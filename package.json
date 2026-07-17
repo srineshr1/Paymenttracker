@@ -1,0 +1,23 @@
+{
+  "name": "paymenttracker",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api": "npm run dev -w @paymenttracker/api",
+    "api:build": "npm run build -w @paymenttracker/api",
+    "mobile": "npm run start -w @paymenttracker/mobile",
+    "mobile:android": "npm run android -w @paymenttracker/mobile",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate -w @paymenttracker/api",
+    "db:seed": "npm run db:seed -w @paymenttracker/api",
+    "test": "npm run test -w @paymenttracker/api && npm run test -w @paymenttracker/shared",
+    "typecheck": "npm run typecheck -w @paymenttracker/api && npm run typecheck -w @paymenttracker/shared"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
