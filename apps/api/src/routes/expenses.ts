@@ -101,6 +101,146 @@ expenseRoutes.get("/:id", async (c) => {
   return c.json({ expense: serializeExpense(row.expense, row.category) });
 });
 
+async function findSoftDuplicate(
+  userId: string,
+  merchant: string,
+  amount: string,
+  paidAt: Date
+) {
+  const dayStart = new Date(paidAt);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(paidAt);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  const rows = await db
+    .select()
+    .from(expenses)
+    .where(
+      and(
+        eq(expenses.userId, userId),
+        eq(expenses.amount, amount),
+        gte(expenses.paidAt, dayStart),
+        lte(expenses.paidAt, dayEnd)
+      )
+    )
+    .limit(20);
+
+  const norm = merchant.trim().toLowerCase();
+  return (
+    rows.find((r) => r.merchant.trim().toLowerCase() === norm) ?? null
+  );
+}
+
+expenseRoutes.post("/batch", async (c) => {
+  const userId = c.get("userId");
+  const body = await c.req.json().catch(() => null);
+  const items = Array.isArray(body?.expenses) ? body.expenses : null;
+  if (!items || items.length === 0) {
+    return c.json({ error: "Send { expenses: [...] }" }, 400);
+  }
+  if (items.length > 40) {
+    return c.json({ error: "Max 40 expenses per batch" }, 400);
+  }
+
+  const created: unknown[] = [];
+  const skipped: { index: number; reason: string; merchant?: string }[] = [];
+  const failed: { index: number; reason: string }[] = [];
+
+  // Dedupe within the batch itself
+  const seenKeys = new Set<string>();
+
+  for (let i = 0; i < items.length; i++) {
+    const parsed = createExpenseSchema.safeParse(items[i]);
+    if (!parsed.success) {
+      failed.push({ index: i, reason: "Invalid fields" });
+      continue;
+    }
+    const data = parsed.data;
+    const upiRef = data.upiRef?.trim() || null;
+    const paidAt = new Date(data.paidAt);
+    const key = `${data.merchant.trim().toLowerCase()}|${data.amount}|${paidAt.toISOString().slice(0, 10)}`;
+
+    if (seenKeys.has(key)) {
+      skipped.push({
+        index: i,
+        reason: "Duplicate in this import",
+        merchant: data.merchant,
+      });
+      continue;
+    }
+    seenKeys.add(key);
+
+    if (upiRef) {
+      const dup = await db.query.expenses.findFirst({
+        where: and(eq(expenses.userId, userId), eq(expenses.upiRef, upiRef)),
+      });
+      if (dup) {
+        skipped.push({
+          index: i,
+          reason: "UPI ref already saved",
+          merchant: data.merchant,
+        });
+        continue;
+      }
+    }
+
+    const soft = await findSoftDuplicate(
+      userId,
+      data.merchant,
+      data.amount,
+      paidAt
+    );
+    if (soft) {
+      skipped.push({
+        index: i,
+        reason: "Same merchant + amount already on this day",
+        merchant: data.merchant,
+      });
+      continue;
+    }
+
+    try {
+      const [row] = await db
+        .insert(expenses)
+        .values({
+          userId,
+          amount: data.amount,
+          currency: data.currency ?? "INR",
+          direction: data.direction ?? "debit",
+          merchant: data.merchant,
+          categoryId: data.categoryId ?? null,
+          paidAt,
+          source: data.source ?? "manual",
+          upiRef,
+          notes: data.notes ?? null,
+          rawOcrText: data.rawOcrText ?? null,
+        })
+        .returning();
+      if (row) created.push(serializeExpense(row, null));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("expenses_user_upi_ref_idx")) {
+        skipped.push({
+          index: i,
+          reason: "UPI ref already saved",
+          merchant: data.merchant,
+        });
+      } else {
+        failed.push({ index: i, reason: "Save failed" });
+      }
+    }
+  }
+
+  return c.json({
+    created: created.length,
+    skipped: skipped.length,
+    failed: failed.length,
+    expenses: created,
+    skippedItems: skipped,
+    failedItems: failed,
+  });
+});
+
 expenseRoutes.post("/", async (c) => {
   const userId = c.get("userId");
   const body = await c.req.json().catch(() => null);
@@ -114,6 +254,7 @@ expenseRoutes.post("/", async (c) => {
 
   const data = parsed.data;
   const upiRef = data.upiRef?.trim() || null;
+  const paidAt = new Date(data.paidAt);
 
   if (upiRef) {
     const dup = await db.query.expenses.findFirst({
@@ -131,6 +272,23 @@ expenseRoutes.post("/", async (c) => {
     }
   }
 
+  const soft = await findSoftDuplicate(
+    userId,
+    data.merchant,
+    data.amount,
+    paidAt
+  );
+  if (soft) {
+    return c.json(
+      {
+        error: "Duplicate transaction",
+        message: "Same merchant and amount already exist on this day.",
+        existingId: soft.id,
+      },
+      409
+    );
+  }
+
   try {
     const [created] = await db
       .insert(expenses)
@@ -141,7 +299,7 @@ expenseRoutes.post("/", async (c) => {
         direction: data.direction ?? "debit",
         merchant: data.merchant,
         categoryId: data.categoryId ?? null,
-        paidAt: new Date(data.paidAt),
+        paidAt,
         source: data.source ?? "manual",
         upiRef,
         notes: data.notes ?? null,
