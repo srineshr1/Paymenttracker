@@ -211,40 +211,8 @@ export default function HomeScreen() {
     () => buildCategorySlices(monthExpenses),
     [monthExpenses]
   );
-  const topCategory = categories[0] ?? null;
   const weekBars = useMemo(() => buildWeekBars(weekExpenses), [weekExpenses]);
   const weekSpent = weekBars.reduce((s, d) => s + d.amount, 0);
-
-  const insight = useMemo(() => {
-    if (!topCategory) {
-      return spent > 0
-        ? "Keep logging payments to see category insights."
-        : "Add a payment or import a screenshot to get started.";
-    }
-    const months = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    const prevFull =
-      months[(cursor.month === 1 ? 12 : cursor.month - 1) - 1];
-    if (change != null && change > 0) {
-      return `${topCategory.name} is your top category this month, up ${change}% from ${prevFull}.`;
-    }
-    if (change != null && change < 0) {
-      return `${topCategory.name} leads this month. Nice — down ${Math.abs(change)}% vs ${prevFull}.`;
-    }
-    return `${topCategory.name} is your top category this month (${topCategory.pct}% of spend).`;
-  }, [topCategory, spent, change, cursor.month]);
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
@@ -293,7 +261,10 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <Card variant="hero" style={{ gap: spacing.md }}>
+        <Card
+          variant="hero"
+          style={{ gap: spacing.sm, padding: spacing.lg }}
+        >
           <View style={styles.monthNav}>
             <Pressable
               onPress={() => shiftMonth(-1)}
@@ -307,8 +278,8 @@ export default function HomeScreen() {
                 flex: 1,
                 textAlign: "center",
                 fontFamily: typography.fontSansSemi,
-                fontSize: 12,
-                letterSpacing: 1.4,
+                fontSize: 11,
+                letterSpacing: 1.2,
                 color: colors.textSecondary,
               }}
             >
@@ -330,7 +301,7 @@ export default function HomeScreen() {
           {loading && !summary ? (
             <ActivityIndicator
               color={colors.accent}
-              style={{ marginVertical: spacing.lg }}
+              style={{ marginVertical: spacing.md }}
             />
           ) : (
             <>
@@ -338,9 +309,9 @@ export default function HomeScreen() {
                 <Text
                   style={{
                     fontFamily: typography.fontSansBold,
-                    fontSize: 40,
-                    lineHeight: 46,
-                    letterSpacing: -0.5,
+                    fontSize: 34,
+                    lineHeight: 40,
+                    letterSpacing: -0.4,
                     color: colors.text,
                     flexShrink: 1,
                   }}
@@ -356,11 +327,9 @@ export default function HomeScreen() {
                       styles.changePill,
                       {
                         backgroundColor:
-                          change > 0
+                          change !== 0
                             ? "rgba(143,203,176,0.14)"
-                            : change < 0
-                              ? "rgba(143,203,176,0.14)"
-                              : colors.bgMuted,
+                            : colors.bgMuted,
                       },
                     ]}
                   >
@@ -372,13 +341,13 @@ export default function HomeScreen() {
                             ? "arrow-down"
                             : "remove"
                       }
-                      size={12}
+                      size={11}
                       color={colors.credit}
                     />
                     <Text
                       style={{
                         fontFamily: typography.fontSansSemi,
-                        fontSize: 12,
+                        fontSize: 11,
                         color: colors.credit,
                       }}
                     >
@@ -387,16 +356,16 @@ export default function HomeScreen() {
                   </View>
                 ) : null}
               </View>
-              <Text muted style={{ marginTop: -4 }}>
+              <Text muted style={{ fontSize: 13, marginTop: -2 }}>
                 Spent this month
               </Text>
 
-              <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+              <View style={{ gap: 6, marginTop: 2 }}>
                 <View style={styles.budgetRow}>
                   <Text
                     style={{
                       fontFamily: typography.fontSansMedium,
-                      fontSize: 13,
+                      fontSize: 12,
                       color: colors.textSecondary,
                     }}
                   >
@@ -405,7 +374,7 @@ export default function HomeScreen() {
                   <Text
                     style={{
                       fontFamily: typography.fontSansMedium,
-                      fontSize: 13,
+                      fontSize: 12,
                       color: colors.textSecondary,
                     }}
                   >
@@ -431,15 +400,17 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              <View style={styles.heroMeta}>
+              <View
+                style={[styles.heroMeta, { borderTopColor: colors.border }]}
+              >
                 <View style={{ flex: 1 }}>
                   <Text variant="caption">Received</Text>
                   <Text
                     style={{
                       fontFamily: typography.fontSansSemi,
                       color: colors.credit,
-                      marginTop: 4,
-                      fontSize: 17,
+                      marginTop: 2,
+                      fontSize: 15,
                     }}
                   >
                     {formatINR(received)}
@@ -451,8 +422,8 @@ export default function HomeScreen() {
                     style={{
                       fontFamily: typography.fontSansSemi,
                       color: colors.text,
-                      marginTop: 4,
-                      fontSize: 17,
+                      marginTop: 2,
+                      fontSize: 15,
                     }}
                   >
                     {summary?.count ?? 0}
@@ -462,33 +433,6 @@ export default function HomeScreen() {
             </>
           )}
         </Card>
-
-        <View
-          style={[
-            styles.insight,
-            {
-              backgroundColor: colors.bgCard,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <View
-            style={[styles.insightIcon, { backgroundColor: colors.accentSoft }]}
-          >
-            <Ionicons name="bulb-outline" size={16} color={colors.accentStrong} />
-          </View>
-          <Text
-            style={{
-              flex: 1,
-              fontFamily: typography.fontSans,
-              fontSize: 13,
-              lineHeight: 19,
-              color: colors.textSecondary,
-            }}
-          >
-            {insight}
-          </Text>
-        </View>
 
         <View>
           <View style={styles.sectionHead}>
@@ -702,23 +646,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   monthBtn: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
   },
   spentRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
   changePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: radius.pill,
   },
   budgetRow: {
@@ -727,7 +670,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   budgetTrack: {
-    height: 6,
+    height: 5,
     borderRadius: radius.pill,
     overflow: "hidden",
   },
@@ -738,25 +681,10 @@ const styles = StyleSheet.create({
   },
   heroMeta: {
     flexDirection: "row",
-    gap: spacing.xl,
-    marginTop: spacing.md,
-    paddingTop: spacing.lg,
-  },
-  insight: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  insightIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   sectionHead: {
     flexDirection: "row",

@@ -470,21 +470,45 @@ export async function wipeVaultSecrets(): Promise<void> {
   await clearFailedAttempts();
 }
 
-/** Encrypt a UTF-8 string; returns base64 combined IV+ciphertext+tag. */
+/**
+ * Android native AESSealedData.fromCombined only accepts ByteArray — not
+ * base64 strings (Kotlin Either conversion fails). Always pass bytes.
+ */
+function sealedToBytes(sealed: string): Uint8Array {
+  if (sealed.startsWith("hex:")) {
+    return hexToBytes(sealed.slice(4));
+  }
+  // legacy base64 combined blob
+  const atobFn = globalThis.atob?.bind(globalThis);
+  if (!atobFn) {
+    throw new Error("base64 decode unavailable");
+  }
+  const bin = atobFn(sealed);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/** Encrypt a UTF-8 string; returns hex:… combined IV+ciphertext+tag. */
 export async function sealString(plaintext: string): Promise<string> {
   const dek = getActiveDek();
   const bytes = new TextEncoder().encode(plaintext);
   const sealed = await aesEncryptAsync(bytes, dek);
-  return (await sealed.combined("base64")) as string;
+  const combined = copyBytes(await sealed.combined("bytes"));
+  return `hex:${bytesToHex(combined)}`;
 }
 
 /** Decrypt a sealed string; null-safe for optional fields. */
 export async function openString(
-  sealedB64: string | null | undefined
+  sealedBlob: string | null | undefined
 ): Promise<string | null> {
-  if (sealedB64 == null || sealedB64 === "") return null;
+  if (sealedBlob == null || sealedBlob === "") return null;
   const dek = getActiveDek();
-  const sealed = AESSealedData.fromCombined(sealedB64);
+  const combined = copyBytes(sealedToBytes(sealedBlob));
+  const sealed = AESSealedData.fromCombined(combined, {
+    ivLength: 12,
+    tagLength: 16,
+  });
   const bytes = await aesDecryptAsync(sealed, dek, { output: "bytes" });
   return new TextDecoder().decode(bytes);
 }
