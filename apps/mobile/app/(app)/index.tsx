@@ -1,0 +1,270 @@
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { Expense, MonthSummary } from "@paymenttracker/shared";
+import { api } from "@/src/api/client";
+import { AddPaymentsMenu } from "@/src/components/AddPaymentsMenu";
+import { ExpenseRow } from "@/src/components/ExpenseRow";
+import {
+  Card,
+  EmptyState,
+  Screen,
+  Text,
+} from "@/src/components/ui";
+import { formatINR, formatMonthYear } from "@/src/design/format";
+import { useTheme } from "@/src/design/ThemeContext";
+import { radius, spacing, typography } from "@/src/design/tokens";
+import { useAuth } from "@/src/features/auth/AuthContext";
+
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const [summary, setSummary] = useState<MonthSummary | null>(null);
+  const [recent, setRecent] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const now = new Date();
+      const [s, list] = await Promise.all([
+        api.monthSummary(now.getFullYear(), now.getMonth() + 1),
+        api.listExpenses({ limit: 8 }),
+      ]);
+      setSummary(s);
+      setRecent(list.expenses);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      // Always collapse the FAB menu when landing on Home (back or tab-in).
+      // Prevents a frozen open overlay from covering / zeroing page content.
+      setAddOpen(false);
+      load();
+      return () => {
+        setAddOpen(false);
+      };
+    }, [load])
+  );
+
+  const now = new Date();
+
+  return (
+    <Screen style={{ paddingTop: insets.top }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: spacing.xl,
+          paddingBottom: insets.bottom + 120,
+          gap: spacing.xl,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={colors.accent}
+          />
+        }
+      >
+        <View style={styles.header}>
+          <View style={{ flex: 1, paddingRight: spacing.md }}>
+            <Text variant="label">Welcome back</Text>
+            <Text variant="hero" style={{ marginTop: 4, fontSize: 28 }}>
+              {user?.username}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push("/(app)/settings")}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            style={({ pressed }) => [
+              styles.settingsBtn,
+              {
+                backgroundColor: colors.bgMuted,
+                borderColor: colors.border,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Ionicons
+              name="settings-outline"
+              size={22}
+              color={colors.text}
+            />
+          </Pressable>
+        </View>
+
+        <Card variant="hero">
+          <Text variant="label">
+            {formatMonthYear(now.getFullYear(), now.getMonth() + 1)}
+          </Text>
+          {loading && !summary ? (
+            <ActivityIndicator
+              color={colors.accent}
+              style={{ marginTop: spacing.lg }}
+            />
+          ) : (
+            <>
+              <Text
+                style={{
+                  // Outfit (not mono) — IBM Plex Mono mangles "," on Android
+                  fontFamily: typography.fontSansBold,
+                  fontSize: 42,
+                  letterSpacing: 0,
+                  color: colors.text,
+                  marginTop: spacing.md,
+                }}
+              >
+                {formatINR(summary?.totalDebit ?? "0")}
+              </Text>
+              <Text muted style={{ marginTop: spacing.sm }}>
+                Spent this month
+              </Text>
+              <View
+                style={[styles.heroMeta, { borderTopColor: colors.border }]}
+              >
+                <View>
+                  <Text variant="caption">Received</Text>
+                  <Text
+                    style={{
+                      fontFamily: typography.fontSansSemi,
+                      color: colors.credit,
+                      marginTop: 2,
+                      fontSize: 16,
+                    }}
+                  >
+                    {formatINR(summary?.totalCredit ?? "0")}
+                  </Text>
+                </View>
+                <View>
+                  <Text variant="caption">Entries</Text>
+                  <Text
+                    style={{
+                      fontFamily: typography.fontSansSemi,
+                      color: colors.text,
+                      marginTop: 2,
+                      fontSize: 16,
+                    }}
+                  >
+                    {summary?.count ?? 0}
+                  </Text>
+                </View>
+              </View>
+            </>
+          )}
+        </Card>
+
+        <View>
+          <View style={styles.sectionHead}>
+            <Text variant="title">Recent</Text>
+            <Pressable
+              onPress={() => router.push("/(app)/expenses")}
+              hitSlop={8}
+            >
+              <Text
+                style={{
+                  fontFamily: typography.fontSansMedium,
+                  color: colors.accentStrong,
+                  fontSize: 15,
+                }}
+              >
+                See all
+              </Text>
+            </Pressable>
+          </View>
+
+          {error ? (
+            <Text color={colors.danger} style={{ marginTop: spacing.md }}>
+              {error}
+            </Text>
+          ) : null}
+
+          {!loading && recent.length === 0 ? (
+            <EmptyState
+              title="No expenses yet"
+              body="Tap Add payments to import a PhonePe/GPay screenshot or enter one manually."
+            />
+          ) : (
+            <Card variant="outline" style={{ paddingVertical: spacing.sm }}>
+              {recent.map((e, i) => (
+                <View key={e.id}>
+                  <ExpenseRow
+                    expense={e}
+                    onPress={() => router.push(`/(app)/expenses/${e.id}`)}
+                  />
+                  {i < recent.length - 1 ? (
+                    <View
+                      style={{
+                        height: StyleSheet.hairlineWidth,
+                        backgroundColor: colors.border,
+                      }}
+                    />
+                  ) : null}
+                </View>
+              ))}
+            </Card>
+          )}
+        </View>
+      </ScrollView>
+
+      <AddPaymentsMenu
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onManual={() => router.push("/(app)/add")}
+        onScreenshot={() => router.push("/(app)/import")}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  settingsBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroMeta: {
+    flexDirection: "row",
+    gap: spacing.xxl,
+    marginTop: spacing.xl,
+    paddingTop: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+});
