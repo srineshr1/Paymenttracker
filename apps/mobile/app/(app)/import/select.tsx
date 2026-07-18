@@ -2,7 +2,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,12 +14,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ParsedExpense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
+import { DateField } from "@/src/components/DateField";
 import { Button, Input, Screen, Text } from "@/src/components/ui";
 import { formatDateTime, formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 
-type Row = ParsedExpense & { id: string };
+type Row = ParsedExpense & { id: string; notes?: string | null };
 
 function isJunk(item: ParsedExpense): boolean {
   const m = (item.merchant ?? "").trim();
@@ -37,10 +40,32 @@ function dayKey(iso: string | null | undefined) {
   }
 }
 
+function sanitizeAmountInput(raw: string): string {
+  let next = raw.replace(/,/g, "").replace(/[^\d.]/g, "");
+  const firstDot = next.indexOf(".");
+  if (firstDot !== -1) {
+    next =
+      next.slice(0, firstDot + 1) +
+      next.slice(firstDot + 1).replace(/\./g, "");
+    const [whole, frac = ""] = next.split(".");
+    next = `${whole}.${frac.slice(0, 2)}`;
+  }
+  if (next.length > 1 && next.startsWith("0") && next[1] !== ".") {
+    next = next.replace(/^0+/, "") || "0";
+  }
+  return next;
+}
+
+function parsePaidAt(iso: string | null | undefined): Date {
+  if (!iso) return new Date();
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? new Date() : d;
+}
+
 export default function ImportSelectScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{
     imageUri?: string;
     list?: string;
@@ -70,16 +95,20 @@ export default function ImportSelectScreen() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [editMerchant, setEditMerchant] = useState("");
   const [editAmount, setEditAmount] = useState("");
-  const [editPaidAt, setEditPaidAt] = useState("");
+  const [editPaidAt, setEditPaidAt] = useState(() => new Date());
   const [editDirection, setEditDirection] = useState<"debit" | "credit">(
     "debit"
   );
+  const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCount = rows.filter((r) => selected[r.id]).length;
   const selectedRows = rows.filter((r) => selected[r.id]);
+  const isEditing = !!editing;
+
+  const closeEdit = useCallback(() => setEditing(null), []);
 
   const toggle = (id: string) => {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
@@ -101,14 +130,16 @@ export default function ImportSelectScreen() {
     setEditing(row);
     setEditMerchant(row.merchant ?? "");
     setEditAmount(row.amount ?? "");
-    setEditPaidAt(row.paidAt ?? new Date().toISOString());
+    setEditPaidAt(parsePaidAt(row.paidAt));
     setEditDirection(row.direction ?? "debit");
+    setEditNotes(row.notes ?? "");
   };
 
   const saveEdit = () => {
     if (!editing) return;
-    const amount = editAmount.replace(/,/g, "").trim();
-    if (!editMerchant.trim() || !amount || Number(amount) <= 0) {
+    const amount = sanitizeAmountInput(editAmount);
+    const n = Number(amount);
+    if (!editMerchant.trim() || !amount || !Number.isFinite(n) || n <= 0) {
       Alert.alert("Check fields", "Merchant and a valid amount are required.");
       return;
     }
@@ -118,9 +149,10 @@ export default function ImportSelectScreen() {
           ? {
               ...r,
               merchant: editMerchant.trim(),
-              amount: Number(amount).toFixed(2),
-              paidAt: editPaidAt,
+              amount: n.toFixed(2),
+              paidAt: editPaidAt.toISOString(),
               direction: editDirection,
+              notes: editNotes.trim() || null,
               warnings: [],
               confidence: Math.max(r.confidence ?? 0, 0.8),
             }
@@ -140,6 +172,18 @@ export default function ImportSelectScreen() {
     });
     setEditing((e) => (e?.id === id ? null : e));
   }, []);
+
+  const confirmRemoveEditing = () => {
+    if (!editing) return;
+    Alert.alert("Remove payment?", "This drops it from the import list.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => removeRow(editing.id),
+      },
+    ]);
+  };
 
   const addSelected = async () => {
     setError(null);
@@ -181,7 +225,7 @@ export default function ImportSelectScreen() {
         source:
           r.source === "phonepe" || r.source === "gpay" ? r.source : "manual",
         upiRef: r.upiRef ?? null,
-        notes: null,
+        notes: r.notes?.trim() || null,
         rawOcrText: r.rawText || params.rawText || null,
       }));
 
@@ -288,69 +332,74 @@ export default function ImportSelectScreen() {
               const isLast = index === rows.length - 1;
               return (
                 <View key={row.id}>
-                  <Pressable
-                    onPress={() => toggle(row.id)}
-                    onLongPress={() => openEdit(row)}
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && { backgroundColor: colors.bgMuted },
-                      junk && !on && { opacity: 0.55 },
-                    ]}
+                  <View
+                    style={[styles.row, junk && !on && { opacity: 0.55 }]}
                   >
-                    <View
-                      style={[
-                        styles.check,
-                        {
-                          borderColor: on
-                            ? colors.text
-                            : colors.borderStrong,
-                          backgroundColor: on
-                            ? colors.text
-                            : "transparent",
-                        },
-                      ]}
-                    >
-                      {on ? (
-                        <Text
-                          style={{
-                            color: colors.bg,
-                            fontSize: 11,
-                            fontFamily: typography.fontSansBold,
-                            lineHeight: 13,
-                          }}
-                        >
-                          ✓
-                        </Text>
-                      ) : null}
-                    </View>
-
                     <Pressable
-                      style={styles.rowBody}
-                      onPress={() => openEdit(row)}
+                      onPress={() => toggle(row.id)}
+                      hitSlop={8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                      style={styles.checkHit}
                     >
-                      <Text
-                        style={{
-                          fontFamily: typography.fontSansSemi,
-                          fontSize: 15,
-                          color: colors.text,
-                        }}
-                        numberOfLines={1}
+                      <View
+                        style={[
+                          styles.check,
+                          {
+                            borderColor: on
+                              ? colors.text
+                              : colors.borderStrong,
+                            backgroundColor: on
+                              ? colors.text
+                              : "transparent",
+                          },
+                        ]}
                       >
-                        {row.merchant || "Unknown"}
-                      </Text>
-                      <Text
-                        muted
-                        style={{ fontSize: 12, marginTop: 3 }}
-                        numberOfLines={1}
-                      >
-                        {row.paidAt
-                          ? formatDateTime(row.paidAt)
-                          : "No date"}
-                        {junk ? " · needs review" : ""}
-                      </Text>
+                        {on ? (
+                          <Text
+                            style={{
+                              color: colors.bg,
+                              fontSize: 11,
+                              fontFamily: typography.fontSansBold,
+                              lineHeight: 13,
+                            }}
+                          >
+                            ✓
+                          </Text>
+                        ) : null}
+                      </View>
                     </Pressable>
 
-                    <View style={styles.rowEnd}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.rowMain,
+                        pressed && { backgroundColor: colors.bgMuted },
+                      ]}
+                      onPress={() => openEdit(row)}
+                    >
+                      <View style={styles.rowBody}>
+                        <Text
+                          style={{
+                            fontFamily: typography.fontSansSemi,
+                            fontSize: 15,
+                            color: colors.text,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {row.merchant || "Unknown"}
+                        </Text>
+                        <Text
+                          muted
+                          style={{ fontSize: 12, marginTop: 3 }}
+                          numberOfLines={1}
+                        >
+                          {row.paidAt
+                            ? formatDateTime(row.paidAt)
+                            : "No date"}
+                          {junk ? " · needs review" : ""}
+                        </Text>
+                      </View>
+
                       <Text
                         style={{
                           fontFamily: typography.fontSansSemi,
@@ -365,22 +414,8 @@ export default function ImportSelectScreen() {
                           ? formatExpenseAmount(row.amount, row.direction)
                           : "—"}
                       </Text>
-                      <Pressable
-                        onPress={() => removeRow(row.id)}
-                        hitSlop={10}
-                        style={{ marginTop: 6 }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            color: colors.textMuted,
-                          }}
-                        >
-                          Remove
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </View>
                   {!isLast ? (
                     <View
                       style={[
@@ -410,42 +445,52 @@ export default function ImportSelectScreen() {
         ) : null}
       </ScrollView>
 
-      <View
-        style={[
-          styles.footer,
-          {
-            paddingBottom: Math.max(insets.bottom, spacing.md),
-            backgroundColor: colors.bg,
-            borderTopColor: colors.border,
-          },
-        ]}
-      >
-        <Button
-          title={
-            saving
-              ? "Adding…"
-              : selectedCount === 0
-                ? "Select payments"
-                : `Add ${selectedCount}`
-          }
-          loading={saving}
-          disabled={saving || selectedCount === 0}
-          onPress={addSelected}
-          style={{
-            opacity: saving || selectedCount === 0 ? 0.5 : 1,
-          }}
-        />
-      </View>
+      {!isEditing ? (
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: Math.max(insets.bottom, spacing.md),
+              backgroundColor: colors.bg,
+              borderTopColor: colors.border,
+            },
+          ]}
+        >
+          <Button
+            title={
+              saving
+                ? "Adding…"
+                : selectedCount === 0
+                  ? "Select payments"
+                  : `Add ${selectedCount}`
+            }
+            loading={saving}
+            disabled={saving || selectedCount === 0}
+            onPress={addSelected}
+            style={{
+              opacity: saving || selectedCount === 0 ? 0.5 : 1,
+            }}
+          />
+        </View>
+      ) : null}
 
       <Modal
-        visible={!!editing}
+        visible={isEditing}
         animationType="slide"
         transparent
-        onRequestClose={() => setEditing(null)}
+        statusBarTranslucent
+        onRequestClose={closeEdit}
       >
-        <View
-          style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
+        <KeyboardAvoidingView
+          style={styles.modalRoot}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
+          <Pressable
+            style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
+            onPress={closeEdit}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss"
+          />
           <View
             style={[
               styles.modalSheet,
@@ -461,45 +506,54 @@ export default function ImportSelectScreen() {
                 { backgroundColor: colors.borderStrong },
               ]}
             />
-            <Text
-              style={{
-                fontFamily: typography.fontSansSemi,
-                fontSize: 18,
-                color: colors.text,
-                marginBottom: spacing.xl,
-              }}
-            >
-              Edit payment
-            </Text>
+            <View style={styles.modalHeader}>
+              <Text
+                style={{
+                  fontFamily: typography.fontSansSemi,
+                  fontSize: 18,
+                  color: colors.text,
+                }}
+              >
+                Edit payment
+              </Text>
+              <Pressable onPress={closeEdit} hitSlop={12}>
+                <Text
+                  style={{
+                    fontFamily: typography.fontSansMedium,
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                  }}
+                >
+                  Close
+                </Text>
+              </Pressable>
+            </View>
 
             <ScrollView
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: spacing.lg }}
+              contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.md }}
             >
               <Field label="Merchant">
                 <Input
                   value={editMerchant}
                   onChangeText={setEditMerchant}
+                  placeholder="Who was this?"
+                  autoCapitalize="words"
+                  returnKeyType="next"
                   style={inputStyle(colors.bgMuted)}
                 />
               </Field>
               <Field label="Amount (₹)">
                 <Input
                   value={editAmount}
-                  onChangeText={setEditAmount}
+                  onChangeText={(v) => setEditAmount(sanitizeAmountInput(v))}
                   keyboardType="decimal-pad"
+                  placeholder="0.00"
                   style={inputStyle(colors.bgMuted)}
                 />
               </Field>
-              <Field label="When">
-                <Input
-                  value={editPaidAt}
-                  onChangeText={setEditPaidAt}
-                  autoCapitalize="none"
-                  style={inputStyle(colors.bgMuted)}
-                />
-              </Field>
+              <DateField value={editPaidAt} onChange={setEditPaidAt} />
               <View style={styles.dirRow}>
                 <DirChip
                   label="Paid"
@@ -512,18 +566,31 @@ export default function ImportSelectScreen() {
                   onPress={() => setEditDirection("credit")}
                 />
               </View>
+              <Field label="Notes (optional)">
+                <Input
+                  value={editNotes}
+                  onChangeText={setEditNotes}
+                  placeholder="Anything to remember"
+                  multiline
+                  style={[
+                    inputStyle(colors.bgMuted),
+                    { minHeight: 72, textAlignVertical: "top", paddingTop: 14 },
+                  ]}
+                />
+              </Field>
             </ScrollView>
 
-            <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
+            <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
               <Button title="Save" onPress={saveEdit} />
+              <Button title="Cancel" variant="ghost" onPress={closeEdit} />
               <Button
-                title="Cancel"
-                variant="ghost"
-                onPress={() => setEditing(null)}
+                title="Remove from list"
+                variant="danger"
+                onPress={confirmRemoveEditing}
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </Screen>
   );
@@ -610,10 +677,12 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.md + 2,
-    paddingHorizontal: spacing.lg,
+    alignItems: "stretch",
+  },
+  checkHit: {
+    justifyContent: "center",
+    paddingLeft: spacing.lg,
+    paddingRight: spacing.md,
   },
   check: {
     width: 22,
@@ -623,12 +692,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  rowMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    minWidth: 0,
+    paddingVertical: spacing.md + 2,
+    paddingRight: spacing.lg,
+  },
   rowBody: {
     flex: 1,
     minWidth: 0,
-  },
-  rowEnd: {
-    alignItems: "flex-end",
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -643,15 +718,18 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  modalBackdrop: {
+  modalRoot: {
     flex: 1,
     justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalSheet: {
     borderTopLeftRadius: radius.xxl,
     borderTopRightRadius: radius.xxl,
     padding: spacing.xl,
-    maxHeight: "88%",
+    maxHeight: "90%",
   },
   modalHandle: {
     alignSelf: "center",
@@ -659,6 +737,12 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginBottom: spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.xl,
   },
   dirRow: {
     flexDirection: "row",
