@@ -29,6 +29,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   onManual: () => void;
   onScreenshot: () => void;
+  /** Optional — Android SMS bulk import */
+  onSms?: () => void;
 };
 
 /** Softer spring so pill → circle + menu options feel fluid */
@@ -49,6 +51,7 @@ export function AddPaymentsMenu({
   onOpenChange,
   onManual,
   onScreenshot,
+  onSms,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -192,6 +195,33 @@ export function AddPaymentsMenu({
     ],
   }));
 
+  const smsStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      progress.value,
+      [0, 1],
+      [0, 1],
+      Extrapolation.CLAMP
+    ),
+    transform: [
+      {
+        translateY: interpolate(
+          progress.value,
+          [0, 1],
+          [56, 0],
+          Extrapolation.CLAMP
+        ),
+      },
+      {
+        scale: interpolate(
+          progress.value,
+          [0, 1],
+          [0.92, 1],
+          Extrapolation.CLAMP
+        ),
+      },
+    ],
+  }));
+
   const mainIconStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -293,6 +323,39 @@ export function AddPaymentsMenu({
       ) : null}
 
       <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
+        {onSms ? (
+          <Animated.View
+            pointerEvents={open ? "auto" : "none"}
+            style={[styles.optionWrap, smsStyle]}
+          >
+            <Pressable
+              onPress={() => runAction(onSms)}
+              style={({ pressed }) => [
+                styles.option,
+                {
+                  backgroundColor: colors.bgCard,
+                  borderColor: colors.borderStrong,
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <IconChip
+                name="chatbubble-ellipses-outline"
+                color={colors.accentStrong}
+                bg={colors.accentSoft}
+                size={40}
+                iconSize={20}
+              />
+              <View style={styles.optionText}>
+                <Text style={styles.optionTitle}>SMS</Text>
+                <Text muted style={{ fontSize: 12 }}>
+                  Bank & UPI messages
+                </Text>
+              </View>
+            </Pressable>
+          </Animated.View>
+        ) : null}
+
         <Animated.View
           pointerEvents={open ? "auto" : "none"}
           style={[styles.optionWrap, shotStyle]}

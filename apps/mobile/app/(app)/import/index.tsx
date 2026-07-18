@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,6 +22,8 @@ import {
   recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
 import { TesseractHost } from "@/src/features/ocr/TesseractHost";
+import { importPaymentsFromSms } from "@/src/features/sms/importSms";
+import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
 
 const SAMPLE_PHONEPE = `PhonePe
 Payment Successful
@@ -43,8 +46,10 @@ type Picked = {
 export default function ImportScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams<{ mode?: string }>();
   const { colors } = useTheme();
   const fastOcr = useMemo(() => isFastOcrAvailable(), []);
+  const autoSmsStarted = useRef(false);
 
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -170,6 +175,71 @@ export default function ImportScreen() {
     goReview(null, pasteText);
   };
 
+  const scanSms = async () => {
+    setError(null);
+    setStatus(null);
+
+    if (Platform.OS !== "android") {
+      setError("SMS import is only available on Android.");
+      return;
+    }
+    if (!isSmsInboxAvailable()) {
+      setError(
+        "SMS import needs a native Spentd build (expo run:android), not Expo Go."
+      );
+      return;
+    }
+
+    setBusy(true);
+    setStatus("Scanning SMS on this device…");
+    try {
+      const { parsed, scanned, paymentLike } = await importPaymentsFromSms({
+        lookbackDays: 90,
+        maxCount: 800,
+      });
+
+      if (!parsed.length) {
+        setError(
+          scanned === 0
+            ? "No SMS found in the last 90 days."
+            : paymentLike === 0
+              ? `Scanned ${scanned} messages — none looked like bank/UPI payments.`
+              : `Found ${paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`
+        );
+        return;
+      }
+
+      setStatus(null);
+      router.push({
+        pathname: "/(app)/import/select",
+        params: {
+          imageUri: "",
+          list: JSON.stringify(parsed),
+          rawText: "",
+        },
+      });
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not read SMS on this device."
+      );
+    } finally {
+      setBusy(false);
+      setStatus(null);
+    }
+  };
+
+  const smsAvailable = Platform.OS === "android";
+
+  // Home menu "SMS" opens Import with mode=sms and starts the scan once.
+  useEffect(() => {
+    if (params.mode !== "sms") return;
+    if (autoSmsStarted.current) return;
+    if (!smsAvailable || busy) return;
+    autoSmsStarted.current = true;
+    void scanSms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on mount/mode
+  }, [params.mode]);
+
   return (
     <Screen style={{ paddingTop: insets.top }}>
       {/* Tesseract.js host — enables OCR in Expo Go */}
@@ -177,7 +247,7 @@ export default function ImportScreen() {
 
       <AppHeader
         title="Import"
-        subtitle="PhonePe & GPay · stays on device"
+        subtitle="SMS · PhonePe & GPay · stays on device"
       />
       <ScrollView
         contentContainerStyle={{
@@ -187,6 +257,22 @@ export default function ImportScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
+        {smsAvailable ? (
+          <Card variant="soft" style={{ gap: spacing.md }}>
+            <Text variant="label">SMS inbox</Text>
+            <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
+              Scan bank and UPI messages from the last 90 days. Parsing stays on
+              this phone — nothing is uploaded.
+            </Text>
+            <Button
+              title={busy ? "Scanning…" : "Import from SMS"}
+              loading={busy}
+              onPress={scanSms}
+              disabled={busy}
+            />
+          </Card>
+        ) : null}
+
         <Card variant="soft" style={{ gap: spacing.md }}>
           <Text variant="label">Screenshot</Text>
           <Text muted style={{ fontSize: 13, lineHeight: 19 }}>

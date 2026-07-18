@@ -173,6 +173,8 @@ export function sourceLabel(source: string) {
       return "PhonePe";
     case "gpay":
       return "GPay";
+    case "sms":
+      return "SMS";
     case "manual":
       return "Manual";
     default:

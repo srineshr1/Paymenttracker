@@ -159,14 +159,13 @@ Download the APK from the EAS link and install on the phone
 > Image OCR (ML Kit) only works in a **dev/production build**, not Expo Go.  
 > Paste-text import works in Expo Go.
 
-### OCR (PhonePe / GPay)
+### Import payments (on-device)
 
-1. **Gallery upload (default)** — app sends the screenshot to `POST /ocr`  
-   (Tesseract on the API). Works in Expo Go + Android emulator. Image is not stored.
-2. **Paste text** — fallback on the Import screen.
-3. Parsers in `packages/shared/src/ocr` extract amount, merchant, date, UPI ref.
+1. **SMS inbox (Android native build)** — scans bank/UPI SMS on the phone, parses with regex (no AI, no upload). Needs `READ_SMS` and `expo run:android` (not Expo Go).
+2. **Screenshot OCR** — PhonePe / GPay screenshots via ML Kit (native build) or Tesseract.js WebView (Expo Go). Parsing is on-device in `@paymenttracker/shared`.
+3. **Paste text** — fallback on the Import screen.
 
-First OCR request may take longer while Tesseract language data downloads.
+Parsers in `packages/shared/src/ocr` extract amount, merchant, date, UPI ref (screenshot + SMS).
 
 ## Auth rules
 

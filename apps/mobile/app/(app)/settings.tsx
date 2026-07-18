@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -9,13 +9,23 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { AppLogo } from "@/src/components/AppLogo";
+import { BudgetSheet } from "@/src/components/BudgetSheet";
 import { Card, Screen, Segmented, Text } from "@/src/components/ui";
+import {
+  type BudgetPrefs,
+  computeBudgetPlan,
+  DEFAULT_BUDGET,
+  DEFAULT_SAVINGS_RATE,
+  getBudgetPrefs,
+} from "@/src/data/budget";
+import { exportExpensesShare } from "@/src/data/export";
+import { formatINR } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
-import { exportExpensesShare } from "@/src/data/export";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +33,64 @@ export default function SettingsScreen() {
   const { colors, preference, setPreference, mode, isDark } = useTheme();
   const { user, logout } = useAuth();
   const [exporting, setExporting] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(false);
+  const [budgetPrefs, setBudgetPrefsState] = useState<BudgetPrefs>({
+    mode: "auto",
+    manualBudget: DEFAULT_BUDGET,
+    savingsRate: DEFAULT_SAVINGS_RATE,
+  });
+  const [autoPreview, setAutoPreview] = useState(DEFAULT_BUDGET);
+
+  const refreshBudget = useCallback(async () => {
+    try {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+      const hist = [1, 2, 3].map((back) => {
+        const d = new Date(y, m - 1 - back, 1);
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+      });
+      const [prefs, s, ...past] = await Promise.all([
+        getBudgetPrefs(),
+        api.monthSummary(y, m),
+        ...hist.map((h) => api.monthSummary(h.year, h.month)),
+      ]);
+      let incomeSum = 0;
+      let incomeN = 0;
+      let spendSum = 0;
+      let spendN = 0;
+      for (const h of past) {
+        const c = Number(h.totalCredit) || 0;
+        const d = Number(h.totalDebit) || 0;
+        if (c > 0) {
+          incomeSum += c;
+          incomeN += 1;
+        }
+        if (d > 0) {
+          spendSum += d;
+          spendN += 1;
+        }
+      }
+      setBudgetPrefsState(prefs);
+      setAutoPreview(
+        computeBudgetPlan({
+          incomeThisMonth: Number(s.totalCredit) || 0,
+          avgIncomeLast3: incomeN > 0 ? incomeSum / incomeN : 0,
+          avgSpendLast3: spendN > 0 ? spendSum / spendN : 0,
+          spentThisMonth: Number(s.totalDebit) || 0,
+          year: y,
+          month: m,
+          prefs: { ...prefs, mode: "auto" },
+        }).budget
+      );
+    } catch {
+      /* ignore — sheet still usable with defaults */
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBudget();
+  }, [refreshBudget]);
 
   const initial = (user?.username?.trim()?.[0] ?? "?").toUpperCase();
 
@@ -184,6 +252,25 @@ export default function SettingsScreen() {
           </Card>
         </View>
 
+        {/* Budget */}
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" style={{ marginLeft: 4 }}>
+            Budget
+          </Text>
+          <Card variant="elevated" style={styles.listCard}>
+            <SettingsRow
+              position="only"
+              title="Budget & savings"
+              subtitle={
+                budgetPrefs.mode === "manual"
+                  ? `Custom · ${formatINR(budgetPrefs.manualBudget)}`
+                  : `Smart · save ${Math.round(budgetPrefs.savingsRate * 100)}% · ~${formatINR(autoPreview)}`
+              }
+              onPress={() => setBudgetOpen(true)}
+            />
+          </Card>
+        </View>
+
         {/* Account */}
         <View style={{ gap: spacing.sm }}>
           <Text variant="label" style={{ marginLeft: 4 }}>
@@ -283,6 +370,17 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <BudgetSheet
+        open={budgetOpen}
+        onClose={() => setBudgetOpen(false)}
+        prefs={budgetPrefs}
+        autoBudgetPreview={autoPreview}
+        onSaved={(next) => {
+          setBudgetPrefsState(next);
+          void refreshBudget();
+        }}
+      />
     </Screen>
   );
 }

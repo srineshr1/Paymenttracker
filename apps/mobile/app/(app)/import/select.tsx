@@ -201,7 +201,11 @@ export default function ImportSelectScreen() {
           ? new Date(r.paidAt).toISOString()
           : new Date().toISOString(),
         source:
-          r.source === "phonepe" || r.source === "gpay" ? r.source : "manual",
+          r.source === "phonepe" ||
+          r.source === "gpay" ||
+          r.source === "sms"
+            ? r.source
+            : "manual",
         upiRef: r.upiRef ?? null,
         notes: r.notes?.trim() || null,
         rawOcrText: r.rawText || params.rawText || null,

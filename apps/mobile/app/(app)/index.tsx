@@ -14,8 +14,16 @@ import { api } from "@/src/api/client";
 import { AddPaymentsMenu } from "@/src/components/AddPaymentsMenu";
 import { DonutChart } from "@/src/components/DonutChart";
 import { WeekBars, type WeekDayBar } from "@/src/components/WeekBars";
+import { BudgetSheet } from "@/src/components/BudgetSheet";
 import { Amount, Card, EmptyState, Screen, Text } from "@/src/components/ui";
-import { getMonthlyBudget } from "@/src/data/budget";
+import {
+  type BudgetPlan,
+  type BudgetPrefs,
+  computeBudgetPlan,
+  DEFAULT_BUDGET,
+  DEFAULT_SAVINGS_RATE,
+  getBudgetPrefs,
+} from "@/src/data/budget";
 import {
   formatINR,
   formatINRCompact,
@@ -138,10 +146,17 @@ export default function HomeScreen() {
   const [monthExpenses, setMonthExpenses] = useState<Expense[]>([]);
   const [weekExpenses, setWeekExpenses] = useState<Expense[]>([]);
   const [recent, setRecent] = useState<Expense[]>([]);
-  const [budget, setBudget] = useState(60000);
+  const [budgetPrefs, setBudgetPrefsState] = useState<BudgetPrefs>({
+    mode: "auto",
+    manualBudget: DEFAULT_BUDGET,
+    savingsRate: DEFAULT_SAVINGS_RATE,
+  });
+  const [avgIncomeLast3, setAvgIncomeLast3] = useState(0);
+  const [avgSpendLast3, setAvgSpendLast3] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [budgetOpen, setBudgetOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -154,29 +169,56 @@ export default function HomeScreen() {
       weekEnd.setDate(weekEnd.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
-      const [s, prevS, monthList, weekList, recentList, b] = await Promise.all([
-        api.monthSummary(cursor.year, cursor.month),
-        api.monthSummary(prev.getFullYear(), prev.getMonth() + 1),
-        api.listExpenses({
-          limit: 200,
-          from: monthStart.toISOString(),
-          to: monthEnd.toISOString(),
-        }),
-        api.listExpenses({
-          limit: 200,
-          from: weekStart.toISOString(),
-          to: weekEnd.toISOString(),
-        }),
-        api.listExpenses({ limit: 6 }),
-        getMonthlyBudget(),
-      ]);
+      // Last 3 complete-ish months before the cursor (for averages)
+      const histMonths = [1, 2, 3].map((back) => {
+        const d = new Date(cursor.year, cursor.month - 1 - back, 1);
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+      });
+
+      const [s, prevS, monthList, weekList, recentList, prefs, ...hist] =
+        await Promise.all([
+          api.monthSummary(cursor.year, cursor.month),
+          api.monthSummary(prev.getFullYear(), prev.getMonth() + 1),
+          api.listExpenses({
+            limit: 200,
+            from: monthStart.toISOString(),
+            to: monthEnd.toISOString(),
+          }),
+          api.listExpenses({
+            limit: 200,
+            from: weekStart.toISOString(),
+            to: weekEnd.toISOString(),
+          }),
+          api.listExpenses({ limit: 6 }),
+          getBudgetPrefs(),
+          ...histMonths.map((m) => api.monthSummary(m.year, m.month)),
+        ]);
+
+      let incomeSum = 0;
+      let spendSum = 0;
+      let incomeN = 0;
+      let spendN = 0;
+      for (const h of hist) {
+        const c = Number(h.totalCredit) || 0;
+        const d = Number(h.totalDebit) || 0;
+        if (c > 0) {
+          incomeSum += c;
+          incomeN += 1;
+        }
+        if (d > 0) {
+          spendSum += d;
+          spendN += 1;
+        }
+      }
 
       setSummary(s);
       setPrevSummary(prevS);
       setMonthExpenses(monthList.expenses);
       setWeekExpenses(weekList.expenses);
       setRecent(recentList.expenses);
-      setBudget(b);
+      setBudgetPrefsState(prefs);
+      setAvgIncomeLast3(incomeN > 0 ? incomeSum / incomeN : 0);
+      setAvgSpendLast3(spendN > 0 ? spendSum / spendN : 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -205,7 +247,93 @@ export default function HomeScreen() {
   const received = Number(summary?.totalCredit ?? 0) || 0;
   const prevSpent = Number(prevSummary?.totalDebit ?? 0) || 0;
   const change = pctChange(spent, prevSpent);
-  const budgetPct = budget > 0 ? Math.min(1, spent / budget) : 0;
+
+  const plan: BudgetPlan = useMemo(
+    () =>
+      computeBudgetPlan({
+        incomeThisMonth: received,
+        avgIncomeLast3,
+        avgSpendLast3,
+        spentThisMonth: spent,
+        year: cursor.year,
+        month: cursor.month,
+        prefs: budgetPrefs,
+      }),
+    [
+      received,
+      avgIncomeLast3,
+      avgSpendLast3,
+      spent,
+      cursor.year,
+      cursor.month,
+      budgetPrefs,
+    ]
+  );
+
+  const budget = plan.budget;
+  const budgetPct = budget > 0 ? Math.min(1.2, spent / budget) : 0;
+  const barWidthPct = Math.min(100, Math.round(budgetPct * 100));
+  const barColor =
+    budgetPct > 1
+      ? colors.danger
+      : budgetPct > 0.8
+        ? colors.warning
+        : colors.accent;
+
+  const autoBudgetPreview = useMemo(
+    () =>
+      computeBudgetPlan({
+        incomeThisMonth: received,
+        avgIncomeLast3,
+        avgSpendLast3,
+        spentThisMonth: spent,
+        year: cursor.year,
+        month: cursor.month,
+        prefs: { ...budgetPrefs, mode: "auto" },
+      }).budget,
+    [
+      received,
+      avgIncomeLast3,
+      avgSpendLast3,
+      spent,
+      cursor.year,
+      cursor.month,
+      budgetPrefs,
+    ]
+  );
+
+  const budgetSourceLabel =
+    plan.mode === "manual"
+      ? "Custom"
+      : plan.source === "income"
+        ? `Smart · save ${Math.round(plan.savingsRate * 100)}%`
+        : plan.source === "spend-avg"
+          ? "Smart · from past spend"
+          : "Smart · default";
+
+  const paceLabel = (() => {
+    if (plan.paceDeltaPct == null) return null;
+    const p = plan.paceDeltaPct;
+    if (plan.isCurrentMonth) {
+      if (Math.abs(p) <= 8) return { text: "On track this month", tone: "ok" as const };
+      if (p > 0)
+        return {
+          text: `${p}% over pace · slow down`,
+          tone: "hot" as const,
+        };
+      return {
+        text: `${Math.abs(p)}% under pace`,
+        tone: "cool" as const,
+      };
+    }
+    if (p > 0) return { text: `Ended ${p}% over budget`, tone: "hot" as const };
+    if (p < 0)
+      return {
+        text: `Ended ${Math.abs(p)}% under budget`,
+        tone: "cool" as const,
+      };
+    return { text: "Ended on budget", tone: "ok" as const };
+  })();
 
   const categories = useMemo(
     () => buildCategorySlices(monthExpenses),
@@ -360,17 +488,31 @@ export default function HomeScreen() {
                 Spent this month
               </Text>
 
-              <View style={{ gap: 6, marginTop: 2 }}>
+              <Pressable
+                onPress={() => setBudgetOpen(true)}
+                style={{ gap: 6, marginTop: 2 }}
+                accessibilityRole="button"
+                accessibilityLabel="Edit monthly budget"
+              >
                 <View style={styles.budgetRow}>
-                  <Text
-                    style={{
-                      fontFamily: typography.fontSansMedium,
-                      fontSize: 12,
-                      color: colors.textSecondary,
-                    }}
-                  >
-                    Monthly budget
-                  </Text>
+                  <View style={styles.budgetTitleRow}>
+                    <Text
+                      style={{
+                        fontFamily: typography.fontSansMedium,
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                        flexShrink: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      Budget · {budgetSourceLabel}
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={12}
+                      color={colors.textMuted}
+                    />
+                  </View>
                   <Text
                     style={{
                       fontFamily: typography.fontSansMedium,
@@ -391,33 +533,38 @@ export default function HomeScreen() {
                     style={[
                       styles.budgetFill,
                       {
-                        width: `${Math.round(budgetPct * 100)}%`,
-                        backgroundColor:
-                          budgetPct > 0.9 ? colors.danger : colors.accent,
+                        width: `${barWidthPct}%` as const,
+                        backgroundColor: barColor,
                       },
                     ]}
                   />
                 </View>
-              </View>
+              </Pressable>
 
               <View
                 style={[styles.heroMeta, { borderTopColor: colors.border }]}
               >
                 <View style={{ flex: 1 }}>
-                  <Text variant="caption">Received</Text>
+                  <Text variant="caption">Left to spend</Text>
                   <Text
                     style={{
                       fontFamily: typography.fontSansSemi,
-                      color: colors.credit,
+                      color:
+                        plan.remaining < 0 ? colors.danger : colors.text,
                       marginTop: 2,
                       fontSize: 15,
                     }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
                   >
-                    {formatINR(received)}
+                    {formatINR(plan.remaining)}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text variant="caption">Transactions</Text>
+                  <Text variant="caption">
+                    {plan.isCurrentMonth ? "Daily allowance" : "Per day left"}
+                  </Text>
                   <Text
                     style={{
                       fontFamily: typography.fontSansSemi,
@@ -425,6 +572,119 @@ export default function HomeScreen() {
                       marginTop: 2,
                       fontSize: 15,
                     }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                  >
+                    {formatINR(Math.round(plan.dailyAllowance))}
+                    {plan.isCurrentMonth ? "/day" : ""}
+                  </Text>
+                </View>
+              </View>
+
+              {paceLabel ? (
+                <View
+                  style={[
+                    styles.paceRow,
+                    {
+                      backgroundColor:
+                        paceLabel.tone === "hot"
+                          ? "rgba(217,123,123,0.12)"
+                          : paceLabel.tone === "cool"
+                            ? "rgba(143,203,176,0.12)"
+                            : colors.bgMuted,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      paceLabel.tone === "hot"
+                        ? "flash-outline"
+                        : paceLabel.tone === "cool"
+                          ? "leaf-outline"
+                          : "checkmark-circle-outline"
+                    }
+                    size={14}
+                    color={
+                      paceLabel.tone === "hot"
+                        ? colors.danger
+                        : paceLabel.tone === "cool"
+                          ? colors.credit
+                          : colors.textSecondary
+                    }
+                  />
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontFamily: typography.fontSansMedium,
+                      fontSize: 12,
+                      color:
+                        paceLabel.tone === "hot"
+                          ? colors.danger
+                          : paceLabel.tone === "cool"
+                            ? colors.credit
+                            : colors.textSecondary,
+                    }}
+                  >
+                    {paceLabel.text}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View
+                style={[styles.heroMeta, { borderTopColor: colors.border }]}
+              >
+                <View style={styles.statCol}>
+                  <Text
+                    variant="caption"
+                    numberOfLines={1}
+                    style={styles.statLabel}
+                  >
+                    Received
+                  </Text>
+                  <Text
+                    style={[styles.statValue, { color: colors.credit }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                  >
+                    {formatINR(received)}
+                  </Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text
+                    variant="caption"
+                    numberOfLines={1}
+                    style={styles.statLabel}
+                  >
+                    Net
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statValue,
+                      {
+                        color: plan.net >= 0 ? colors.credit : colors.danger,
+                      },
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                  >
+                    {plan.net >= 0 ? "+" : "−"}
+                    {formatINR(Math.abs(plan.net))}
+                  </Text>
+                </View>
+                <View style={styles.statCol}>
+                  <Text
+                    variant="caption"
+                    numberOfLines={1}
+                    style={styles.statLabel}
+                  >
+                    Txns
+                  </Text>
+                  <Text
+                    style={[styles.statValue, { color: colors.text }]}
+                    numberOfLines={1}
                   >
                     {summary?.count ?? 0}
                   </Text>
@@ -548,7 +808,7 @@ export default function HomeScreen() {
           {!loading && recent.length === 0 ? (
             <EmptyState
               title="No expenses yet"
-              body="Tap Add payments to import a PhonePe/GPay screenshot or enter one manually."
+              body="Tap Add payments to import SMS or a PhonePe/GPay screenshot, or enter one manually."
             />
           ) : (
             <Card style={{ paddingVertical: spacing.xs, paddingHorizontal: spacing.sm }}>
@@ -622,6 +882,19 @@ export default function HomeScreen() {
         onOpenChange={setAddOpen}
         onManual={() => router.push("/(app)/add")}
         onScreenshot={() => router.push("/(app)/import")}
+        onSms={() =>
+          router.push({ pathname: "/(app)/import", params: { mode: "sms" } })
+        }
+      />
+
+      <BudgetSheet
+        open={budgetOpen}
+        onClose={() => setBudgetOpen(false)}
+        prefs={budgetPrefs}
+        autoBudgetPreview={autoBudgetPreview}
+        onSaved={(next) => {
+          setBudgetPrefsState(next);
+        }}
       />
     </Screen>
   );
@@ -668,6 +941,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.sm,
+  },
+  budgetTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    flexShrink: 1,
   },
   budgetTrack: {
     height: 5,
@@ -679,12 +959,40 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     minWidth: 4,
   },
+  paceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    marginTop: 2,
+  },
   heroMeta: {
     flexDirection: "row",
-    gap: spacing.lg,
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     marginTop: spacing.xs,
     paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  statCol: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    gap: 3,
+  },
+  statLabel: {
+    textAlign: "center",
+    width: "100%",
+  },
+  statValue: {
+    fontFamily: typography.fontSansSemi,
+    fontSize: 15,
+    lineHeight: 20,
+    textAlign: "center",
+    width: "100%",
   },
   sectionHead: {
     flexDirection: "row",

@@ -1,5 +1,5 @@
 export type Direction = "debit" | "credit";
-export type ExpenseSource = "phonepe" | "gpay" | "manual";
+export type ExpenseSource = "phonepe" | "gpay" | "sms" | "manual";
 
 export interface UserPublic {
   id: string;

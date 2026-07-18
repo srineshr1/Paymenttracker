@@ -37,7 +37,7 @@ export const updateUsernameSchema = z.object({
 });
 
 export const directionSchema = z.enum(["debit", "credit"]);
-export const sourceSchema = z.enum(["phonepe", "gpay", "manual"]);
+export const sourceSchema = z.enum(["phonepe", "gpay", "sms", "manual"]);
 
 export const createExpenseSchema = z.object({
   amount: z

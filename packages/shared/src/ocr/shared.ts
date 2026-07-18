@@ -312,6 +312,7 @@ export function scoreConfidence(parts: {
   if (parts.paidAt) score += 0.15;
   if (parts.upiRef) score += 0.15;
   if (parts.status === "success") score += 0.05;
+  // phonepe/gpay/sms all count as a known channel
   if (parts.source !== "unknown") score += 0.05;
   return Math.min(1, Math.round(score * 100) / 100);
 }

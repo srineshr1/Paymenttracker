@@ -1,4 +1,4 @@
-export type ParsedSource = "phonepe" | "gpay" | "unknown";
+export type ParsedSource = "phonepe" | "gpay" | "sms" | "unknown";
 export type ParsedDirection = "debit" | "credit";
 
 export interface ParsedExpense {
@@ -13,4 +13,13 @@ export interface ParsedExpense {
   confidence: number;
   rawText: string;
   warnings: string[];
+}
+
+/** Raw SMS row from the device inbox (Android). */
+export interface SmsMessageInput {
+  body: string;
+  /** Sender id / short code, e.g. VM-HDFCBK */
+  address?: string | null;
+  /** Epoch ms when the SMS was received */
+  dateMs?: number | null;
 }

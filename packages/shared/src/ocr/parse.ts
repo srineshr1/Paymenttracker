@@ -72,5 +72,6 @@ export function parseUpiScreenshotText(raw: string): ParsedExpense {
 export * from "./types.js";
 export * from "./shared.js";
 export * from "./history.js";
+export * from "./sms.js";
 export { parsePhonePeOcr } from "./phonepe.js";
 export { parseGPayOcr } from "./gpay.js";

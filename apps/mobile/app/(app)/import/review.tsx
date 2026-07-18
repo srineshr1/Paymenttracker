@@ -49,7 +49,9 @@ export default function ImportReviewScreen() {
   const [showRaw, setShowRaw] = useState(false);
 
   const source =
-    initial?.source === "phonepe" || initial?.source === "gpay"
+    initial?.source === "phonepe" ||
+    initial?.source === "gpay" ||
+    initial?.source === "sms"
       ? initial.source
       : "manual";
 

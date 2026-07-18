@@ -8,7 +8,7 @@ const logos = {
   manual: require("../../assets/images/brands/manual.png"),
 } as const;
 
-type Source = "phonepe" | "gpay" | "manual" | string;
+type Source = "phonepe" | "gpay" | "sms" | "manual" | string;
 
 export function SourceLogo({
   source,
@@ -18,6 +18,31 @@ export function SourceLogo({
   size?: number;
 }) {
   const { colors } = useTheme();
+
+  if (source === "sms") {
+    return (
+      <View
+        style={[
+          styles.wrap,
+          {
+            width: size,
+            height: size,
+            borderRadius: Math.max(10, size * 0.28),
+            borderColor: colors.border,
+            backgroundColor: colors.accentSoft,
+          },
+        ]}
+      >
+        <Ionicons
+          name="chatbubble-ellipses-outline"
+          size={Math.round(size * 0.48)}
+          color={colors.accentStrong}
+          accessibilityLabel="SMS"
+        />
+      </View>
+    );
+  }
+
   const key =
     source === "phonepe" || source === "gpay" || source === "manual"
       ? source
