@@ -89,6 +89,84 @@ export function formatMonthYear(year: number, month: number) {
   return `${months[month - 1]} ${year}`;
 }
 
+export function formatMonthShort(year: number, month: number) {
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+  return `${months[month - 1]} ${year}`;
+}
+
+/** ₹42.8k · ₹1.2L · ₹42,850 */
+export function formatINRCompact(amount: string | number) {
+  const n = typeof amount === "string" ? Number(amount) : amount;
+  if (!Number.isFinite(n)) return "₹—";
+  const abs = Math.abs(n);
+  if (abs >= 1_00_00_000) {
+    const v = abs / 1_00_00_000;
+    return `₹${v >= 10 ? v.toFixed(0) : v.toFixed(1).replace(/\.0$/, "")}Cr`;
+  }
+  if (abs >= 1_00_000) {
+    const v = abs / 1_00_000;
+    return `₹${v >= 10 ? v.toFixed(0) : v.toFixed(1).replace(/\.0$/, "")}L`;
+  }
+  if (abs >= 1000) {
+    const v = abs / 1000;
+    return `₹${v >= 100 ? v.toFixed(0) : v.toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return formatINR(abs);
+}
+
+export function formatRelativePaidAt(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayDiff = Math.round(
+    (startToday.getTime() - startThat.getTime()) / 86_400_000
+  );
+
+  let h = d.getHours();
+  const m = d.getMinutes().toString().padStart(2, "0");
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  const time = `${h}:${m} ${ampm}`;
+
+  if (dayDiff === 0) return `Today, ${time}`;
+  if (dayDiff === 1) return `Yesterday, ${time}`;
+
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  if (d.getFullYear() === now.getFullYear()) {
+    return `${months[d.getMonth()]} ${d.getDate()}, ${time}`;
+  }
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 export function sourceLabel(source: string) {
   switch (source) {
     case "phonepe":

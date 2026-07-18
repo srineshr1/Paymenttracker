@@ -163,28 +163,6 @@ export default function ImportSelectScreen() {
     setEditing(null);
   };
 
-  const removeRow = useCallback((id: string) => {
-    setRows((prev) => prev.filter((r) => r.id !== id));
-    setSelected((s) => {
-      const n = { ...s };
-      delete n[id];
-      return n;
-    });
-    setEditing((e) => (e?.id === id ? null : e));
-  }, []);
-
-  const confirmRemoveEditing = () => {
-    if (!editing) return;
-    Alert.alert("Remove payment?", "This drops it from the import list.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: () => removeRow(editing.id),
-      },
-    ]);
-  };
-
   const addSelected = async () => {
     setError(null);
     setStatus(null);
@@ -580,14 +558,8 @@ export default function ImportSelectScreen() {
               </Field>
             </ScrollView>
 
-            <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
+            <View style={{ marginTop: spacing.lg }}>
               <Button title="Save" onPress={saveEdit} />
-              <Button title="Cancel" variant="ghost" onPress={closeEdit} />
-              <Button
-                title="Remove from list"
-                variant="danger"
-                onPress={confirmRemoveEditing}
-              />
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -723,7 +695,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   modalSheet: {
     borderTopLeftRadius: radius.xxl,
