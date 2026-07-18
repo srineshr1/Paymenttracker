@@ -22,6 +22,10 @@ import {
   recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
 import { TesseractHost } from "@/src/features/ocr/TesseractHost";
+import {
+  enableSmsAutoImport,
+  getSmsAutoImportEnabled,
+} from "@/src/features/sms/autoImport";
 import { importPaymentsFromSms } from "@/src/features/sms/importSms";
 import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
 
@@ -209,6 +213,14 @@ export default function ImportScreen() {
         return;
       }
 
+      // First successful SMS scan → turn on live auto-import for next messages
+      try {
+        const already = await getSmsAutoImportEnabled();
+        if (!already) await enableSmsAutoImport();
+      } catch {
+        /* permission edge — bulk review still works */
+      }
+
       setStatus(null);
       router.push({
         pathname: "/(app)/import/select",
@@ -261,8 +273,8 @@ export default function ImportScreen() {
           <Card variant="soft" style={{ gap: spacing.md }}>
             <Text variant="label">SMS inbox</Text>
             <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-              Scan bank and UPI messages from the last 90 days. Parsing stays on
-              this phone — nothing is uploaded.
+              Scan the last 90 days, then keep auto-importing new bank/UPI SMS
+              as they arrive (while the app is unlocked). Nothing is uploaded.
             </Text>
             <Button
               title={busy ? "Scanning…" : "Import from SMS"}

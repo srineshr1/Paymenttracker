@@ -3,9 +3,11 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,6 +28,12 @@ import { formatINR } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
+import {
+  disableSmsAutoImport,
+  enableSmsAutoImport,
+  getSmsAutoImportEnabled,
+} from "@/src/features/sms/autoImport";
+import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -40,6 +48,39 @@ export default function SettingsScreen() {
     savingsRate: DEFAULT_SAVINGS_RATE,
   });
   const [autoPreview, setAutoPreview] = useState(DEFAULT_BUDGET);
+  const [smsAuto, setSmsAuto] = useState(false);
+  const [smsBusy, setSmsBusy] = useState(false);
+  const smsSupported =
+    Platform.OS === "android" && isSmsInboxAvailable();
+
+  useEffect(() => {
+    if (!smsSupported) return;
+    void getSmsAutoImportEnabled().then(setSmsAuto);
+  }, [smsSupported]);
+
+  const onToggleSmsAuto = async (next: boolean) => {
+    if (smsBusy) return;
+    setSmsBusy(true);
+    try {
+      if (next) {
+        await enableSmsAutoImport();
+        setSmsAuto(true);
+      } else {
+        await disableSmsAutoImport();
+        setSmsAuto(false);
+      }
+    } catch (e) {
+      setSmsAuto(false);
+      Alert.alert(
+        "SMS auto-import",
+        e instanceof Error
+          ? e.message
+          : "Could not enable SMS listening. Check permissions in system Settings."
+      );
+    } finally {
+      setSmsBusy(false);
+    }
+  };
 
   const refreshBudget = useCallback(async () => {
     try {
@@ -270,6 +311,65 @@ export default function SettingsScreen() {
             />
           </Card>
         </View>
+
+        {/* SMS auto-import (Android native build) */}
+        {smsSupported ? (
+          <View style={{ gap: spacing.sm }}>
+            <Text variant="label" style={{ marginLeft: 4 }}>
+              Payments from SMS
+            </Text>
+            <Card variant="elevated" style={styles.sectionCard}>
+              <View style={styles.sectionHead}>
+                <View
+                  style={[
+                    styles.iconWrap,
+                    {
+                      backgroundColor: colors.accentSoft,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={18}
+                    color={colors.accentStrong}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontFamily: typography.fontSansSemi,
+                      fontSize: 16,
+                      color: colors.text,
+                    }}
+                  >
+                    Auto-import SMS
+                  </Text>
+                  <Text muted style={{ fontSize: 13, marginTop: 2, lineHeight: 18 }}>
+                    {smsAuto
+                      ? "On · new bank/UPI messages save while unlocked"
+                      : "Off · turn on to parse payments as SMS arrives"}
+                  </Text>
+                </View>
+                <Switch
+                  value={smsAuto}
+                  onValueChange={(v) => void onToggleSmsAuto(v)}
+                  disabled={smsBusy}
+                  trackColor={{
+                    false: colors.borderStrong,
+                    true: colors.accent,
+                  }}
+                  thumbColor={colors.bgCard}
+                  accessibilityLabel="Auto-import payments from SMS"
+                />
+              </View>
+              <Text muted style={{ fontSize: 12, lineHeight: 18 }}>
+                Stays on this phone. Only high-confidence payment SMS is saved;
+                duplicates are skipped. Needs the app unlocked (passcode).
+              </Text>
+            </Card>
+          </View>
+        ) : null}
 
         {/* Account */}
         <View style={{ gap: spacing.sm }}>

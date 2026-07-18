@@ -24,7 +24,8 @@
         "android.permission.INTERNET",
         "android.permission.READ_MEDIA_IMAGES",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.READ_SMS"
+        "android.permission.READ_SMS",
+        "android.permission.RECEIVE_SMS"
       ],
       "usesCleartextTraffic": true,
       "predictiveBackGestureEnabled": false

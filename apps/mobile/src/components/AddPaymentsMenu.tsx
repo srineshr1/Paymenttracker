@@ -127,33 +127,6 @@ export function AddPaymentsMenu({
     };
   });
 
-  const manualStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 1],
-      [0, 1],
-      Extrapolation.CLAMP
-    ),
-    transform: [
-      {
-        translateY: interpolate(
-          progress.value,
-          [0, 1],
-          [24, 0],
-          Extrapolation.CLAMP
-        ),
-      },
-      {
-        scale: interpolate(
-          progress.value,
-          [0, 1],
-          [0.92, 1],
-          Extrapolation.CLAMP
-        ),
-      },
-    ],
-  }));
-
   const shotStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       progress.value,
@@ -166,7 +139,7 @@ export function AddPaymentsMenu({
         translateY: interpolate(
           progress.value,
           [0, 1],
-          [40, 0],
+          [16, 0],
           Extrapolation.CLAMP
         ),
       },
@@ -174,7 +147,7 @@ export function AddPaymentsMenu({
         scale: interpolate(
           progress.value,
           [0, 1],
-          [0.92, 1],
+          [0.96, 1],
           Extrapolation.CLAMP
         ),
       },
@@ -278,49 +251,59 @@ export function AddPaymentsMenu({
       <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
         <Animated.View
           pointerEvents={open ? "auto" : "none"}
-          style={[styles.optionWrap, shotStyle]}
+          style={[
+            styles.sheet,
+            {
+              backgroundColor: colors.bgElevated,
+              borderColor: colors.border,
+            },
+            shotStyle,
+          ]}
         >
           <Pressable
             onPress={() => runAction(onScreenshot)}
             style={({ pressed }) => [
-              styles.option,
-              {
-                backgroundColor: colors.bgCard,
-                borderColor: colors.borderStrong,
-                opacity: pressed ? 0.9 : 1,
-              },
+              styles.row,
+              pressed && { backgroundColor: colors.bgMuted },
             ]}
           >
-            <Text style={[styles.optionTitle, { color: colors.text }]}>
-              Screenshot
-            </Text>
-            <Text muted style={styles.optionSub}>
-              PhonePe / GPay
-            </Text>
+            <View style={styles.rowText}>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>
+                Import screenshot
+              </Text>
+              <Text style={[styles.rowHint, { color: colors.textMuted }]}>
+                PhonePe or GPay
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.textMuted}
+            />
           </Pressable>
-        </Animated.View>
 
-        <Animated.View
-          pointerEvents={open ? "auto" : "none"}
-          style={[styles.optionWrap, manualStyle]}
-        >
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
           <Pressable
             onPress={() => runAction(onManual)}
             style={({ pressed }) => [
-              styles.option,
-              {
-                backgroundColor: colors.bgCard,
-                borderColor: colors.borderStrong,
-                opacity: pressed ? 0.9 : 1,
-              },
+              styles.row,
+              pressed && { backgroundColor: colors.bgMuted },
             ]}
           >
-            <Text style={[styles.optionTitle, { color: colors.text }]}>
-              Manual
-            </Text>
-            <Text muted style={styles.optionSub}>
-              Type amount & merchant
-            </Text>
+            <View style={styles.rowText}>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>
+                Enter manually
+              </Text>
+              <Text style={[styles.rowHint, { color: colors.textMuted }]}>
+                Amount and merchant
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.textMuted}
+            />
           </Pressable>
         </Animated.View>
 
@@ -330,7 +313,11 @@ export function AddPaymentsMenu({
           onPressOut={onPressOut}
           accessibilityRole="button"
           accessibilityLabel={open ? "Close add menu" : "Add payments"}
-          style={[styles.mainBtn, { backgroundColor: colors.accent }, mainBtnStyle]}
+          style={[
+            styles.mainBtn,
+            { backgroundColor: colors.accent },
+            mainBtnStyle,
+          ]}
         >
           <Animated.View style={[styles.mainIconBox, mainIconStyle]}>
             <Ionicons
@@ -382,29 +369,42 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 50,
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
   },
-  optionWrap: {
-    width: 220,
+  sheet: {
+    width: "100%",
+    maxWidth: 320,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
-  option: {
+  row: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
+    gap: spacing.md,
     paddingVertical: 14,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 64,
   },
-  optionTitle: {
-    fontFamily: typography.fontSansSemi,
-    fontSize: 16,
-    textAlign: "center",
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  optionSub: {
+  rowTitle: {
+    fontFamily: typography.fontSansMedium,
+    fontSize: 15,
+    letterSpacing: -0.1,
+  },
+  rowHint: {
+    fontFamily: typography.fontSans,
     fontSize: 12,
-    textAlign: "center",
+    letterSpacing: 0.1,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: spacing.lg,
   },
   mainBtn: {
     flexDirection: "row",
