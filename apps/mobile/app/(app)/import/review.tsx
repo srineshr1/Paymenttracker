@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ParsedExpense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
+import { CategoryChips } from "@/src/components/CategoryChips";
 import { Badge, Button, Card, Input, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
@@ -42,6 +43,7 @@ export default function ImportReviewScreen() {
     initial?.direction ?? "debit"
   );
   const [notes, setNotes] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState(false);
@@ -76,6 +78,7 @@ export default function ImportReviewScreen() {
         source: source === "manual" ? "manual" : source,
         upiRef: upiRef.trim() || null,
         notes: notes.trim() || null,
+        categoryId,
         rawOcrText: initial?.rawText ?? null,
       });
       router.replace("/(app)");
@@ -210,6 +213,9 @@ export default function ImportReviewScreen() {
                 onChangeText={setUpiRef}
                 autoCapitalize="characters"
               />
+            </Field>
+            <Field label="Category">
+              <CategoryChips value={categoryId} onChange={setCategoryId} />
             </Field>
             <Field label="Notes">
               <Input value={notes} onChangeText={setNotes} />

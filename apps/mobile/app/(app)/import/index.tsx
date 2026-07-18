@@ -16,7 +16,7 @@ import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing } from "@/src/design/tokens";
 import {
   parseScreenshotAll,
-  recognizeTextFromBase64,
+  recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
 
 const SAMPLE_PHONEPE = `PhonePe
@@ -92,15 +92,9 @@ export default function ImportScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    if (!asset.base64) {
-      setError("Could not read this image. Try another screenshot or paste text.");
-      setShowPaste(true);
-      return;
-    }
-
     setPicked({
       uri: asset.uri,
-      base64: asset.base64,
+      base64: asset.base64 ?? "",
       mimeType: asset.mimeType ?? "image/jpeg",
     });
     setError(null);
@@ -114,13 +108,14 @@ export default function ImportScreen() {
 
     setError(null);
     setBusy(true);
-    setStatus("Reading text from screenshot… (first time may take a bit)");
+    setStatus("Reading text on device…");
 
     try {
-      const { text } = await recognizeTextFromBase64(
-        picked.base64,
-        picked.mimeType
-      );
+      const { text } = await recognizeTextFromImage({
+        uri: picked.uri,
+        base64: picked.base64 || null,
+        mimeType: picked.mimeType,
+      });
       setStatus(null);
       goReview(picked.uri, text);
     } catch (e) {

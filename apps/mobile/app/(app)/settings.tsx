@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
   Alert,
   Pressable,
@@ -14,14 +15,48 @@ import { Card, Screen, Segmented, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
+import { exportExpensesShare } from "@/src/data/export";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors, preference, setPreference, mode, isDark } = useTheme();
   const { user, logout } = useAuth();
+  const [exporting, setExporting] = useState(false);
 
   const initial = (user?.username?.trim()?.[0] ?? "?").toUpperCase();
+
+  const onExport = (format: "csv" | "json") => {
+    Alert.alert(
+      format === "csv" ? "Export CSV?" : "Export JSON?",
+      "Shares a file of decrypted expenses from this device (while unlocked).",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Export",
+          onPress: async () => {
+            setExporting(true);
+            try {
+              const { count } = await exportExpensesShare(format);
+              Alert.alert(
+                "Export ready",
+                count === 0
+                  ? "No expenses to export yet."
+                  : `Shared ${count} expense${count === 1 ? "" : "s"}.`
+              );
+            } catch (e) {
+              Alert.alert(
+                "Export failed",
+                e instanceof Error ? e.message : "Could not export"
+              );
+            } finally {
+              setExporting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
   const modeLabel =
     preference === "system"
       ? `System · ${mode === "dark" ? "Dark" : "Light"}`
@@ -188,6 +223,30 @@ export default function SettingsScreen() {
               }}
             />
           </Card>
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" style={{ marginLeft: 4 }}>
+            Data
+          </Text>
+          <Card variant="elevated" style={styles.listCard}>
+            <SettingsRow
+              icon="download-outline"
+              title="Export CSV"
+              subtitle={exporting ? "Preparing…" : "Share expenses as spreadsheet"}
+              onPress={() => !exporting && onExport("csv")}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon="code-slash-outline"
+              title="Export JSON"
+              subtitle="Full local backup file"
+              onPress={() => !exporting && onExport("json")}
+            />
+          </Card>
+          <Text muted style={{ marginLeft: 4, fontSize: 12, lineHeight: 18 }}>
+            Everything stays on this device. Export only works while unlocked.
+          </Text>
         </View>
 
         {/* Sign out */}

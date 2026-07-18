@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,27 +25,37 @@ export default function RegisterScreen() {
   const [step, setStep] = useState<"user" | "pin" | "confirm">("user");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const submitting = useRef(false);
+  // Snapshot the create-PIN so confirm can't race with a cleared state.
+  const createdPin = useRef("");
 
   useEffect(() => {
     if (step !== "pin" || passcode.length !== 6) return;
+    createdPin.current = passcode;
+    setConfirm("");
     setStep("confirm");
   }, [passcode, step]);
 
   useEffect(() => {
-    if (step !== "confirm" || confirm.length !== 6 || loading) return;
-    let cancelled = false;
+    if (step !== "confirm" || confirm.length !== 6 || submitting.current) return;
+
+    const pin = createdPin.current;
+    const confirmed = confirm;
+
+    if (confirmed !== pin) {
+      setError("Passcodes do not match");
+      setConfirm("");
+      return;
+    }
+
+    submitting.current = true;
+    setError(null);
+    setLoading(true);
+
     (async () => {
-      if (confirm !== passcode) {
-        setError("Passcodes do not match");
-        setConfirm("");
-        return;
-      }
-      setError(null);
-      setLoading(true);
       try {
-        await register(username.trim(), passcode);
+        await register(username.trim(), pin);
       } catch (e) {
-        if (cancelled) return;
         const raw =
           e instanceof ApiError
             ? e.message
@@ -56,20 +66,19 @@ export default function RegisterScreen() {
           raw.includes("NullPointerException") ||
           raw.includes("prepareAsync") ||
           raw.includes("NativeDatabase")
-            ? "Storage hiccup. Tap confirm again, or reload the app (shake → Reload)."
+            ? "Storage hiccup. Try again, or reload the app (shake → Reload)."
             : raw;
         setError(friendly);
+        createdPin.current = "";
         setPasscode("");
         setConfirm("");
         setStep("pin");
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
+        submitting.current = false;
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [confirm, passcode, register, username, step, loading]);
+  }, [confirm, register, username, step]);
 
   return (
     <Screen style={{ paddingTop: insets.top + spacing.xxl }}>

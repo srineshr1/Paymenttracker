@@ -29,6 +29,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
+  const [cursor, setCursor] = useState(() => {
+    const n = new Date();
+    return { year: n.getFullYear(), month: n.getMonth() + 1 };
+  });
   const [summary, setSummary] = useState<MonthSummary | null>(null);
   const [recent, setRecent] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,10 +42,15 @@ export default function HomeScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      const now = new Date();
+      const monthStart = new Date(cursor.year, cursor.month - 1, 1);
+      const monthEnd = new Date(cursor.year, cursor.month, 0, 23, 59, 59, 999);
       const [s, list] = await Promise.all([
-        api.monthSummary(now.getFullYear(), now.getMonth() + 1),
-        api.listExpenses({ limit: 8 }),
+        api.monthSummary(cursor.year, cursor.month),
+        api.listExpenses({
+          limit: 8,
+          from: monthStart.toISOString(),
+          to: monthEnd.toISOString(),
+        }),
       ]);
       setSummary(s);
       setRecent(list.expenses);
@@ -50,7 +59,7 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cursor.year, cursor.month]);
 
   useFocusEffect(
     useCallback(() => {
@@ -67,7 +76,12 @@ export default function HomeScreen() {
     }, [load])
   );
 
-  const now = new Date();
+  const shiftMonth = (delta: number) => {
+    setCursor((c) => {
+      const d = new Date(c.year, c.month - 1 + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+  };
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
@@ -111,9 +125,25 @@ export default function HomeScreen() {
         </View>
 
         <Card variant="hero">
-          <Text variant="label">
-            {formatMonthYear(now.getFullYear(), now.getMonth() + 1)}
-          </Text>
+          <View style={styles.monthNav}>
+            <Pressable
+              onPress={() => shiftMonth(-1)}
+              hitSlop={10}
+              style={styles.monthBtn}
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
+            </Pressable>
+            <Text variant="label" style={{ flex: 1, textAlign: "center" }}>
+              {formatMonthYear(cursor.year, cursor.month)}
+            </Text>
+            <Pressable
+              onPress={() => shiftMonth(1)}
+              hitSlop={10}
+              style={styles.monthBtn}
+            >
+              <Ionicons name="chevron-forward" size={20} color={colors.text} />
+            </Pressable>
+          </View>
           {loading && !summary ? (
             <ActivityIndicator
               color={colors.accent}
@@ -266,5 +296,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.md,
+  },
+  monthNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  monthBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

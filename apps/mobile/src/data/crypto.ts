@@ -108,24 +108,41 @@ function hexToBytes(hex: string): Uint8Array {
   return out;
 }
 
+function copyBytes(src: Uint8Array): Uint8Array {
+  // Defensive copy — some native bridges mishandle views / shared buffers.
+  return Uint8Array.from(src);
+}
+
 async function deriveKek(
   passcode: string,
   salt: Uint8Array
 ): Promise<Uint8Array> {
-  const passBytes = new TextEncoder().encode(passcode);
-  const material = new Uint8Array(passBytes.length + salt.length);
+  const pin = String(passcode ?? "").trim();
+  const saltBytes = copyBytes(salt);
+  const passBytes = new TextEncoder().encode(pin);
+  const material = new Uint8Array(passBytes.length + saltBytes.length);
   material.set(passBytes, 0);
-  material.set(salt, passBytes.length);
+  material.set(saltBytes, passBytes.length);
 
-  let hash = new Uint8Array(
-    await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA512, material)
+  let hash = copyBytes(
+    new Uint8Array(
+      await Crypto.digest(
+        Crypto.CryptoDigestAlgorithm.SHA512,
+        material as BufferSource
+      )
+    )
   );
   for (let i = 1; i < KDF_ITERS; i++) {
-    hash = new Uint8Array(
-      await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA512, hash)
+    hash = copyBytes(
+      new Uint8Array(
+        await Crypto.digest(
+          Crypto.CryptoDigestAlgorithm.SHA512,
+          hash as BufferSource
+        )
+      )
     );
   }
-  return hash.slice(0, 32);
+  return copyBytes(hash.subarray(0, 32));
 }
 
 async function makeVerifier(kek: Uint8Array): Promise<string> {
@@ -139,21 +156,29 @@ async function wrapDek(
   dek: AESEncryptionKey,
   kek: Uint8Array
 ): Promise<string> {
-  const wrapKey = await AESEncryptionKey.import(kek);
-  const dekBytes = await dek.bytes();
+  const wrapKey = await AESEncryptionKey.import(copyBytes(kek));
+  const dekBytes = copyBytes(await dek.bytes());
   const sealed = await aesEncryptAsync(dekBytes, wrapKey);
-  const combined = await sealed.combined("base64");
-  return combined as string;
+  // Hex avoids any base64 (+, /, =) edge cases in SecureStore.
+  const combined = copyBytes(await sealed.combined("bytes"));
+  return `hex:${bytesToHex(combined)}`;
 }
 
 async function unwrapDek(
-  wrappedB64: string,
+  wrapped: string,
   kek: Uint8Array
 ): Promise<AESEncryptionKey> {
-  const wrapKey = await AESEncryptionKey.import(kek);
-  const sealed = AESSealedData.fromCombined(wrappedB64);
+  const wrapKey = await AESEncryptionKey.import(copyBytes(kek));
+  let combined: Uint8Array | string = wrapped;
+  if (wrapped.startsWith("hex:")) {
+    combined = hexToBytes(wrapped.slice(4));
+  }
+  const sealed = AESSealedData.fromCombined(combined, {
+    ivLength: 12,
+    tagLength: 16,
+  });
   const plain = await aesDecryptAsync(sealed, wrapKey, { output: "bytes" });
-  return AESEncryptionKey.import(plain);
+  return AESEncryptionKey.import(copyBytes(plain));
 }
 
 /** Persist DEK for device-auth recovery (biometrics / lock screen). */
@@ -256,8 +281,12 @@ async function rewrapDekWithPasscode(
   dek: AESEncryptionKey,
   passcode: string
 ): Promise<void> {
-  const newSalt = await Crypto.getRandomBytesAsync(16);
-  const newKek = await deriveKek(passcode, newSalt);
+  const pin = String(passcode ?? "").trim();
+  if (!/^\d{6}$/.test(pin)) {
+    throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
+  }
+  const newSalt = copyBytes(await Crypto.getRandomBytesAsync(16));
+  const newKek = await deriveKek(pin, newSalt);
   const newVerifier = await makeVerifier(newKek);
   const newWrapped = await wrapDek(dek, newKek);
 
@@ -271,13 +300,20 @@ async function rewrapDekWithPasscode(
 
 /**
  * First-time setup: generate DEK, wrap with passcode-derived KEK, store verifier.
+ * Verifies a full lock→unlock round-trip before returning so a bad wrap
+ * can never leave the user with a passcode that won't unlock later.
  */
 export async function setupVault(
   passcode: string,
   userId: string
 ): Promise<void> {
-  const salt = await Crypto.getRandomBytesAsync(16);
-  const kek = await deriveKek(passcode, salt);
+  const pin = String(passcode ?? "").trim();
+  if (!/^\d{6}$/.test(pin)) {
+    throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
+  }
+
+  const salt = copyBytes(await Crypto.getRandomBytesAsync(16));
+  const kek = await deriveKek(pin, salt);
   const verifier = await makeVerifier(kek);
   const dek = await AESEncryptionKey.generate();
   const wrapped = await wrapDek(dek, kek);
@@ -288,7 +324,33 @@ export async function setupVault(
   await setSecure(KEYS.userId, userId);
   await saveRecoveryDek(dek);
   await clearFailedAttempts();
-  activeDek = dek;
+
+  // Prove the stored material unlocks with the same PIN before we finish.
+  activeDek = null;
+  const salt2 = hexToBytes((await getSecure(KEYS.salt)) ?? "");
+  const verifier2 = await getSecure(KEYS.verifier);
+  const wrapped2 = await getSecure(KEYS.wrappedDek);
+  if (!verifier2 || !wrapped2) {
+    throw new LocalDataError("Could not persist vault. Try again.", 500);
+  }
+  const kek2 = await deriveKek(pin, salt2);
+  const check = await makeVerifier(kek2);
+  if (check !== verifier2) {
+    await wipeVaultSecrets();
+    throw new LocalDataError(
+      "Passcode setup failed verification. Try again.",
+      500
+    );
+  }
+  try {
+    activeDek = await unwrapDek(wrapped2, kek2);
+  } catch {
+    await wipeVaultSecrets();
+    throw new LocalDataError(
+      "Passcode setup failed to seal the vault. Try again.",
+      500
+    );
+  }
 }
 
 /**
@@ -297,6 +359,11 @@ export async function setupVault(
  */
 export async function unlockVault(passcode: string): Promise<void> {
   await assertNotRateLimited();
+
+  const pin = String(passcode ?? "").trim();
+  if (!/^\d{6}$/.test(pin)) {
+    throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
+  }
 
   const saltHex = await getSecure(KEYS.salt);
   const verifier = await getSecure(KEYS.verifier);
@@ -309,7 +376,7 @@ export async function unlockVault(passcode: string): Promise<void> {
   }
 
   const salt = hexToBytes(saltHex);
-  const kek = await deriveKek(passcode, salt);
+  const kek = await deriveKek(pin, salt);
   const check = await makeVerifier(kek);
   if (check !== verifier) {
     await recordFailedAttempt();
@@ -319,10 +386,24 @@ export async function unlockVault(passcode: string): Promise<void> {
   try {
     activeDek = await unwrapDek(wrapped, kek);
   } catch {
+    // Verifier matched but unwrap failed — storage/format problem, not the PIN.
     await recordFailedAttempt();
-    throw new LocalDataError("Incorrect passcode.", 401);
+    throw new LocalDataError(
+      "Vault data is unreadable. Use Forgot passcode to reset.",
+      500
+    );
   }
   await clearFailedAttempts();
+
+  // Migrate legacy base64 wraps → hex on successful unlock
+  if (!wrapped.startsWith("hex:")) {
+    try {
+      const migrated = await wrapDek(activeDek, kek);
+      await setSecure(KEYS.wrappedDek, migrated);
+    } catch {
+      /* keep legacy wrap */
+    }
+  }
 
   // Ensure recovery key exists for forgot-passcode flow
   try {

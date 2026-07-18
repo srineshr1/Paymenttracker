@@ -27,7 +27,10 @@ export function ExpenseRow({
         <Text variant="subtitle" numberOfLines={1}>
           {expense.merchant}
         </Text>
-        <Text variant="caption">{formatDateTime(expense.paidAt)}</Text>
+        <Text variant="caption">
+          {formatDateTime(expense.paidAt)}
+          {expense.category ? ` · ${expense.category.name}` : ""}
+        </Text>
       </View>
       <Amount amount={expense.amount} direction={expense.direction} size="sm" />
     </Pressable>

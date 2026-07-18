@@ -3,32 +3,90 @@ import {
   parseUpiScreenshotText,
   type ParsedExpense,
 } from "@paymenttracker/shared";
+import * as FileSystem from "expo-file-system/legacy";
+
+export type RecognizeInput = {
+  /** Preferred — file:// or content:// URI from image picker */
+  uri?: string | null;
+  /** Fallback when only base64 is available */
+  base64?: string | null;
+  mimeType?: string;
+};
 
 /**
- * Read text from a screenshot (base64) on-device when a native OCR module is present.
- * No server call — parsers in @paymenttracker/shared are fully offline.
+ * On-device OCR via ML Kit (requires a custom dev build, not Expo Go).
+ * Parsers in @paymenttracker/shared stay fully offline.
  */
-export async function recognizeTextFromBase64(
-  _imageBase64: string,
-  _mimeType = "image/jpeg"
+export async function recognizeTextFromImage(
+  input: RecognizeInput
 ): Promise<{ text: string; engine: string }> {
-  // ML Kit (and similar) require a custom dev client; Expo Go uses the stub.
-  try {
-    // Dynamic require so Metro can resolve the stub without hard-failing.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mlkit = require("@react-native-ml-kit/text-recognition");
-    const TextRecognition = mlkit?.default ?? mlkit;
-    if (typeof TextRecognition?.recognize === "function") {
-      // Real ML Kit needs a file URI; base64 path is not supported without writing a temp file.
-      // Until wired with file URI in a dev client, fall through to the clear error.
+  let imageUri = input.uri?.trim() || null;
+
+  if (!imageUri && input.base64) {
+    const ext = input.mimeType?.includes("png") ? "png" : "jpg";
+    const dir = FileSystem.cacheDirectory;
+    if (!dir) {
+      throw new Error("Could not access cache to process this image.");
     }
-  } catch {
-    /* package not installed */
+    imageUri = `${dir}spentd-ocr-${Date.now()}.${ext}`;
+    await FileSystem.writeAsStringAsync(imageUri, input.base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
   }
 
-  throw new Error(
-    "On-device OCR is not available in this build. Use Manual entry for now, or add a native OCR module in a custom build later. No server is required."
-  );
+  if (!imageUri) {
+    throw new Error("No image to read. Choose a screenshot or paste text.");
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("@react-native-ml-kit/text-recognition");
+    const TextRecognition = mod?.default ?? mod;
+    if (typeof TextRecognition?.recognize !== "function") {
+      throw new Error("ML_KIT_UNAVAILABLE");
+    }
+
+    const script =
+      TextRecognition.TextRecognitionScript?.LATIN ??
+      mod?.TextRecognitionScript?.LATIN ??
+      "Latin";
+
+    const result = await TextRecognition.recognize(imageUri, script);
+    const text =
+      typeof result === "string"
+        ? result
+        : typeof result?.text === "string"
+          ? result.text
+          : "";
+
+    if (!text.trim()) {
+      throw new Error(
+        "No text found in this image. Try a clearer screenshot or paste text."
+      );
+    }
+    return { text, engine: "mlkit" };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (
+      msg.includes("ML_KIT") ||
+      msg.includes("doesn't seem to be linked") ||
+      msg.includes("Expo managed") ||
+      msg.includes("Native module")
+    ) {
+      throw new Error(
+        "On-device OCR needs the Spentd dev build (not Expo Go). Use Paste text below, or run: npx expo run:android"
+      );
+    }
+    throw e instanceof Error ? e : new Error(String(e));
+  }
+}
+
+/** @deprecated Prefer recognizeTextFromImage({ base64, mimeType }) */
+export async function recognizeTextFromBase64(
+  imageBase64: string,
+  mimeType = "image/jpeg"
+): Promise<{ text: string; engine: string }> {
+  return recognizeTextFromImage({ base64: imageBase64, mimeType });
 }
 
 export function parseScreenshotText(text: string): ParsedExpense {

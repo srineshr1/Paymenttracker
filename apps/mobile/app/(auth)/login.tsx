@@ -38,13 +38,15 @@ export default function LoginScreen() {
   useEffect(() => {
     if (passcode.length !== 6 || submitting.current) return;
 
+    // Snapshot immediately — later setPasscode("") must not affect unlock.
+    const pin = passcode;
     submitting.current = true;
     setError(null);
     setLoading(true);
 
     (async () => {
       try {
-        await unlock(passcode);
+        await unlock(pin);
       } catch (e) {
         setPasscode("");
         if (e instanceof ApiError) {
@@ -54,7 +56,10 @@ export default function LoginScreen() {
             setError("No account found. Create one to continue.");
             await refreshAccountState();
             router.replace("/(auth)/register");
+          } else if (e.status === 429) {
+            setError(e.message);
           } else {
+            // Vault seal/storage failures — point user at recovery
             setError(e.message);
           }
         } else if (e instanceof Error) {
@@ -108,7 +113,7 @@ export default function LoginScreen() {
             styles.content,
             { paddingBottom: insets.bottom + spacing.xl },
           ]}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
         >
           <View style={styles.brand}>
             <AppLogo size={64} style={{ marginBottom: spacing.sm }} />

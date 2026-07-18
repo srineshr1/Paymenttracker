@@ -11,6 +11,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
+import { CategoryChips } from "@/src/components/CategoryChips";
+import { DateField } from "@/src/components/DateField";
 import { Button, Input, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
@@ -52,6 +54,8 @@ export default function AddExpenseScreen() {
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
   const [direction, setDirection] = useState<"debit" | "credit">("debit");
+  const [paidAt, setPaidAt] = useState(() => new Date());
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,9 +83,10 @@ export default function AddExpenseScreen() {
         merchant: name,
         amount: amt,
         direction,
-        paidAt: new Date().toISOString(),
+        paidAt: paidAt.toISOString(),
         source: "manual",
         notes: notes.trim() || null,
+        categoryId,
       });
       if (router.canGoBack()) router.back();
       else router.replace("/(app)");
@@ -181,6 +186,22 @@ export default function AddExpenseScreen() {
               active={direction === "credit"}
               onPress={() => setDirection("credit")}
             />
+          </View>
+
+          <DateField value={paidAt} onChange={setPaidAt} />
+
+          <View style={styles.field}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 13,
+                color: colors.textSecondary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Category
+            </Text>
+            <CategoryChips value={categoryId} onChange={setCategoryId} />
           </View>
 
           <View style={styles.field}>
