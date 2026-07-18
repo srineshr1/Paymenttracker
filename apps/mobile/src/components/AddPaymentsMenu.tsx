@@ -2,7 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
-import { BackHandler, Pressable, StyleSheet, View } from "react-native";
+import {
+  BackHandler,
+  Pressable,
+  StyleSheet,
+  View,
+  type LayoutChangeEvent,
+} from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
@@ -25,7 +31,18 @@ type Props = {
   onScreenshot: () => void;
 };
 
-const SPRING = { damping: 18, stiffness: 220, mass: 0.85 } as const;
+/** Softer spring so pill → circle + menu options feel fluid */
+const MORPH_SPRING = { damping: 20, stiffness: 170, mass: 0.9 } as const;
+const PRESS_SPRING = { damping: 16, stiffness: 420, mass: 0.55 } as const;
+
+const BTN_SIZE = 56;
+const ICON_SIZE = 28;
+const PAD_CLOSED = 22;
+const GAP_CLOSED = 8;
+/** Fallback label width until onLayout measures real glyphs */
+const LABEL_FALLBACK = 102;
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export function AddPaymentsMenu({
   open,
@@ -36,11 +53,23 @@ export function AddPaymentsMenu({
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const progress = useSharedValue(0);
+  const press = useSharedValue(0);
+  const labelW = useSharedValue(0);
+
+  const onLabelLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const w = Math.ceil(e.nativeEvent.layout.width);
+      if (w > 0 && Math.abs(w - labelW.value) > 0.5) {
+        labelW.value = w;
+      }
+    },
+    [labelW]
+  );
 
   const syncProgress = useCallback(
     (nextOpen: boolean, animated: boolean) => {
       if (animated) {
-        progress.value = withSpring(nextOpen ? 1 : 0, SPRING);
+        progress.value = withSpring(nextOpen ? 1 : 0, MORPH_SPRING);
       } else {
         progress.value = nextOpen ? 1 : 0;
       }
@@ -48,24 +77,28 @@ export function AddPaymentsMenu({
     [progress]
   );
 
-  // Drive animation from open prop
+  // Animate open/close while focused. Do not put `open` in useFocusEffect
+  // deps — that re-fires cleanup (progress=0) on every toggle and races the spring.
   useEffect(() => {
     syncProgress(open, true);
   }, [open, syncProgress]);
 
-  // After stack freeze/unfreeze (navigate away & back), re-sync so shared
-  // values can't stay stuck open while `open` is already false.
+  // On focus only: force a clean closed shared-value state so a leftover
+  // backdrop opacity can't cover Home after navigating back. Avoid writing
+  // shared values in the blur cleanup — that races the native pop animation
+  // on Android and can blank the scene under the outgoing screen.
   useFocusEffect(
     useCallback(() => {
-      syncProgress(open, false);
-      return () => {
-        // Snap closed when leaving this screen so return state is clean
+      const ready = requestAnimationFrame(() => {
         progress.value = 0;
+        press.value = 0;
+      });
+      return () => {
+        cancelAnimationFrame(ready);
       };
-    }, [open, progress, syncProgress])
+    }, [progress, press])
   );
 
-  // Hardware back closes the menu instead of eating the page / leaving the app
   useEffect(() => {
     if (!open) return;
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -82,14 +115,28 @@ export function AddPaymentsMenu({
     onOpenChange(!open);
   };
 
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
+  const onPressIn = () => {
+    press.value = withSpring(1, PRESS_SPRING);
+  };
+
+  const onPressOut = () => {
+    press.value = withSpring(0, PRESS_SPRING);
+  };
+
+  const backdropStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
       progress.value,
       [0, 1],
       [0, 1],
       Extrapolation.CLAMP
-    ),
-  }));
+    );
+    return {
+      opacity,
+      // Also hide from hit-testing when fully closed (progress drives this,
+      // not React `open`, so a desynced open prop can't leave a dark veil).
+      zIndex: opacity > 0.02 ? 40 : -1,
+    };
+  });
 
   const manualStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -158,30 +205,64 @@ export function AddPaymentsMenu({
     ],
   }));
 
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 0.4, 1],
-      [1, 0.3, 0],
-      Extrapolation.CLAMP
-    ),
-    width: interpolate(
-      progress.value,
-      [0, 1],
-      [118, 0],
-      Extrapolation.CLAMP
-    ),
-  }));
+  /** Label collapses in sync with the pill → circle width morph */
+  const labelStyle = useAnimatedStyle(() => {
+    const lw = labelW.value > 0 ? labelW.value : LABEL_FALLBACK;
+    return {
+      width: interpolate(
+        progress.value,
+        [0, 1],
+        [lw, 0],
+        Extrapolation.CLAMP
+      ),
+      marginLeft: interpolate(
+        progress.value,
+        [0, 1],
+        [GAP_CLOSED, 0],
+        Extrapolation.CLAMP
+      ),
+      opacity: interpolate(
+        progress.value,
+        [0, 0.4, 0.75],
+        [1, 0.35, 0],
+        Extrapolation.CLAMP
+      ),
+    };
+  });
+
+  /**
+   * Pill → circle: width, padding, and press scale all track `progress`.
+   * Closed width = pad*2 + icon + gap + label.
+   */
+  const mainBtnStyle = useAnimatedStyle(() => {
+    const lw = labelW.value > 0 ? labelW.value : LABEL_FALLBACK;
+    const closedW = PAD_CLOSED * 2 + ICON_SIZE + GAP_CLOSED + lw;
+    const pressScale = interpolate(press.value, [0, 1], [1, 0.94]);
+
+    return {
+      width: interpolate(
+        progress.value,
+        [0, 1],
+        [closedW, BTN_SIZE],
+        Extrapolation.CLAMP
+      ),
+      paddingHorizontal: interpolate(
+        progress.value,
+        [0, 1],
+        [PAD_CLOSED, 0],
+        Extrapolation.CLAMP
+      ),
+      transform: [{ scale: pressScale }],
+    };
+  });
 
   const bottom = Math.max(insets.bottom, 16) + 12;
 
   const runAction = (action: () => void) => {
-    // Close first, snap progress, then navigate on next frame so the home
-    // screen never freezes mid-open (which made UI vanish on back).
     onOpenChange(false);
     progress.value = withTiming(0, {
-      duration: 120,
-      easing: Easing.out(Easing.quad),
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
     });
     requestAnimationFrame(() => {
       action();
@@ -190,23 +271,26 @@ export function AddPaymentsMenu({
 
   return (
     <>
-      <Animated.View
-        pointerEvents={open ? "auto" : "none"}
-        style={[
-          styles.backdrop,
-          {
-            backgroundColor: isDark
-              ? "rgba(0,0,0,0.45)"
-              : "rgba(20,22,28,0.28)",
-          },
-          backdropStyle,
-        ]}
-      >
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={() => onOpenChange(false)}
-        />
-      </Animated.View>
+      {/* Only mount the dimmer while open — avoids a stuck overlay blanking Home after back. */}
+      {open ? (
+        <Animated.View
+          pointerEvents="auto"
+          style={[
+            styles.backdrop,
+            {
+              backgroundColor: isDark
+                ? "rgba(0,0,0,0.45)"
+                : "rgba(20,22,28,0.28)",
+            },
+            backdropStyle,
+          ]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => onOpenChange(false)}
+          />
+        </Animated.View>
+      ) : null}
 
       <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
         <Animated.View
@@ -271,32 +355,45 @@ export function AddPaymentsMenu({
           </Pressable>
         </Animated.View>
 
-        <Pressable
+        <AnimatedPressable
           onPress={toggle}
-          style={({ pressed }) => [
-            styles.mainBtn,
-            {
-              backgroundColor: colors.accent,
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            },
-          ]}
+          onPressIn={onPressIn}
+          onPressOut={onPressOut}
+          accessibilityRole="button"
+          accessibilityLabel={open ? "Close add menu" : "Add payments"}
+          style={[styles.mainBtn, { backgroundColor: colors.accent }, mainBtnStyle]}
         >
           <Animated.View style={[styles.mainIconBox, mainIconStyle]}>
-            <Ionicons name="add" size={28} color={colors.accentOn} />
+            <Ionicons
+              name="add"
+              size={ICON_SIZE}
+              color={colors.accentOn}
+              style={styles.mainIcon}
+            />
           </Animated.View>
-          <Animated.View style={[styles.mainLabel, labelStyle]}>
+
+          {/* Invisible measure — always mounted so width stays accurate */}
+          <Text
+            numberOfLines={1}
+            onLayout={onLabelLayout}
+            style={styles.labelMeasure}
+            pointerEvents="none"
+          >
+            Add payments
+          </Text>
+
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.mainLabel, labelStyle]}
+          >
             <Text
               numberOfLines={1}
-              style={{
-                fontFamily: typography.fontSansSemi,
-                fontSize: 15,
-                color: colors.accentOn,
-              }}
+              style={[styles.labelText, { color: colors.accentOn }]}
             >
-              {open ? "" : "Add payments"}
+              Add payments
             </Text>
           </Animated.View>
-        </Pressable>
+        </AnimatedPressable>
       </View>
     </>
   );
@@ -313,10 +410,12 @@ const styles = StyleSheet.create({
   },
   dock: {
     position: "absolute",
-    right: spacing.xl,
+    left: 0,
+    right: 0,
     zIndex: 50,
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   optionWrap: {
     width: 228,
@@ -342,21 +441,39 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 56,
-    minWidth: 56,
-    paddingHorizontal: 16,
+    height: BTN_SIZE,
     borderRadius: radius.pill,
-    gap: 4,
     overflow: "hidden",
   },
   mainIconBox: {
-    width: 28,
-    height: 28,
+    width: ICON_SIZE,
+    height: ICON_SIZE,
     alignItems: "center",
     justifyContent: "center",
+  },
+  mainIcon: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    textAlign: "center",
+    textAlignVertical: "center",
+    includeFontPadding: false,
   },
   mainLabel: {
     overflow: "hidden",
     justifyContent: "center",
+    alignItems: "flex-start",
+  },
+  labelText: {
+    fontFamily: typography.fontSansSemi,
+    fontSize: 15,
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
+  labelMeasure: {
+    position: "absolute",
+    opacity: 0,
+    fontFamily: typography.fontSansSemi,
+    fontSize: 15,
+    includeFontPadding: false,
   },
 });

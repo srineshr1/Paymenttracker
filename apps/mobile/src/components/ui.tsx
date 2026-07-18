@@ -28,7 +28,13 @@ export function Screen({
 }: ViewProps & { children: React.ReactNode }) {
   const { colors } = useTheme();
   return (
-    <View style={[{ flex: 1, backgroundColor: colors.bg }, style]} {...rest}>
+    <View
+      // Android Fabric can drop inactive scene subtrees during stack pops
+      // when the root is collapsable — keep the surface attached.
+      collapsable={false}
+      style={[{ flex: 1, backgroundColor: colors.bg }, style]}
+      {...rest}
+    >
       {children}
     </View>
   );
@@ -388,15 +394,19 @@ export function Amount({
     lg: 28,
     hero: 40,
   };
+  const fontSize = sizes[size];
   return (
     <RNText
       style={{
         // Sans — mono fonts often render "," as a broken bar on Android
         fontFamily: typography.fontSansSemi,
-        fontSize: sizes[size],
+        fontSize,
+        // Keep commas/figures from being clipped at large sizes (Android)
+        lineHeight: Math.round(fontSize * 1.3),
         letterSpacing: 0,
         color,
       }}
+      numberOfLines={1}
     >
       {formatExpenseAmount(amount, direction)}
     </RNText>

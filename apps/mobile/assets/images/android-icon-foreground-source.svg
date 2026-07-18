@@ -1,0 +1,8 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Transparent canvas; mark inset for Android adaptive safe zone -->
+  <path d="M256,96 A78,78 0 0,0 256,256 A78,78 0 0,1 256,416"
+        fill="none"
+        stroke="#34D399"
+        stroke-width="44"
+        stroke-linecap="round"/>
+</svg>

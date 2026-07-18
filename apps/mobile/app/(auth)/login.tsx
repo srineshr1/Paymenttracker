@@ -1,41 +1,42 @@
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ApiError, getApiBase } from "@/src/api/client";
+import { ApiError } from "@/src/api/client";
+import { AppLogo } from "@/src/components/AppLogo";
 import { PinPad } from "@/src/components/PinPad";
-import { Button, Card, Input, Screen, Text } from "@/src/components/ui";
+import { Button, Card, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
-import { radius, spacing, typography } from "@/src/design/tokens";
+import { spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { colors } = useTheme();
-  const { login, rememberedUsername } = useAuth();
-  const [username, setUsername] = useState("");
+  const { unlock, hasAccount, rememberedUsername, refreshAccountState } =
+    useAuth();
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
 
+  // No profile on device → create account (don't strand on unlock UI)
   useEffect(() => {
-    if (rememberedUsername) setUsername(rememberedUsername);
-  }, [rememberedUsername]);
+    if (!hasAccount) {
+      router.replace("/(auth)/register");
+    }
+  }, [hasAccount, router]);
 
   useEffect(() => {
     if (passcode.length !== 6 || submitting.current) return;
-    if (username.trim().length < 3) {
-      setError("Enter a username (at least 3 characters) first.");
-      setPasscode("");
-      return;
-    }
 
     submitting.current = true;
     setError(null);
@@ -43,28 +44,58 @@ export default function LoginScreen() {
 
     (async () => {
       try {
-        await login(username.trim(), passcode);
+        await unlock(passcode);
       } catch (e) {
         setPasscode("");
         if (e instanceof ApiError) {
           if (e.status === 401) {
-            setError(
-              "Invalid username or passcode. New here? Create an account first."
-            );
+            setError("Incorrect passcode. Try again.");
+          } else if (e.status === 404) {
+            setError("No account found. Create one to continue.");
+            await refreshAccountState();
+            router.replace("/(auth)/register");
           } else {
             setError(e.message);
           }
         } else if (e instanceof Error) {
           setError(e.message);
+          if (e.message.toLowerCase().includes("no account")) {
+            await refreshAccountState();
+            router.replace("/(auth)/register");
+          }
         } else {
-          setError("Could not sign in. Try again.");
+          setError("Could not unlock. Try again.");
         }
       } finally {
         setLoading(false);
         submitting.current = false;
       }
     })();
-  }, [passcode, login, username]);
+  }, [passcode, unlock, refreshAccountState, router]);
+
+  const greeting = rememberedUsername
+    ? `Welcome back, ${rememberedUsername}`
+    : "Welcome back";
+
+  // Brief moment while redirecting to register
+  if (!hasAccount) {
+    return (
+      <Screen style={{ paddingTop: insets.top + spacing.xl }}>
+        <View style={[styles.brand, { paddingHorizontal: spacing.xl }]}>
+          <AppLogo size={64} style={{ marginBottom: spacing.sm }} />
+          <Text variant="display">Spentd</Text>
+          <Text muted style={{ marginTop: spacing.md, textAlign: "center" }}>
+            Setting up…
+          </Text>
+          <Button
+            title="Create account"
+            style={{ marginTop: spacing.xl, alignSelf: "stretch" }}
+            onPress={() => router.replace("/(auth)/register")}
+          />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={{ paddingTop: insets.top + spacing.xl }}>
@@ -80,64 +111,32 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.brand}>
-            <View
-              style={[
-                styles.mark,
-                { backgroundColor: colors.accentSoft, borderColor: colors.border },
-              ]}
-            >
-              <Text
-                style={{
-                  fontFamily: typography.fontDisplayBold,
-                  fontSize: 22,
-                  color: colors.accentStrong,
-                }}
-              >
-                L
-              </Text>
-            </View>
-            <Text variant="display">Ledger</Text>
+            <AppLogo size={64} style={{ marginBottom: spacing.sm }} />
+            <Text variant="display">Spentd</Text>
             <Text
               muted
-              style={{ marginTop: spacing.sm, maxWidth: 300, textAlign: "center" }}
+              style={{
+                marginTop: spacing.sm,
+                maxWidth: 300,
+                textAlign: "center",
+              }}
             >
-              Private expense tracking from PhonePe & GPay screenshots.
+              {greeting}
             </Text>
           </View>
 
           <Card variant="soft" style={{ gap: spacing.lg }}>
             <View>
-              <Text variant="label">Username</Text>
-              <Input
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={username}
-                onChangeText={(t) => {
-                  setUsername(t);
-                  setError(null);
-                }}
-                placeholder="your_name"
-                style={{ marginTop: spacing.sm }}
-              />
-            </View>
-
-            <View>
               <Text variant="label">Passcode</Text>
               <Text muted style={{ marginTop: 4, marginBottom: spacing.lg }}>
-                Six digits. Never stored on this device.
+                Enter your 6-digit passcode to unlock.
               </Text>
               <PinPad
                 value={passcode}
                 onChange={setPasscode}
-                disabled={loading || username.trim().length < 3}
+                disabled={loading}
               />
             </View>
-
-            {username.trim().length < 3 ? (
-              <Text muted style={{ textAlign: "center" }}>
-                Type your username (3+ characters) to unlock the pad.
-              </Text>
-            ) : null}
 
             {error ? (
               <Text
@@ -147,20 +146,27 @@ export default function LoginScreen() {
                 {error}
               </Text>
             ) : null}
-          </Card>
 
-          <View style={styles.footer}>
-            <Text muted style={{ textAlign: "center" }}>
-              New here?{" "}
-              <Link
-                href="/(auth)/register"
+            <Pressable
+              onPress={() => router.push("/(auth)/recover")}
+              hitSlop={12}
+              style={{ alignSelf: "center", marginTop: spacing.sm }}
+            >
+              <Text
                 style={{
                   color: colors.accentStrong,
                   fontFamily: typography.fontSansSemi,
+                  fontSize: 14,
                 }}
               >
-                Create account
-              </Link>
+                Forgot passcode?
+              </Text>
+            </Pressable>
+          </Card>
+
+          <View style={styles.footer}>
+            <Text muted style={{ textAlign: "center", fontSize: 13 }}>
+              Your data stays encrypted on this device.
             </Text>
             <Text
               muted
@@ -171,11 +177,11 @@ export default function LoginScreen() {
                 fontFamily: typography.fontMono,
               }}
             >
-              {getApiBase()}
+              local · secure on-device
             </Text>
             {loading ? (
               <Button
-                title="Signing in…"
+                title="Unlocking…"
                 loading
                 style={{ marginTop: spacing.lg }}
               />
@@ -198,16 +204,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: spacing.lg,
     gap: spacing.sm,
-  },
-  mark: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.sm,
-    transform: [{ rotate: "-4deg" }],
   },
   footer: {
     paddingBottom: spacing.lg,

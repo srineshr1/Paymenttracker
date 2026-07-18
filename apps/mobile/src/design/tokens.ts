@@ -1,5 +1,5 @@
 /**
- * Ledger design system
+ * Spentd design system
  * Light: warm paper / ink / copper
  * Dark: deep ink / cream / gold
  * Typography: Fraunces (display) · Outfit (UI) · IBM Plex Mono (figures)

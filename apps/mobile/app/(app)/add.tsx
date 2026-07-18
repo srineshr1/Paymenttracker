@@ -1,8 +1,9 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -10,9 +11,38 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
-import { Button, Card, Input, Screen, Text } from "@/src/components/ui";
+import { Button, Input, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
-import { spacing } from "@/src/design/tokens";
+import { radius, spacing, typography } from "@/src/design/tokens";
+
+function normalizeAmount(raw: string): string | null {
+  const cleaned = raw.replace(/,/g, "").replace(/\s/g, "").trim();
+  if (!cleaned) return null;
+  // Allow "50." while typing → treat as incomplete until blurred/saved
+  if (cleaned === "." || cleaned.endsWith(".")) return null;
+  if (!/^\d+(\.\d{0,2})?$/.test(cleaned)) return null;
+  const n = Number(cleaned);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n.toFixed(2);
+}
+
+function sanitizeAmountInput(raw: string): string {
+  // Keep digits + one decimal point, max 2 decimal places
+  let next = raw.replace(/,/g, "").replace(/[^\d.]/g, "");
+  const firstDot = next.indexOf(".");
+  if (firstDot !== -1) {
+    next =
+      next.slice(0, firstDot + 1) +
+      next.slice(firstDot + 1).replace(/\./g, "");
+    const [whole, frac = ""] = next.split(".");
+    next = `${whole}.${frac.slice(0, 2)}`;
+  }
+  // Strip leading zeros unless "0." decimal
+  if (next.length > 1 && next.startsWith("0") && next[1] !== ".") {
+    next = next.replace(/^0+/, "") || "0";
+  }
+  return next;
+}
 
 export default function AddExpenseScreen() {
   const router = useRouter();
@@ -25,21 +55,46 @@ export default function AddExpenseScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parsedAmount = useMemo(() => normalizeAmount(amount), [amount]);
+  const canSave =
+    merchant.trim().length > 0 && parsedAmount != null && !loading;
+
   const save = async () => {
+    const name = merchant.trim();
+    const amt = normalizeAmount(amount);
+
+    if (!name) {
+      setError("Enter a merchant name");
+      return;
+    }
+    if (!amt) {
+      setError("Enter a valid amount greater than zero");
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
       await api.createExpense({
-        merchant: merchant.trim(),
-        amount: amount.replace(/,/g, ""),
+        merchant: name,
+        amount: amt,
         direction,
         paidAt: new Date().toISOString(),
         source: "manual",
         notes: notes.trim() || null,
       });
-      router.replace("/(app)");
+      if (router.canGoBack()) router.back();
+      else router.replace("/(app)");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Could not save");
+      if (e instanceof ApiError && e.status === 409) {
+        setError(
+          e.message.includes("already")
+            ? e.message
+            : "This payment looks already saved today."
+        );
+      } else {
+        setError(e instanceof ApiError ? e.message : "Could not save expense");
+      }
     } finally {
       setLoading(false);
     }
@@ -56,65 +111,107 @@ export default function AddExpenseScreen() {
           contentContainerStyle={{
             padding: spacing.xl,
             paddingBottom: insets.bottom + spacing.xxl,
-            gap: spacing.lg,
+            gap: spacing.xl,
           }}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
+          showsVerticalScrollIndicator={false}
         >
+          <View style={styles.field}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 13,
+                color: colors.textSecondary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Merchant
+            </Text>
+            <Input
+              value={merchant}
+              onChangeText={(v) => {
+                setMerchant(v);
+                if (error) setError(null);
+              }}
+              placeholder="Who did you pay?"
+              autoFocus
+              returnKeyType="next"
+              style={inputStyle(colors.bgMuted)}
+            />
+          </View>
 
-          <Card variant="soft" style={{ gap: spacing.lg }}>
-            <View>
-              <Text variant="label">Merchant</Text>
-              <Input
-                value={merchant}
-                onChangeText={setMerchant}
-                placeholder="Who did you pay?"
-                style={{ marginTop: spacing.sm }}
-              />
-            </View>
+          <View style={styles.field}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 13,
+                color: colors.textSecondary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Amount (₹)
+            </Text>
+            <Input
+              value={amount}
+              onChangeText={(v) => {
+                setAmount(sanitizeAmountInput(v));
+                if (error) setError(null);
+              }}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              style={[
+                inputStyle(colors.bgMuted),
+                {
+                  fontFamily: typography.fontSansSemi,
+                  fontSize: 22,
+                  letterSpacing: 0.2,
+                },
+              ]}
+            />
+          </View>
 
-            <View>
-              <Text variant="label">Amount (INR)</Text>
-              <Input
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="0.00"
-                keyboardType="decimal-pad"
-                style={{ marginTop: spacing.sm }}
-              />
-            </View>
+          <View style={styles.dirRow}>
+            <DirChip
+              label="Paid"
+              active={direction === "debit"}
+              onPress={() => setDirection("debit")}
+            />
+            <DirChip
+              label="Received"
+              active={direction === "credit"}
+              onPress={() => setDirection("credit")}
+            />
+          </View>
 
-            <View style={styles.dirRow}>
-              <Button
-                title="Paid"
-                variant={direction === "debit" ? "primary" : "ghost"}
-                onPress={() => setDirection("debit")}
-                style={{ flex: 1 }}
-              />
-              <Button
-                title="Received"
-                variant={direction === "credit" ? "secondary" : "ghost"}
-                onPress={() => setDirection("credit")}
-                style={{ flex: 1 }}
-              />
-            </View>
+          <View style={styles.field}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 13,
+                color: colors.textSecondary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Notes
+            </Text>
+            <Input
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Optional"
+              style={inputStyle(colors.bgMuted)}
+            />
+          </View>
 
-            <View>
-              <Text variant="label">Notes</Text>
-              <Input
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Optional"
-                style={{ marginTop: spacing.sm }}
-              />
-            </View>
-          </Card>
-
-          {error ? <Text color={colors.danger}>{error}</Text> : null}
+          {error ? (
+            <Text color={colors.danger} style={{ lineHeight: 20 }}>
+              {error}
+            </Text>
+          ) : null}
 
           <Button
-            title="Save expense"
+            title={loading ? "Saving…" : "Save expense"}
             loading={loading}
-            disabled={!merchant.trim() || !amount}
+            style={{ opacity: canSave ? 1 : 0.55 }}
             onPress={save}
           />
         </ScrollView>
@@ -123,9 +220,64 @@ export default function AddExpenseScreen() {
   );
 }
 
+function DirChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          backgroundColor: active ? colors.accent : colors.bgMuted,
+          opacity: pressed ? 0.9 : 1,
+        },
+      ]}
+    >
+      <Text
+        style={{
+          fontFamily: typography.fontSansSemi,
+          fontSize: 15,
+          color: active ? colors.accentOn : colors.text,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function inputStyle(bg: string) {
+  return {
+    borderWidth: 0,
+    backgroundColor: bg,
+    borderRadius: radius.md,
+    minHeight: 56,
+  };
+}
+
 const styles = StyleSheet.create({
+  field: {
+    width: "100%",
+  },
   dirRow: {
     flexDirection: "row",
     gap: spacing.md,
+  },
+  chip: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

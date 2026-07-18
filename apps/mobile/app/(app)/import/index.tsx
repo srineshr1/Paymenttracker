@@ -142,7 +142,7 @@ export default function ImportScreen() {
     <Screen style={{ paddingTop: insets.top }}>
       <AppHeader
         title="Import"
-        subtitle="Screenshot → parse → confirm"
+        subtitle="Local parse · nothing leaves this device"
       />
       <ScrollView
         contentContainerStyle={{
@@ -153,8 +153,8 @@ export default function ImportScreen() {
       >
         <Text muted>
           1) Choose a PhonePe or GPay screenshot{"\n"}
-          2) Tap Parse screenshot{"\n"}
-          3) Review fields, then save
+          2) Tap Parse (or paste OCR text){"\n"}
+          3) Review fields, then save locally
         </Text>
 
         <Card variant="hero" style={styles.steps}>

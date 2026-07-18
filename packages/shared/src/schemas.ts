@@ -21,6 +21,21 @@ export const authBodySchema = z.object({
   passcode: passcodeSchema,
 });
 
+export const changePasscodeSchema = z
+  .object({
+    currentPasscode: passcodeSchema,
+    newPasscode: passcodeSchema,
+  })
+  .refine((d) => d.currentPasscode !== d.newPasscode, {
+    message: "New passcode must be different",
+    path: ["newPasscode"],
+  });
+
+export const updateUsernameSchema = z.object({
+  username: usernameSchema,
+  passcode: passcodeSchema,
+});
+
 export const directionSchema = z.enum(["debit", "credit"]);
 export const sourceSchema = z.enum(["phonepe", "gpay", "manual"]);
 
@@ -57,5 +72,7 @@ export const listExpensesQuerySchema = z.object({
 });
 
 export type AuthBody = z.infer<typeof authBodySchema>;
+export type ChangePasscodeInput = z.infer<typeof changePasscodeSchema>;
+export type UpdateUsernameInput = z.infer<typeof updateUsernameSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;

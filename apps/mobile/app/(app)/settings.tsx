@@ -1,11 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Category } from "@paymenttracker/shared";
-import { api, getApiBase } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
-import { Button, Card, Screen, Segmented, Text } from "@/src/components/ui";
+import { AppLogo } from "@/src/components/AppLogo";
+import { Card, Screen, Segmented, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
@@ -13,137 +18,353 @@ import { useAuth } from "@/src/features/auth/AuthContext";
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { colors, preference, setPreference, mode } = useTheme();
-  const { user, logout, lock } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { colors, preference, setPreference, mode, isDark } = useTheme();
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    api
-      .listCategories()
-      .then((r) => setCategories(r.categories))
-      .catch(() => undefined);
-  }, []);
+  const initial = (user?.username?.trim()?.[0] ?? "?").toUpperCase();
+  const modeLabel =
+    preference === "system"
+      ? `System · ${mode === "dark" ? "Dark" : "Light"}`
+      : mode === "dark"
+        ? "Dark mode"
+        : "Light mode";
+
+  const onSignOut = () => {
+    Alert.alert("Lock Spentd?", "You’ll need your passcode to unlock again.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Lock",
+        style: "destructive",
+        onPress: () => {
+          logout();
+          router.replace("/(auth)/login");
+        },
+      },
+    ]);
+  };
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
-      <AppHeader title="Settings" subtitle="Appearance, account & privacy" />
+      <AppHeader title="Settings" subtitle="Appearance & account" />
       <ScrollView
         contentContainerStyle={{
           padding: spacing.xl,
-          paddingBottom: insets.bottom + 40,
+          paddingBottom: insets.bottom + spacing.xxxl,
           gap: spacing.xl,
         }}
+        showsVerticalScrollIndicator={false}
       >
-
-        <Card variant="hero" style={{ gap: spacing.md }}>
-          <Text variant="label">Appearance</Text>
-          <Text variant="title">
-            {mode === "dark" ? "Dark mode" : "Light mode"}
-          </Text>
-          <Segmented
-            value={preference}
-            onChange={(v) =>
-              setPreference(v as "system" | "light" | "dark")
-            }
-            options={[
-              { label: "System", value: "system" },
-              { label: "Light", value: "light" },
-              { label: "Dark", value: "dark" },
+        {/* Profile */}
+        <Card
+          variant="hero"
+          style={[
+            styles.profileCard,
+            {
+              backgroundColor: isDark ? colors.bgElevated : colors.heroWash,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.avatar,
+              {
+                backgroundColor: colors.accentSoft,
+                borderColor: colors.border,
+              },
             ]}
-          />
-          <Text muted>
-            Light uses warm paper tones; dark uses ink and gold. Your choice is
-            saved on this device.
-          </Text>
+          >
+            <Text
+              style={{
+                fontFamily: typography.fontDisplayBold,
+                fontSize: 28,
+                color: colors.accentStrong,
+                lineHeight: 34,
+              }}
+            >
+              {initial}
+            </Text>
+          </View>
+          <View style={styles.profileText}>
+            <Text variant="label">Signed in as</Text>
+            <Text
+              style={{
+                fontFamily: typography.fontDisplayBold,
+                fontSize: 28,
+                lineHeight: 34,
+                letterSpacing: -0.5,
+                color: colors.text,
+                marginTop: 4,
+              }}
+              numberOfLines={1}
+            >
+              {user?.username ?? "—"}
+            </Text>
+            <Text muted style={{ marginTop: spacing.sm, fontSize: 13 }}>
+              Passcode is never stored — it only unlocks encrypted data on this
+              device.
+            </Text>
+          </View>
         </Card>
 
-        <Card variant="accent" style={{ gap: spacing.md }}>
-          <Text variant="label">Username</Text>
-          <Text variant="hero" style={{ fontSize: 26 }}>
-            {user?.username}
+        {/* Appearance */}
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" style={{ marginLeft: 4 }}>
+            Appearance
           </Text>
-          <Text muted>
-            Passcode is verified as a secure hash on the server. It is never
-            saved on this device. You re-enter it every session.
-          </Text>
-        </Card>
-
-        <Card variant="outline" style={{ gap: spacing.sm }}>
-          <Text variant="label">API endpoint</Text>
-          <Text variant="mono" style={{ fontSize: 12 }}>
-            {getApiBase()}
-          </Text>
-          <Text muted>
-            Physical phones need your PC LAN IP. Emulator uses 10.0.2.2. Web
-            uses localhost.
-          </Text>
-        </Card>
-
-        <Card variant="soft" style={{ gap: spacing.md }}>
-          <Text variant="label">Categories</Text>
-          <View style={styles.catGrid}>
-            {categories.map((c) => (
+          <Card variant="elevated" style={styles.sectionCard}>
+            <View style={styles.sectionHead}>
               <View
-                key={c.id}
                 style={[
-                  styles.catChip,
+                  styles.iconWrap,
                   {
-                    backgroundColor: colors.bgCard,
+                    backgroundColor: colors.accentSoft,
                     borderColor: colors.border,
                   },
                 ]}
               >
-                <View style={[styles.dot, { backgroundColor: c.color }]} />
-                <Text style={{ fontSize: 13 }}>{c.name}</Text>
+                <Ionicons
+                  name={mode === "dark" ? "moon" : "sunny"}
+                  size={18}
+                  color={colors.accentStrong}
+                />
               </View>
-            ))}
-          </View>
-        </Card>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: typography.fontSansSemi,
+                    fontSize: 16,
+                    color: colors.text,
+                  }}
+                >
+                  {modeLabel}
+                </Text>
+                <Text muted style={{ fontSize: 13, marginTop: 2 }}>
+                  Warm paper in light · ink & gold in dark
+                </Text>
+              </View>
+            </View>
+            <Segmented
+              value={preference}
+              onChange={(v) =>
+                setPreference(v as "system" | "light" | "dark")
+              }
+              options={[
+                { label: "System", value: "system" },
+                { label: "Light", value: "light" },
+                { label: "Dark", value: "dark" },
+              ]}
+            />
+          </Card>
+        </View>
 
-        <Button title="Lock now" variant="secondary" onPress={lock} />
-        <Button
-          title="Sign out"
-          variant="danger"
-          onPress={() => {
-            logout();
-            router.replace("/(auth)/login");
-          }}
-        />
+        {/* Account */}
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" style={{ marginLeft: 4 }}>
+            Account
+          </Text>
+          <Card variant="elevated" style={styles.listCard}>
+            <SettingsRow
+              icon="person-outline"
+              title="Edit username"
+              subtitle="Change how you appear"
+              onPress={() => router.push("/(app)/edit-username")}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon="key-outline"
+              title="Change passcode"
+              subtitle="Update your 6-digit code"
+              onPress={() => router.push("/(app)/change-passcode")}
+            />
+            <RowDivider />
+            <SettingsRow
+              icon="lock-closed-outline"
+              title="Lock now"
+              subtitle="Require passcode again"
+              onPress={() => {
+                logout();
+                router.replace("/(auth)/login");
+              }}
+            />
+          </Card>
+        </View>
 
-        <Text
-          muted
-          style={{
-            textAlign: "center",
-            fontFamily: typography.fontDisplay,
-            fontSize: 14,
-          }}
+        {/* Sign out */}
+        <Pressable
+          onPress={onSignOut}
+          accessibilityRole="button"
+          accessibilityLabel="Lock app"
+          style={({ pressed }) => [
+            styles.signOutBtn,
+            {
+              backgroundColor: colors.dangerSoft,
+              borderColor: isDark
+                ? "rgba(217,123,123,0.28)"
+                : "rgba(181,74,74,0.22)",
+              opacity: pressed ? 0.88 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
         >
-          Ledger · v1.0
-        </Text>
+          <Ionicons name="lock-closed-outline" size={18} color={colors.danger} />
+          <Text
+            style={{
+              fontFamily: typography.fontSansSemi,
+              fontSize: 15,
+              color: colors.danger,
+            }}
+          >
+            Lock app
+          </Text>
+        </Pressable>
+
+        <View style={styles.brandFooter}>
+          <AppLogo size={28} />
+          <Text
+            muted
+            style={{
+              textAlign: "center",
+              fontSize: 12,
+              marginTop: spacing.sm,
+            }}
+          >
+            Spentd · v1.0
+          </Text>
+        </View>
       </ScrollView>
     </Screen>
   );
 }
 
+function RowDivider() {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
+  );
+}
+
+function SettingsRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.row,
+        pressed && { backgroundColor: colors.bgMuted, opacity: 0.95 },
+      ]}
+    >
+      <View
+        style={[
+          styles.iconWrap,
+          {
+            backgroundColor: colors.bgMuted,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Ionicons name={icon} size={18} color={colors.textSecondary} />
+      </View>
+      <View style={styles.rowText}>
+        <Text
+          style={{
+            fontFamily: typography.fontSansSemi,
+            fontSize: 15,
+            color: colors.text,
+          }}
+        >
+          {title}
+        </Text>
+        <Text muted style={{ fontSize: 12, marginTop: 2 }}>
+          {subtitle}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  catGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  catChip: {
+  profileCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
+    gap: spacing.lg,
+    padding: spacing.xl,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 2,
-    transform: [{ rotate: "45deg" }],
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sectionCard: {
+    gap: spacing.lg,
+    padding: spacing.lg,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  listCard: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    overflow: "hidden",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 40 + spacing.md + spacing.md,
+  },
+  signOutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 52,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  brandFooter: {
+    alignItems: "center",
+    marginTop: spacing.sm,
+    gap: 2,
   },
 });

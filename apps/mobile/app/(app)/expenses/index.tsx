@@ -3,7 +3,6 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
@@ -22,7 +21,6 @@ export default function ExpensesListScreen() {
   const { colors } = useTheme();
   const [items, setItems] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -30,19 +28,22 @@ export default function ExpensesListScreen() {
       setItems(res.expenses);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      // Defer past the stack transition so Android doesn't blank the scene.
+      const ready = requestAnimationFrame(() => {
+        void load();
+      });
+      return () => cancelAnimationFrame(ready);
     }, [load])
   );
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
-      <AppHeader title="Activity" subtitle="All synced expenses" />
+      <AppHeader title="Activity" subtitle="All expenses on this device" />
 
       {loading ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 40 }} />
@@ -54,16 +55,6 @@ export default function ExpensesListScreen() {
             paddingHorizontal: spacing.xl,
             paddingBottom: insets.bottom + 100,
           }}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
-              tintColor={colors.accent}
-            />
-          }
           ItemSeparatorComponent={() => (
             <View
               style={{

@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -33,7 +32,6 @@ export default function HomeScreen() {
   const [summary, setSummary] = useState<MonthSummary | null>(null);
   const [recent, setRecent] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -51,18 +49,20 @@ export default function HomeScreen() {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      // Always collapse the FAB menu when landing on Home (back or tab-in).
-      // Prevents a frozen open overlay from covering / zeroing page content.
-      setAddOpen(false);
-      load();
-      return () => {
+      // Collapse FAB after the transition settles. setState during the native
+      // stack animation blanks the previous scene on Android (New Arch).
+      const ready = requestAnimationFrame(() => {
         setAddOpen(false);
+        // Refresh quietly — don't flip loading=true (that blanks the page on every back).
+        void load();
+      });
+      return () => {
+        cancelAnimationFrame(ready);
       };
     }, [load])
   );
@@ -77,16 +77,6 @@ export default function HomeScreen() {
           paddingBottom: insets.bottom + 120,
           gap: spacing.xl,
         }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              load();
-            }}
-            tintColor={colors.accent}
-          />
-        }
       >
         <View style={styles.header}>
           <View style={{ flex: 1, paddingRight: spacing.md }}>
@@ -96,7 +86,10 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={() => router.push("/(app)/settings")}
+            onPress={() => {
+              setAddOpen(false);
+              router.push("/(app)/settings");
+            }}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Settings"
@@ -133,10 +126,17 @@ export default function HomeScreen() {
                   // Outfit (not mono) — IBM Plex Mono mangles "," on Android
                   fontFamily: typography.fontSansBold,
                   fontSize: 42,
+                  // Explicit lineHeight + padding so large Outfit glyphs
+                  // (especially ",") aren't clipped on Android.
+                  lineHeight: 40,
+                  paddingVertical: 4,
                   letterSpacing: 0,
                   color: colors.text,
                   marginTop: spacing.md,
                 }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.55}
               >
                 {formatINR(summary?.totalDebit ?? "0")}
               </Text>

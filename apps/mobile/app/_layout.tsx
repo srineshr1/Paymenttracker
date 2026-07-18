@@ -14,10 +14,17 @@ import {
   IBMPlexMono_600SemiBold,
 } from "@expo-google-fonts/ibm-plex-mono";
 import { useFonts } from "expo-font";
-import { Stack, useRouter, useSegments } from "expo-router";
+import {
+  DarkTheme,
+  DefaultTheme,
+  Stack,
+  ThemeProvider as NavigationThemeProvider,
+  useRouter,
+  useSegments,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
@@ -29,7 +36,7 @@ export { ErrorBoundary } from "expo-router";
 SplashScreen.preventAutoHideAsync();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { token, ready } = useAuth();
+  const { token, ready, hasAccount } = useAuth();
   const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
@@ -37,12 +44,29 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     const inAuth = segments[0] === "(auth)";
-    if (!token && !inAuth) {
-      router.replace("/(auth)/login");
-    } else if (token && inAuth) {
-      router.replace("/(app)");
+    const authScreen = segments[1];
+
+    if (token) {
+      if (inAuth) router.replace("/(app)");
+      return;
     }
-  }, [token, ready, segments, router]);
+
+    // Locked / signed out
+    if (!inAuth) {
+      router.replace(hasAccount ? "/(auth)/login" : "/(auth)/register");
+      return;
+    }
+
+    // Has account → only passcode login (no re-register)
+    // Allow recover screen when account exists
+    if (hasAccount && authScreen === "register") {
+      router.replace("/(auth)/login");
+    }
+    // No account → force create account (not recover)
+    if (!hasAccount && (authScreen === "login" || authScreen === "recover")) {
+      router.replace("/(auth)/register");
+    }
+  }, [token, ready, hasAccount, segments, router]);
 
   if (!ready) {
     return (
@@ -65,23 +89,43 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ThemedRoot() {
   const { colors, isDark } = useTheme();
 
+  // Keep React Navigation's canvas color in sync so stack pops don't flash a
+  // blank/default background while the previous scene reattaches.
+  const navigationTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.bg,
+        card: colors.bg,
+        text: colors.text,
+        border: colors.border,
+        primary: colors.accent,
+      },
+    };
+  }, [colors, isDark]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <AuthProvider>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <AuthGate>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-              animation: "fade",
-            }}
-          >
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(app)" />
-          </Stack>
-        </AuthGate>
-      </AuthProvider>
+      <NavigationThemeProvider value={navigationTheme}>
+        <AuthProvider>
+          <StatusBar style={isDark ? "light" : "dark"} />
+          <AuthGate>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg, flex: 1 },
+                animation: "fade",
+                freezeOnBlur: false,
+              }}
+            >
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(app)" />
+            </Stack>
+          </AuthGate>
+        </AuthProvider>
+      </NavigationThemeProvider>
     </GestureHandlerRootView>
   );
 }

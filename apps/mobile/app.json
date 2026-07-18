@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Ledger",
-    "slug": "paymenttracker",
+    "name": "Spentd",
+    "slug": "spentd",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "paymenttracker",
+    "scheme": "spentd",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "ios": {
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.paymenttracker.ledger",
       "adaptiveIcon": {
-        "backgroundColor": "#0B0C0E",
+        "backgroundColor": "#14151A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -37,9 +37,15 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Spentd to use Face ID to recover your passcode."
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Ledger to access screenshots for expense import."
+          "photosPermission": "Allow Spentd to access screenshots for expense import."
         }
       ],
       [
@@ -47,9 +53,12 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#0B0C0E"
+          "backgroundColor": "#14151A"
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
