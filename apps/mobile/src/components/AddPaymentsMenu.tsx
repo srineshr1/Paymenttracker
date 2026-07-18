@@ -20,7 +20,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "@/src/components/ui";
-import { IconChip } from "@/src/components/SourceLogo";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 
@@ -29,11 +28,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   onManual: () => void;
   onScreenshot: () => void;
-  /** Optional — Android SMS bulk import */
-  onSms?: () => void;
 };
 
-/** Softer spring so pill → circle + menu options feel fluid */
 const MORPH_SPRING = { damping: 20, stiffness: 170, mass: 0.9 } as const;
 const PRESS_SPRING = { damping: 16, stiffness: 420, mass: 0.55 } as const;
 
@@ -41,7 +37,6 @@ const BTN_SIZE = 56;
 const ICON_SIZE = 28;
 const PAD_CLOSED = 22;
 const GAP_CLOSED = 8;
-/** Fallback label width until onLayout measures real glyphs */
 const LABEL_FALLBACK = 102;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -51,7 +46,6 @@ export function AddPaymentsMenu({
   onOpenChange,
   onManual,
   onScreenshot,
-  onSms,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -80,16 +74,10 @@ export function AddPaymentsMenu({
     [progress]
   );
 
-  // Animate open/close while focused. Do not put `open` in useFocusEffect
-  // deps — that re-fires cleanup (progress=0) on every toggle and races the spring.
   useEffect(() => {
     syncProgress(open, true);
   }, [open, syncProgress]);
 
-  // On focus only: force a clean closed shared-value state so a leftover
-  // backdrop opacity can't cover Home after navigating back. Avoid writing
-  // shared values in the blur cleanup — that races the native pop animation
-  // on Android and can blank the scene under the outgoing screen.
   useFocusEffect(
     useCallback(() => {
       const ready = requestAnimationFrame(() => {
@@ -135,8 +123,6 @@ export function AddPaymentsMenu({
     );
     return {
       opacity,
-      // Also hide from hit-testing when fully closed (progress drives this,
-      // not React `open`, so a desynced open prop can't leave a dark veil).
       zIndex: opacity > 0.02 ? 40 : -1,
     };
   });
@@ -195,33 +181,6 @@ export function AddPaymentsMenu({
     ],
   }));
 
-  const smsStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 1],
-      [0, 1],
-      Extrapolation.CLAMP
-    ),
-    transform: [
-      {
-        translateY: interpolate(
-          progress.value,
-          [0, 1],
-          [56, 0],
-          Extrapolation.CLAMP
-        ),
-      },
-      {
-        scale: interpolate(
-          progress.value,
-          [0, 1],
-          [0.92, 1],
-          Extrapolation.CLAMP
-        ),
-      },
-    ],
-  }));
-
   const mainIconStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -235,7 +194,6 @@ export function AddPaymentsMenu({
     ],
   }));
 
-  /** Label collapses in sync with the pill → circle width morph */
   const labelStyle = useAnimatedStyle(() => {
     const lw = labelW.value > 0 ? labelW.value : LABEL_FALLBACK;
     return {
@@ -260,10 +218,6 @@ export function AddPaymentsMenu({
     };
   });
 
-  /**
-   * Pill → circle: width, padding, and press scale all track `progress`.
-   * Closed width = pad*2 + icon + gap + label.
-   */
   const mainBtnStyle = useAnimatedStyle(() => {
     const lw = labelW.value > 0 ? labelW.value : LABEL_FALLBACK;
     const closedW = PAD_CLOSED * 2 + ICON_SIZE + GAP_CLOSED + lw;
@@ -301,7 +255,6 @@ export function AddPaymentsMenu({
 
   return (
     <>
-      {/* Only mount the dimmer while open — avoids a stuck overlay blanking Home after back. */}
       {open ? (
         <Animated.View
           pointerEvents="auto"
@@ -323,39 +276,6 @@ export function AddPaymentsMenu({
       ) : null}
 
       <View pointerEvents="box-none" style={[styles.dock, { bottom }]}>
-        {onSms ? (
-          <Animated.View
-            pointerEvents={open ? "auto" : "none"}
-            style={[styles.optionWrap, smsStyle]}
-          >
-            <Pressable
-              onPress={() => runAction(onSms)}
-              style={({ pressed }) => [
-                styles.option,
-                {
-                  backgroundColor: colors.bgCard,
-                  borderColor: colors.borderStrong,
-                  opacity: pressed ? 0.9 : 1,
-                },
-              ]}
-            >
-              <IconChip
-                name="chatbubble-ellipses-outline"
-                color={colors.accentStrong}
-                bg={colors.accentSoft}
-                size={40}
-                iconSize={20}
-              />
-              <View style={styles.optionText}>
-                <Text style={styles.optionTitle}>SMS</Text>
-                <Text muted style={{ fontSize: 12 }}>
-                  Bank & UPI messages
-                </Text>
-              </View>
-            </Pressable>
-          </Animated.View>
-        ) : null}
-
         <Animated.View
           pointerEvents={open ? "auto" : "none"}
           style={[styles.optionWrap, shotStyle]}
@@ -371,19 +291,12 @@ export function AddPaymentsMenu({
               },
             ]}
           >
-            <IconChip
-              name="image-outline"
-              color={colors.accentStrong}
-              bg={colors.accentSoft}
-              size={40}
-              iconSize={20}
-            />
-            <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>Screenshot</Text>
-              <Text muted style={{ fontSize: 12 }}>
-                PhonePe / GPay
-              </Text>
-            </View>
+            <Text style={[styles.optionTitle, { color: colors.text }]}>
+              Screenshot
+            </Text>
+            <Text muted style={styles.optionSub}>
+              PhonePe / GPay
+            </Text>
           </Pressable>
         </Animated.View>
 
@@ -402,19 +315,12 @@ export function AddPaymentsMenu({
               },
             ]}
           >
-            <IconChip
-              name="create-outline"
-              color={colors.text}
-              bg={colors.bgMuted}
-              size={40}
-              iconSize={20}
-            />
-            <View style={styles.optionText}>
-              <Text style={styles.optionTitle}>Manual</Text>
-              <Text muted style={{ fontSize: 12 }}>
-                Type amount & merchant
-              </Text>
-            </View>
+            <Text style={[styles.optionTitle, { color: colors.text }]}>
+              Manual
+            </Text>
+            <Text muted style={styles.optionSub}>
+              Type amount & merchant
+            </Text>
           </Pressable>
         </Animated.View>
 
@@ -435,7 +341,6 @@ export function AddPaymentsMenu({
             />
           </Animated.View>
 
-          {/* Invisible measure — always mounted so width stays accurate */}
           <Text
             numberOfLines={1}
             onLayout={onLabelLayout}
@@ -481,24 +386,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   optionWrap: {
-    width: 228,
+    width: 220,
   },
   option: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    justifyContent: "center",
+    gap: 2,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  optionText: {
-    flex: 1,
-    justifyContent: "center",
-  },
   optionTitle: {
     fontFamily: typography.fontSansSemi,
-    fontSize: 15,
+    fontSize: 16,
+    textAlign: "center",
+  },
+  optionSub: {
+    fontSize: 12,
+    textAlign: "center",
   },
   mainBtn: {
     flexDirection: "row",

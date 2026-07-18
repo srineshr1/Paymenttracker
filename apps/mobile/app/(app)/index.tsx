@@ -808,7 +808,7 @@ export default function HomeScreen() {
           {!loading && recent.length === 0 ? (
             <EmptyState
               title="No expenses yet"
-              body="Tap Add payments to import SMS or a PhonePe/GPay screenshot, or enter one manually."
+              body="Tap Add payments to import a PhonePe/GPay screenshot or enter one manually."
             />
           ) : (
             <Card style={{ paddingVertical: spacing.xs, paddingHorizontal: spacing.sm }}>
@@ -882,9 +882,6 @@ export default function HomeScreen() {
         onOpenChange={setAddOpen}
         onManual={() => router.push("/(app)/add")}
         onScreenshot={() => router.push("/(app)/import")}
-        onSms={() =>
-          router.push({ pathname: "/(app)/import", params: { mode: "sms" } })
-        }
       />
 
       <BudgetSheet

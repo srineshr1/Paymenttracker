@@ -119,6 +119,37 @@ export default function RegisterScreen() {
             </Text>
 
             {step === "user" ? (
+              <View
+                style={[
+                  styles.featureCard,
+                  {
+                    backgroundColor: colors.bgMuted,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontFamily: typography.fontSansSemi,
+                    fontSize: 14,
+                    color: colors.text,
+                    marginBottom: 6,
+                  }}
+                >
+                  Auto-updates from bank SMS
+                </Text>
+                <Text
+                  muted
+                  style={{ fontSize: 13, lineHeight: 19 }}
+                >
+                  Spentd can read bank and UPI messages on this phone to
+                  track payments and keep your balance in sync. Everything
+                  stays on your device — nothing is uploaded.
+                </Text>
+              </View>
+            ) : null}
+
+            {step === "user" ? (
               <View style={styles.form}>
                 <Text
                   style={{
@@ -240,8 +271,15 @@ const styles = StyleSheet.create({
   top: {
     paddingTop: spacing.sm,
   },
+  featureCard: {
+    marginTop: spacing.xl,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: 360,
+  },
   form: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.xl,
     width: "100%",
   },
   pinBlock: {
