@@ -1,23 +1,26 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ApiError } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { Button, Card, Input, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
-import { radius, spacing } from "@/src/design/tokens";
+import { radius, spacing, typography } from "@/src/design/tokens";
 import {
+  isFastOcrAvailable,
   parseScreenshotAll,
   recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
+import { TesseractHost } from "@/src/features/ocr/TesseractHost";
 
 const SAMPLE_PHONEPE = `PhonePe
 Payment Successful
@@ -31,6 +34,7 @@ Debited from
 HDFC Bank XX1234`;
 
 type Picked = {
+  id: string;
   uri: string;
   base64: string;
   mimeType: string;
@@ -40,10 +44,12 @@ export default function ImportScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
+  const fastOcr = useMemo(() => isFastOcrAvailable(), []);
+
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [picked, setPicked] = useState<Picked | null>(null);
+  const [picked, setPicked] = useState<Picked[]>([]);
   const [pasteText, setPasteText] = useState("");
   const [showPaste, setShowPaste] = useState(false);
 
@@ -73,13 +79,62 @@ export default function ImportScreen() {
     });
   };
 
+  const runOcr = async (assets: Picked[]) => {
+    if (!assets.length) {
+      setError("Choose a screenshot first.");
+      return;
+    }
+
+    setError(null);
+    setBusy(true);
+    setStatus(
+      assets.length > 1
+        ? `Reading ${assets.length} screenshots…`
+        : fastOcr
+          ? "Reading text on this device…"
+          : "Reading screenshot… first time may take a moment"
+    );
+
+    try {
+      const texts: string[] = [];
+      for (let i = 0; i < assets.length; i++) {
+        if (assets.length > 1) {
+          setStatus(`Reading screenshot ${i + 1} of ${assets.length}…`);
+        }
+        const { text } = await recognizeTextFromImage({
+          uri: assets[i].uri,
+          base64: assets[i].base64 || null,
+          mimeType: assets[i].mimeType,
+        });
+        if (text.trim()) texts.push(text.trim());
+      }
+
+      if (!texts.length) {
+        throw new Error(
+          "No text found in these images. Try clearer screenshots or paste text."
+        );
+      }
+
+      setStatus(null);
+      goReview(assets[0]?.uri ?? null, texts.join("\n\n"));
+    } catch (e) {
+      setStatus(null);
+      setError(
+        e instanceof Error ? e.message : "Could not read this image."
+      );
+      setShowPaste(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const pickImage = async () => {
     setError(null);
     setStatus(null);
 
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      setError("Gallery permission is required to import screenshots.");
+      setError("Gallery permission is required to pick a screenshot.");
       return;
     }
 
@@ -88,211 +143,297 @@ export default function ImportScreen() {
       quality: 0.85,
       base64: true,
       allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: 6,
     });
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets?.length) return;
 
-    const asset = result.assets[0];
-    setPicked({
+    const added: Picked[] = result.assets.map((asset, i) => ({
+      id: `${Date.now()}-${i}-${asset.uri}`,
       uri: asset.uri,
       base64: asset.base64 ?? "",
       mimeType: asset.mimeType ?? "image/jpeg",
-    });
+    }));
+
+    const next = [...picked, ...added].slice(0, 8);
+    setPicked(next);
+  };
+
+  const removePicked = (id: string) => {
+    setPicked((prev) => prev.filter((p) => p.id !== id));
     setError(null);
   };
 
-  const parsePicked = async () => {
-    if (!picked) {
-      setError("Choose a screenshot first.");
-      return;
-    }
-
+  const parsePaste = () => {
+    if (!pasteText.trim()) return;
     setError(null);
-    setBusy(true);
-    setStatus("Reading text on device…");
-
-    try {
-      const { text } = await recognizeTextFromImage({
-        uri: picked.uri,
-        base64: picked.base64 || null,
-        mimeType: picked.mimeType,
-      });
-      setStatus(null);
-      goReview(picked.uri, text);
-    } catch (e) {
-      setStatus(null);
-      if (e instanceof ApiError) {
-        setError(e.message);
-      } else if (e instanceof Error) {
-        setError(e.message);
-      } else {
-        setError("Could not read this image. Try paste instead.");
-      }
-      setShowPaste(true);
-    } finally {
-      setBusy(false);
-    }
+    goReview(null, pasteText);
   };
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
+      {/* Tesseract.js host — enables OCR in Expo Go */}
+      <TesseractHost />
+
       <AppHeader
         title="Import"
-        subtitle="Local parse · nothing leaves this device"
+        subtitle="PhonePe & GPay · stays on device"
       />
       <ScrollView
         contentContainerStyle={{
           padding: spacing.xl,
-          paddingBottom: insets.bottom + 40,
-          gap: spacing.xl,
+          paddingBottom: insets.bottom + 48,
+          gap: spacing.lg,
         }}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text muted>
-          1) Choose a PhonePe or GPay screenshot{"\n"}
-          2) Tap Parse (or paste OCR text){"\n"}
-          3) Review fields, then save locally
-        </Text>
+        <Card variant="soft" style={{ gap: spacing.md }}>
+          <Text variant="label">Screenshot</Text>
+          <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
+            Pick PhonePe or GPay screenshots. Text is read on this device.
+          </Text>
 
-        <Card variant="hero" style={styles.steps}>
-          <Step n="01" title="Choose screenshot" body="From your gallery" />
-          <Step n="02" title="Parse screenshot" body="We extract the text" />
-          <Step n="03" title="Review & save" body="Confirm before anything saves" />
-        </Card>
-
-        <Button
-          title={picked ? "Choose a different image" : "Choose from gallery"}
-          variant={picked ? "secondary" : "primary"}
-          onPress={pickImage}
-          disabled={busy}
-        />
-
-        {picked ? (
-          <>
-            <Image
-              source={{ uri: picked.uri }}
-              style={[styles.preview, { backgroundColor: colors.bgCard }]}
-              resizeMode="contain"
-            />
+          {picked.length === 0 ? (
             <Button
-              title={busy ? "Parsing…" : "Parse screenshot"}
-              loading={busy}
-              onPress={parsePicked}
+              title="Choose from gallery"
+              onPress={pickImage}
+              disabled={busy}
             />
-          </>
-        ) : null}
+          ) : (
+            <>
+              <View style={styles.pillRow}>
+                {picked.map((item, index) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.pill,
+                      {
+                        backgroundColor: colors.bg,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.pillThumb}
+                    />
+                    <Text style={styles.pillLabel} numberOfLines={1}>
+                      Shot {index + 1}
+                    </Text>
+                    <Pressable
+                      onPress={() => removePicked(item.id)}
+                      hitSlop={10}
+                      disabled={busy}
+                      style={({ pressed }) => ({
+                        opacity: pressed || busy ? 0.5 : 1,
+                        padding: 2,
+                      })}
+                      accessibilityLabel={`Remove screenshot ${index + 1}`}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={18}
+                        color={colors.textMuted}
+                      />
+                    </Pressable>
+                  </View>
+                ))}
+
+                {picked.length < 8 ? (
+                  <Pressable
+                    onPress={pickImage}
+                    disabled={busy}
+                    accessibilityLabel="Add another picture"
+                    style={({ pressed }) => [
+                      styles.addCircle,
+                      {
+                        borderColor: colors.borderStrong,
+                        backgroundColor: colors.bg,
+                        opacity: pressed || busy ? 0.55 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="add" size={22} color={colors.accentStrong} />
+                  </Pressable>
+                ) : null}
+              </View>
+
+              <Button
+                title={
+                  busy
+                    ? "Reading…"
+                    : picked.length > 1
+                      ? "Read screenshots"
+                      : "Read screenshot"
+                }
+                loading={busy}
+                onPress={() => runOcr(picked)}
+                disabled={busy}
+              />
+            </>
+          )}
+        </Card>
 
         {status ? (
           <View style={styles.statusRow}>
             <ActivityIndicator color={colors.accent} />
-            <Text muted style={{ flex: 1 }}>
+            <Text muted style={{ flex: 1, fontSize: 13, lineHeight: 18 }}>
               {status}
             </Text>
           </View>
         ) : null}
 
         {error ? (
-          <Text color={colors.warning} style={{ lineHeight: 22 }}>
+          <Text color={colors.warning} style={{ lineHeight: 21, fontSize: 14 }}>
             {error}
           </Text>
         ) : null}
 
-        <Button
-          title={showPaste ? "Hide paste option" : "Or paste text instead"}
-          variant="link"
-          onPress={() => setShowPaste((v) => !v)}
-        />
-
-        {showPaste ? (
+        {/* Secondary: paste text (collapsed by default) */}
+        {!showPaste ? (
+          <Pressable
+            onPress={() => setShowPaste(true)}
+            style={({ pressed }) => [
+              styles.secondaryLink,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}
+          >
+            <Ionicons
+              name="clipboard-outline"
+              size={16}
+              color={colors.textSecondary}
+            />
+            <Text
+              style={{
+                color: colors.textSecondary,
+                fontFamily: typography.fontSansSemi,
+                fontSize: 13,
+              }}
+            >
+              Or paste transaction text
+            </Text>
+          </Pressable>
+        ) : (
           <Card variant="soft" style={{ gap: spacing.md }}>
-            <Text variant="label">Screenshot text</Text>
+            <View style={styles.pasteHeader}>
+              <Text variant="label">Paste text</Text>
+              <Pressable
+                onPress={() => setShowPaste(false)}
+                hitSlop={12}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
+                <Text
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 13,
+                    fontFamily: typography.fontSansSemi,
+                  }}
+                >
+                  Hide
+                </Text>
+              </Pressable>
+            </View>
+            <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
+              Copy text from PhonePe / GPay (or long-press → share → copy), paste
+              here, then parse.
+            </Text>
             <Input
               value={pasteText}
               onChangeText={setPasteText}
-              placeholder="Paste PhonePe or GPay transaction text…"
+              placeholder="Paste PhonePe or GPay text…"
               multiline
-              style={{ height: 140, textAlignVertical: "top", paddingTop: 14 }}
-            />
-            <Button
-              title="Parse text"
-              variant="secondary"
-              disabled={!pasteText.trim()}
-              onPress={() => {
-                if (!pasteText.trim()) return;
-                goReview(null, pasteText);
+              style={{
+                height: 140,
+                textAlignVertical: "top",
+                paddingTop: 14,
+                backgroundColor: colors.bg,
+                borderWidth: 0,
               }}
             />
             <Button
-              title="Try sample (PhonePe)"
-              variant="chip"
+              title="Parse & continue"
+              disabled={!pasteText.trim() || busy}
+              onPress={parsePaste}
+            />
+            <Button
+              title="Load sample (PhonePe)"
+              variant="secondary"
               onPress={() => setPasteText(SAMPLE_PHONEPE)}
             />
           </Card>
-        ) : null}
+        )}
+
+        <Pressable
+          onPress={() => router.push("/(app)/add")}
+          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+        >
+          <Text
+            style={{
+              textAlign: "center",
+              color: colors.accentStrong,
+              fontFamily: typography.fontSansSemi,
+              fontSize: 14,
+            }}
+          >
+            Or enter manually →
+          </Text>
+        </Pressable>
       </ScrollView>
     </Screen>
   );
 }
 
-function Step({
-  n,
-  title,
-  body,
-}: {
-  n: string;
-  title: string;
-  body: string;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.step}>
-      <View
-        style={[
-          styles.stepNum,
-          { backgroundColor: colors.accentSoft, borderColor: colors.border },
-        ]}
-      >
-        <Text
-          style={{
-            color: colors.accentStrong,
-            fontSize: 12,
-            letterSpacing: 0.5,
-          }}
-        >
-          {n}
-        </Text>
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text variant="subtitle">{title}</Text>
-        <Text muted>{body}</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  steps: {
-    gap: spacing.lg,
-  },
-  step: {
+  pillRow: {
     flexDirection: "row",
-    gap: spacing.md,
-    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
   },
-  stepNum: {
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    paddingLeft: 6,
+    paddingRight: 8,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: "100%",
+  },
+  pillThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(128,128,128,0.2)",
+  },
+  pillLabel: {
+    fontFamily: typography.fontSansSemi,
+    fontSize: 13,
+    maxWidth: 88,
+  },
+  addCircle: {
     width: 40,
     height: 40,
-    borderRadius: radius.sharp,
+    borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
-  },
-  preview: {
-    width: "100%",
-    height: 200,
-    borderRadius: radius.xl,
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+  },
+  secondaryLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: spacing.sm,
+  },
+  pasteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 });

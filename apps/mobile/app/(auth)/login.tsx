@@ -1,18 +1,11 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError } from "@/src/api/client";
 import { AppLogo } from "@/src/components/AppLogo";
 import { PinPad } from "@/src/components/PinPad";
-import { Button, Card, Screen, Text } from "@/src/components/ui";
+import { Button, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
@@ -28,7 +21,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
 
-  // No profile on device → create account (don't strand on unlock UI)
   useEffect(() => {
     if (!hasAccount) {
       router.replace("/(auth)/register");
@@ -38,7 +30,6 @@ export default function LoginScreen() {
   useEffect(() => {
     if (passcode.length !== 6 || submitting.current) return;
 
-    // Snapshot immediately — later setPasscode("") must not affect unlock.
     const pin = passcode;
     submitting.current = true;
     setError(null);
@@ -51,15 +42,12 @@ export default function LoginScreen() {
         setPasscode("");
         if (e instanceof ApiError) {
           if (e.status === 401) {
-            setError("Incorrect passcode. Try again.");
+            setError("Incorrect passcode");
           } else if (e.status === 404) {
-            setError("No account found. Create one to continue.");
+            setError("No account found");
             await refreshAccountState();
             router.replace("/(auth)/register");
-          } else if (e.status === 429) {
-            setError(e.message);
           } else {
-            // Vault seal/storage failures — point user at recovery
             setError(e.message);
           }
         } else if (e instanceof Error) {
@@ -69,7 +57,7 @@ export default function LoginScreen() {
             router.replace("/(auth)/register");
           }
         } else {
-          setError("Could not unlock. Try again.");
+          setError("Could not unlock");
         }
       } finally {
         setLoading(false);
@@ -78,23 +66,26 @@ export default function LoginScreen() {
     })();
   }, [passcode, unlock, refreshAccountState, router]);
 
-  const greeting = rememberedUsername
-    ? `Welcome back, ${rememberedUsername}`
-    : "Welcome back";
-
-  // Brief moment while redirecting to register
   if (!hasAccount) {
     return (
-      <Screen style={{ paddingTop: insets.top + spacing.xl }}>
-        <View style={[styles.brand, { paddingHorizontal: spacing.xl }]}>
-          <AppLogo size={64} style={{ marginBottom: spacing.sm }} />
-          <Text variant="display">Spentd</Text>
-          <Text muted style={{ marginTop: spacing.md, textAlign: "center" }}>
-            Setting up…
+      <Screen style={styles.screen}>
+        <View
+          style={[
+            styles.center,
+            {
+              paddingTop: insets.top,
+              paddingBottom: insets.bottom,
+              paddingHorizontal: spacing.xl,
+            },
+          ]}
+        >
+          <AppLogo size={56} />
+          <Text variant="display" style={{ marginTop: spacing.lg }}>
+            Spentd
           </Text>
           <Button
             title="Create account"
-            style={{ marginTop: spacing.xl, alignSelf: "stretch" }}
+            style={{ marginTop: spacing.xxl, alignSelf: "stretch" }}
             onPress={() => router.replace("/(auth)/register")}
           />
         </View>
@@ -103,114 +94,111 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen style={{ paddingTop: insets.top + spacing.xl }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <Screen style={styles.screen}>
+      <View
+        style={[
+          styles.root,
+          {
+            paddingTop: insets.top + spacing.xl,
+            paddingBottom: insets.bottom + spacing.lg,
+          },
+        ]}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: insets.bottom + spacing.xl },
-          ]}
-          keyboardShouldPersistTaps="always"
-        >
-          <View style={styles.brand}>
-            <AppLogo size={64} style={{ marginBottom: spacing.sm }} />
-            <Text variant="display">Spentd</Text>
-            <Text
-              muted
-              style={{
-                marginTop: spacing.sm,
-                maxWidth: 300,
-                textAlign: "center",
-              }}
-            >
-              {greeting}
-            </Text>
-          </View>
+        <View style={styles.top}>
+          <AppLogo size={48} />
+          <Text
+            style={{
+              marginTop: spacing.md,
+              fontFamily: typography.fontSansMedium,
+              fontSize: 16,
+              color: colors.textSecondary,
+            }}
+          >
+            {rememberedUsername
+              ? `Welcome back, ${rememberedUsername}`
+              : "Welcome back"}
+          </Text>
+        </View>
 
-          <Card variant="soft" style={{ gap: spacing.lg }}>
-            <View>
-              <Text variant="label">Passcode</Text>
-              <Text muted style={{ marginTop: 4, marginBottom: spacing.lg }}>
-                Enter your 6-digit passcode to unlock.
-              </Text>
-              <PinPad
-                value={passcode}
-                onChange={setPasscode}
-                disabled={loading}
-              />
-            </View>
+        <View style={styles.middle}>
+          <PinPad
+            value={passcode}
+            onChange={(next) => {
+              if (error) setError(null);
+              setPasscode(next);
+            }}
+            disabled={loading}
+          />
 
-            {error ? (
+          <View style={styles.status}>
+            {loading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : error ? (
               <Text
                 color={colors.danger}
-                style={{ textAlign: "center", lineHeight: 20 }}
+                style={{ textAlign: "center", fontSize: 14 }}
               >
                 {error}
               </Text>
-            ) : null}
-
-            <Pressable
-              onPress={() => router.push("/(auth)/recover")}
-              hitSlop={12}
-              style={{ alignSelf: "center", marginTop: spacing.sm }}
-            >
-              <Text
-                style={{
-                  color: colors.accentStrong,
-                  fontFamily: typography.fontSansSemi,
-                  fontSize: 14,
-                }}
-              >
-                Forgot passcode?
-              </Text>
-            </Pressable>
-          </Card>
-
-          <View style={styles.footer}>
-            <Text muted style={{ textAlign: "center", fontSize: 13 }}>
-              Your data stays encrypted on this device.
-            </Text>
-            <Text
-              muted
-              style={{
-                textAlign: "center",
-                marginTop: spacing.md,
-                fontSize: 11,
-                fontFamily: typography.fontMono,
-              }}
-            >
-              local · secure on-device
-            </Text>
-            {loading ? (
-              <Button
-                title="Unlocking…"
-                loading
-                style={{ marginTop: spacing.lg }}
-              />
-            ) : null}
+            ) : (
+              <View style={styles.statusPlaceholder} />
+            )}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+
+        <Pressable
+          onPress={() => router.push("/(auth)/recover")}
+          hitSlop={16}
+          style={styles.forgot}
+        >
+          <Text
+            style={{
+              color: colors.textMuted,
+              fontFamily: typography.fontSansMedium,
+              fontSize: 14,
+            }}
+          >
+            Forgot passcode?
+          </Text>
+        </Pressable>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
+  screen: {
+    flex: 1,
+  },
+  root: {
+    flex: 1,
     paddingHorizontal: spacing.xl,
-    justifyContent: "space-between",
-    gap: spacing.xxl,
   },
-  brand: {
+  center: {
+    flex: 1,
     alignItems: "center",
-    paddingTop: spacing.lg,
-    gap: spacing.sm,
+    justifyContent: "center",
   },
-  footer: {
-    paddingBottom: spacing.lg,
+  top: {
+    alignItems: "center",
+    paddingTop: spacing.md,
+  },
+  middle: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  status: {
+    minHeight: 28,
+    marginTop: spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusPlaceholder: {
+    height: 20,
+  },
+  forgot: {
+    alignSelf: "center",
+    paddingVertical: spacing.md,
   },
 });

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Text } from "./ui";
 import { useTheme } from "@/src/design/ThemeContext";
-import { radius, spacing, typography } from "@/src/design/tokens";
+import { spacing, typography } from "@/src/design/tokens";
 
 const KEYS = [
   ["1", "2", "3"],
@@ -23,7 +23,7 @@ export function PinPad({
   length?: number;
   disabled?: boolean;
 }) {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
 
   const press = async (key: string) => {
     if (disabled) return;
@@ -48,53 +48,41 @@ export function PinPad({
               style={[
                 styles.dot,
                 {
-                  borderColor: filled ? colors.accent : colors.borderStrong,
-                  backgroundColor: filled ? colors.accent : "transparent",
+                  backgroundColor: filled
+                    ? colors.text
+                    : "transparent",
+                  borderColor: filled ? colors.text : colors.textMuted,
                 },
               ]}
             />
           );
         })}
       </View>
+
       <View style={styles.pad}>
         {KEYS.map((row, ri) => (
           <View key={ri} style={styles.row}>
             {row.map((key, ki) =>
               key === "" ? (
-                <View key={ki} style={styles.keySpacer} />
+                <View key={ki} style={styles.key} />
               ) : (
                 <Pressable
                   key={ki}
                   disabled={disabled}
                   onPress={() => press(key)}
+                  hitSlop={4}
                   style={({ pressed }) => [
                     styles.key,
-                    {
-                      backgroundColor: pressed
-                        ? colors.pinKeyPressed
-                        : colors.pinKey,
-                      borderColor: colors.border,
-                      // Mix of shapes: backspace is round, digits are squircle
-                      borderRadius:
-                        key === "⌫" ? radius.pill : radius.lg,
-                      ...(mode === "light"
-                        ? {
-                            shadowColor: colors.shadow,
-                            shadowOpacity: 0.06,
-                            shadowRadius: 8,
-                            shadowOffset: { width: 0, height: 2 },
-                            elevation: 1,
-                          }
-                        : null),
-                    },
-                    disabled && { opacity: 0.4 },
+                    pressed && !disabled && { opacity: 0.35 },
+                    disabled && { opacity: 0.35 },
                   ]}
                 >
                   <Text
                     style={{
-                      fontFamily: typography.fontMonoMed,
-                      fontSize: key === "⌫" ? 20 : 24,
+                      fontFamily: typography.fontSansMedium,
+                      fontSize: key === "⌫" ? 22 : 28,
                       color: colors.text,
+                      letterSpacing: key === "⌫" ? 0 : 0.5,
                     }}
                   >
                     {key}
@@ -113,41 +101,32 @@ const styles = StyleSheet.create({
   wrap: {
     width: "100%",
     alignItems: "center",
-    gap: spacing.xl,
+    gap: spacing.xxl,
   },
   dots: {
     flexDirection: "row",
-    gap: 14,
-    marginBottom: spacing.sm,
+    alignItems: "center",
+    gap: 16,
   },
   dot: {
-    width: 11,
-    height: 11,
-    borderRadius: 3,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     borderWidth: 1.5,
-    transform: [{ rotate: "45deg" }],
   },
   pad: {
     width: "100%",
-    maxWidth: 320,
-    gap: spacing.md,
+    maxWidth: 280,
+    gap: spacing.sm,
   },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: spacing.md,
   },
   key: {
-    flex: 1,
-    aspectRatio: 1.35,
-    maxHeight: 68,
-    borderWidth: StyleSheet.hairlineWidth,
+    width: 72,
+    height: 64,
     alignItems: "center",
     justifyContent: "center",
-  },
-  keySpacer: {
-    flex: 1,
-    aspectRatio: 1.35,
-    maxHeight: 68,
   },
 });

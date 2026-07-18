@@ -90,57 +90,48 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Profile */}
-        <Card
-          variant="hero"
-          style={[
-            styles.profileCard,
-            {
-              backgroundColor: isDark ? colors.bgElevated : colors.heroWash,
-              borderColor: colors.border,
-            },
-          ]}
-        >
+        <View style={styles.profile}>
           <View
             style={[
-              styles.avatar,
-              {
-                backgroundColor: colors.accentSoft,
-                borderColor: colors.border,
-              },
+              styles.monogram,
+              { backgroundColor: isDark ? colors.bgMuted : colors.bgElevated },
             ]}
           >
             <Text
               style={{
-                fontFamily: typography.fontDisplayBold,
-                fontSize: 28,
-                color: colors.accentStrong,
-                lineHeight: 34,
+                fontFamily: typography.fontSansSemi,
+                fontSize: 18,
+                color: colors.text,
+                letterSpacing: 0.5,
               }}
             >
               {initial}
             </Text>
           </View>
           <View style={styles.profileText}>
-            <Text variant="label">Signed in as</Text>
             <Text
               style={{
-                fontFamily: typography.fontDisplayBold,
-                fontSize: 28,
-                lineHeight: 34,
-                letterSpacing: -0.5,
+                fontFamily: typography.fontSansSemi,
+                fontSize: 20,
+                letterSpacing: -0.3,
                 color: colors.text,
-                marginTop: 4,
               }}
               numberOfLines={1}
             >
               {user?.username ?? "—"}
             </Text>
-            <Text muted style={{ marginTop: spacing.sm, fontSize: 13 }}>
-              Passcode is never stored — it only unlocks encrypted data on this
-              device.
+            <Text
+              muted
+              style={{
+                marginTop: 4,
+                fontSize: 13,
+                color: colors.textMuted,
+              }}
+            >
+              Local account · on this device
             </Text>
           </View>
-        </Card>
+        </View>
 
         {/* Appearance */}
         <View style={{ gap: spacing.sm }}>
@@ -200,21 +191,21 @@ export default function SettingsScreen() {
           </Text>
           <Card variant="elevated" style={styles.listCard}>
             <SettingsRow
-              icon="person-outline"
+              position="first"
               title="Edit username"
               subtitle="Change how you appear"
               onPress={() => router.push("/(app)/edit-username")}
             />
             <RowDivider />
             <SettingsRow
-              icon="key-outline"
+              position="middle"
               title="Change passcode"
               subtitle="Update your 6-digit code"
               onPress={() => router.push("/(app)/change-passcode")}
             />
             <RowDivider />
             <SettingsRow
-              icon="lock-closed-outline"
+              position="last"
               title="Lock now"
               subtitle="Require passcode again"
               onPress={() => {
@@ -231,14 +222,14 @@ export default function SettingsScreen() {
           </Text>
           <Card variant="elevated" style={styles.listCard}>
             <SettingsRow
-              icon="download-outline"
+              position="first"
               title="Export CSV"
               subtitle={exporting ? "Preparing…" : "Share expenses as spreadsheet"}
               onPress={() => !exporting && onExport("csv")}
             />
             <RowDivider />
             <SettingsRow
-              icon="code-slash-outline"
+              position="last"
               title="Export JSON"
               subtitle="Full local backup file"
               onPress={() => !exporting && onExport("json")}
@@ -303,16 +294,49 @@ function RowDivider() {
   );
 }
 
+type RowPosition = "first" | "middle" | "last" | "only";
+
+/** Match Card elevated radius (radius.xl) so press fill follows the card shape. */
+const CARD_RADIUS = radius.xl;
+
+function rowRadius(position: RowPosition) {
+  switch (position) {
+    case "first":
+      return {
+        borderTopLeftRadius: CARD_RADIUS,
+        borderTopRightRadius: CARD_RADIUS,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+      };
+    case "last":
+      return {
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderBottomLeftRadius: CARD_RADIUS,
+        borderBottomRightRadius: CARD_RADIUS,
+      };
+    case "only":
+      return { borderRadius: CARD_RADIUS };
+    default:
+      return {
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+      };
+  }
+}
+
 function SettingsRow({
-  icon,
   title,
   subtitle,
   onPress,
+  position = "middle",
 }: {
-  icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
   onPress: () => void;
+  position?: RowPosition;
 }) {
   const { colors } = useTheme();
 
@@ -322,20 +346,10 @@ function SettingsRow({
       accessibilityRole="button"
       style={({ pressed }) => [
         styles.row,
-        pressed && { backgroundColor: colors.bgMuted, opacity: 0.95 },
+        rowRadius(position),
+        pressed && { backgroundColor: colors.bgMuted },
       ]}
     >
-      <View
-        style={[
-          styles.iconWrap,
-          {
-            backgroundColor: colors.bgMuted,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <Ionicons name={icon} size={18} color={colors.textSecondary} />
-      </View>
       <View style={styles.rowText}>
         <Text
           style={{
@@ -356,17 +370,16 @@ function SettingsRow({
 }
 
 const styles = StyleSheet.create({
-  profileCard: {
+  profile: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.lg,
-    padding: spacing.xl,
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.xl,
-    borderWidth: StyleSheet.hairlineWidth,
+  monogram: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -374,6 +387,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+
   sectionCard: {
     gap: spacing.lg,
     padding: spacing.lg,
@@ -384,17 +398,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   listCard: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
+    padding: 0,
     overflow: "hidden",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
   },
   rowText: {
     flex: 1,
@@ -410,8 +422,10 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 40 + spacing.md + spacing.md,
+    marginLeft: spacing.lg,
+    marginRight: spacing.lg,
   },
+
   signOutBtn: {
     flexDirection: "row",
     alignItems: "center",

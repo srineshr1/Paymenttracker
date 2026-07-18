@@ -11,7 +11,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { ParsedExpense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
-import { Button, Card, Input, Screen, Text } from "@/src/components/ui";
+import { AppHeader } from "@/src/components/AppHeader";
+import { Button, Input, Screen, Text } from "@/src/components/ui";
 import { formatDateTime, formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
@@ -80,15 +81,6 @@ export default function ImportSelectScreen() {
   const selectedCount = rows.filter((r) => selected[r.id]).length;
   const selectedRows = rows.filter((r) => selected[r.id]);
 
-  const goBackToImport = useCallback(() => {
-    // Stable path — avoid broken stack "back" into half-parsed states
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(app)/import");
-    }
-  }, [router]);
-
   const toggle = (id: string) => {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
   };
@@ -139,15 +131,15 @@ export default function ImportSelectScreen() {
     setEditing(null);
   };
 
-  const removeRow = (id: string) => {
+  const removeRow = useCallback((id: string) => {
     setRows((prev) => prev.filter((r) => r.id !== id));
     setSelected((s) => {
       const n = { ...s };
       delete n[id];
       return n;
     });
-    if (editing?.id === id) setEditing(null);
-  };
+    setEditing((e) => (e?.id === id ? null : e));
+  }, []);
 
   const addSelected = async () => {
     setError(null);
@@ -158,11 +150,10 @@ export default function ImportSelectScreen() {
     );
 
     if (batch.length === 0) {
-      setError("Select at least one valid payment (with merchant + amount).");
+      setError("Select at least one payment with merchant and amount.");
       return;
     }
 
-    // Client-side within-batch dedupe preview
     const keys = new Set<string>();
     const unique = batch.filter((r) => {
       const k = `${(r.merchant ?? "").trim().toLowerCase()}|${r.amount}|${dayKey(r.paidAt)}`;
@@ -175,8 +166,8 @@ export default function ImportSelectScreen() {
     setSaving(true);
     setStatus(
       clientDupes > 0
-        ? `Saving ${unique.length}… (skipped ${clientDupes} duplicate in list)`
-        : `Saving ${unique.length} payment${unique.length === 1 ? "" : "s"}…`
+        ? `Saving ${unique.length}…`
+        : `Saving ${unique.length}…`
     );
 
     try {
@@ -198,19 +189,16 @@ export default function ImportSelectScreen() {
 
       const parts = [
         res.created > 0 ? `Added ${res.created}` : null,
-        res.skipped > 0 ? `skipped ${res.skipped} duplicate${res.skipped === 1 ? "" : "s"}` : null,
+        res.skipped > 0
+          ? `skipped ${res.skipped} duplicate${res.skipped === 1 ? "" : "s"}`
+          : null,
         res.failed > 0 ? `${res.failed} failed` : null,
       ].filter(Boolean);
 
       Alert.alert(
         res.created > 0 ? "Import complete" : "Nothing new added",
         parts.join(" · ") || "No changes",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(app)"),
-          },
-        ]
+        [{ text: "OK", onPress: () => router.replace("/(app)") }]
       );
     } catch (e) {
       setError(
@@ -228,164 +216,206 @@ export default function ImportSelectScreen() {
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            borderBottomColor: colors.border,
-            paddingHorizontal: spacing.xl,
-            paddingBottom: spacing.md,
-          },
-        ]}
-      >
-        <Pressable
-          onPress={goBackToImport}
-          hitSlop={12}
-          style={({ pressed }) => [
-            styles.backChip,
-            {
-              backgroundColor: colors.bgMuted,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Text style={{ fontFamily: typography.fontSansSemi, fontSize: 15 }}>
-            ← Back
-          </Text>
-        </Pressable>
-        <View style={{ flex: 1 }}>
-          <Text variant="title" numberOfLines={1}>
-            {rows.length} detected
-          </Text>
-          <Text muted style={{ fontSize: 13 }}>
-            Tap a row to edit · check to include
-          </Text>
-        </View>
-      </View>
+      <AppHeader
+        title={`${rows.length} detected`}
+        subtitle="Select what to import"
+        backTo="/(app)/import"
+      />
 
       <ScrollView
         contentContainerStyle={{
-          padding: spacing.xl,
-          paddingBottom: insets.bottom + 140,
-          gap: spacing.md,
+          paddingHorizontal: spacing.xl,
+          paddingTop: spacing.md,
+          paddingBottom: insets.bottom + 120,
         }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.toolbar}>
-          <Button title="All good" variant="chip" onPress={selectAllGood} />
-          <Button title="None" variant="chip" onPress={selectNone} />
-          <Text muted style={{ marginLeft: "auto", fontSize: 13 }}>
-            {selectedCount} selected
+          <Pressable onPress={selectAllGood} hitSlop={8}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 14,
+                color: colors.accentStrong,
+              }}
+            >
+              Select good
+            </Text>
+          </Pressable>
+          <Text muted style={{ fontSize: 13 }}>
+            ·
+          </Text>
+          <Pressable onPress={selectNone} hitSlop={8}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 14,
+                color: colors.textSecondary,
+              }}
+            >
+              Clear
+            </Text>
+          </Pressable>
+          <Text
+            muted
+            style={{ marginLeft: "auto", fontSize: 13 }}
+          >
+            {selectedCount} of {rows.length}
           </Text>
         </View>
 
         {rows.length === 0 ? (
-          <Card variant="soft">
-            <Text muted style={{ textAlign: "center" }}>
-              No payments left. Go back and try another screenshot.
-            </Text>
-          </Card>
-        ) : null}
-
-        {rows.map((row) => {
-          const on = !!selected[row.id];
-          const junk = isJunk(row);
-          return (
-            <View
-              key={row.id}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: colors.bgCard,
-                  borderColor: on ? colors.accent : colors.border,
-                  borderWidth: on ? 1.5 : StyleSheet.hairlineWidth,
-                  opacity: junk && !on ? 0.72 : 1,
-                },
-              ]}
-            >
-              <Pressable
-                onPress={() => toggle(row.id)}
-                hitSlop={8}
-                style={[
-                  styles.check,
-                  {
-                    borderColor: on ? colors.accent : colors.borderStrong,
-                    backgroundColor: on ? colors.accent : "transparent",
-                  },
-                ]}
-              >
-                {on ? (
-                  <Text
-                    style={{
-                      color: colors.accentOn,
-                      fontSize: 13,
-                      fontFamily: typography.fontSansBold,
-                    }}
+          <Text
+            muted
+            style={{ textAlign: "center", marginTop: spacing.xxxl }}
+          >
+            No payments left. Go back and try another screenshot.
+          </Text>
+        ) : (
+          <View
+            style={[
+              styles.list,
+              {
+                backgroundColor: colors.bgCard,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            {rows.map((row, index) => {
+              const on = !!selected[row.id];
+              const junk = isJunk(row);
+              const isLast = index === rows.length - 1;
+              return (
+                <View key={row.id}>
+                  <Pressable
+                    onPress={() => toggle(row.id)}
+                    onLongPress={() => openEdit(row)}
+                    style={({ pressed }) => [
+                      styles.row,
+                      pressed && { backgroundColor: colors.bgMuted },
+                      junk && !on && { opacity: 0.55 },
+                    ]}
                   >
-                    ✓
-                  </Text>
-                ) : null}
-              </Pressable>
+                    <View
+                      style={[
+                        styles.check,
+                        {
+                          borderColor: on
+                            ? colors.text
+                            : colors.borderStrong,
+                          backgroundColor: on
+                            ? colors.text
+                            : "transparent",
+                        },
+                      ]}
+                    >
+                      {on ? (
+                        <Text
+                          style={{
+                            color: colors.bg,
+                            fontSize: 11,
+                            fontFamily: typography.fontSansBold,
+                            lineHeight: 13,
+                          }}
+                        >
+                          ✓
+                        </Text>
+                      ) : null}
+                    </View>
 
-              <Pressable style={{ flex: 1, gap: 4 }} onPress={() => openEdit(row)}>
-                <Text variant="subtitle" numberOfLines={2}>
-                  {row.merchant || "Unknown merchant"}
-                </Text>
-                <Text variant="caption">
-                  {row.paidAt ? formatDateTime(row.paidAt) : "No date"}
-                  {junk ? " · needs edit" : ""}
-                </Text>
-                <Text
-                  color={colors.accentStrong}
-                  style={{ fontSize: 12, marginTop: 2 }}
-                >
-                  Tap to edit
-                </Text>
-              </Pressable>
+                    <Pressable
+                      style={styles.rowBody}
+                      onPress={() => openEdit(row)}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: typography.fontSansSemi,
+                          fontSize: 15,
+                          color: colors.text,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {row.merchant || "Unknown"}
+                      </Text>
+                      <Text
+                        muted
+                        style={{ fontSize: 12, marginTop: 3 }}
+                        numberOfLines={1}
+                      >
+                        {row.paidAt
+                          ? formatDateTime(row.paidAt)
+                          : "No date"}
+                        {junk ? " · needs review" : ""}
+                      </Text>
+                    </Pressable>
 
-              <View style={{ alignItems: "flex-end", gap: 8 }}>
-                <Text
-                  style={{
-                    fontFamily: typography.fontMonoSemi,
-                    color:
-                      row.direction === "credit" ? colors.credit : colors.debit,
-                    fontSize: 16,
-                  }}
-                >
-                  {row.amount
-                    ? formatExpenseAmount(row.amount, row.direction)
-                    : "—"}
-                </Text>
-                <Pressable onPress={() => removeRow(row.id)} hitSlop={8}>
-                  <Text color={colors.textMuted} style={{ fontSize: 12 }}>
-                    Remove
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          );
-        })}
+                    <View style={styles.rowEnd}>
+                      <Text
+                        style={{
+                          fontFamily: typography.fontSansSemi,
+                          fontSize: 15,
+                          color:
+                            row.direction === "credit"
+                              ? colors.credit
+                              : colors.debit,
+                        }}
+                      >
+                        {row.amount
+                          ? formatExpenseAmount(row.amount, row.direction)
+                          : "—"}
+                      </Text>
+                      <Pressable
+                        onPress={() => removeRow(row.id)}
+                        hitSlop={10}
+                        style={{ marginTop: 6 }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: colors.textMuted,
+                          }}
+                        >
+                          Remove
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </Pressable>
+                  {!isLast ? (
+                    <View
+                      style={[
+                        styles.divider,
+                        { backgroundColor: colors.border },
+                      ]}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {error ? (
-          <Text color={colors.danger} style={{ lineHeight: 20 }}>
+          <Text
+            color={colors.danger}
+            style={{ marginTop: spacing.lg, lineHeight: 20 }}
+          >
             {error}
           </Text>
         ) : null}
         {status ? (
-          <Text muted style={{ textAlign: "center" }}>
+          <Text muted style={{ textAlign: "center", marginTop: spacing.md }}>
             {status}
           </Text>
         ) : null}
       </ScrollView>
 
-      {/* Sticky footer CTA */}
       <View
         style={[
           styles.footer,
           {
             paddingBottom: Math.max(insets.bottom, spacing.md),
-            backgroundColor: isDark ? colors.bgElevated : colors.bgCard,
+            backgroundColor: colors.bg,
             borderTopColor: colors.border,
           },
         ]}
@@ -395,85 +425,97 @@ export default function ImportSelectScreen() {
             saving
               ? "Adding…"
               : selectedCount === 0
-                ? "Select payments to add"
-                : `Add ${selectedCount} payment${selectedCount === 1 ? "" : "s"}`
+                ? "Select payments"
+                : `Add ${selectedCount}`
           }
           loading={saving}
           disabled={saving || selectedCount === 0}
           onPress={addSelected}
+          style={{
+            opacity: saving || selectedCount === 0 ? 0.5 : 1,
+          }}
         />
-        <Text muted style={{ textAlign: "center", fontSize: 11, marginTop: 8 }}>
-          Duplicates (same merchant + amount on the same day) are skipped
-        </Text>
       </View>
 
-      {/* Edit modal */}
       <Modal
         visible={!!editing}
         animationType="slide"
         transparent
         onRequestClose={() => setEditing(null)}
       >
-        <View style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}>
+        <View
+          style={[styles.modalBackdrop, { backgroundColor: colors.overlay }]}
+        >
           <View
             style={[
               styles.modalSheet,
               {
-                backgroundColor: colors.bgElevated,
+                backgroundColor: colors.bg,
                 paddingBottom: Math.max(insets.bottom, spacing.xl),
               },
             ]}
           >
-            <View style={styles.modalHandle} />
-            <Text variant="title" style={{ marginBottom: spacing.sm }}>
+            <View
+              style={[
+                styles.modalHandle,
+                { backgroundColor: colors.borderStrong },
+              ]}
+            />
+            <Text
+              style={{
+                fontFamily: typography.fontSansSemi,
+                fontSize: 18,
+                color: colors.text,
+                marginBottom: spacing.xl,
+              }}
+            >
               Edit payment
-            </Text>
-            <Text muted style={{ marginBottom: spacing.lg }}>
-              Fix OCR mistakes, then save changes to this row.
             </Text>
 
             <ScrollView
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ gap: spacing.md }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: spacing.lg }}
             >
-              <View style={{ gap: 6 }}>
-                <Text variant="label">Merchant</Text>
-                <Input value={editMerchant} onChangeText={setEditMerchant} />
-              </View>
-              <View style={{ gap: 6 }}>
-                <Text variant="label">Amount (INR)</Text>
+              <Field label="Merchant">
+                <Input
+                  value={editMerchant}
+                  onChangeText={setEditMerchant}
+                  style={inputStyle(colors.bgMuted)}
+                />
+              </Field>
+              <Field label="Amount (₹)">
                 <Input
                   value={editAmount}
                   onChangeText={setEditAmount}
                   keyboardType="decimal-pad"
+                  style={inputStyle(colors.bgMuted)}
                 />
-              </View>
-              <View style={{ gap: 6 }}>
-                <Text variant="label">When (ISO date)</Text>
+              </Field>
+              <Field label="When">
                 <Input
                   value={editPaidAt}
                   onChangeText={setEditPaidAt}
                   autoCapitalize="none"
+                  style={inputStyle(colors.bgMuted)}
                 />
-              </View>
+              </Field>
               <View style={styles.dirRow}>
-                <Button
-                  title="Paid"
-                  variant={editDirection === "debit" ? "primary" : "ghost"}
+                <DirChip
+                  label="Paid"
+                  active={editDirection === "debit"}
                   onPress={() => setEditDirection("debit")}
-                  style={{ flex: 1 }}
                 />
-                <Button
-                  title="Received"
-                  variant={editDirection === "credit" ? "secondary" : "ghost"}
+                <DirChip
+                  label="Received"
+                  active={editDirection === "credit"}
                   onPress={() => setEditDirection("credit")}
-                  style={{ flex: 1 }}
                 />
               </View>
             </ScrollView>
 
             <View style={{ gap: spacing.sm, marginTop: spacing.xl }}>
-              <Button title="Save changes" onPress={saveEdit} />
+              <Button title="Save" onPress={saveEdit} />
               <Button
                 title="Cancel"
                 variant="ghost"
@@ -487,39 +529,110 @@ export default function ImportSelectScreen() {
   );
 }
 
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View>
+      <Text
+        style={{
+          fontFamily: typography.fontSansMedium,
+          fontSize: 13,
+          color: colors.textSecondary,
+          marginBottom: spacing.sm,
+        }}
+      >
+        {label}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+function DirChip({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.dirChip,
+        {
+          backgroundColor: active ? colors.accent : colors.bgMuted,
+        },
+      ]}
+    >
+      <Text
+        style={{
+          fontFamily: typography.fontSansSemi,
+          fontSize: 14,
+          color: active ? colors.accentOn : colors.text,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function inputStyle(bg: string) {
+  return {
+    borderWidth: 0,
+    backgroundColor: bg,
+    borderRadius: radius.md,
+    minHeight: 52,
+  };
+}
+
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingTop: spacing.sm,
-  },
-  backChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: radius.pill,
-  },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
-  card: {
+  list: {
+    borderRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.lg,
   },
   check: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
+  },
+  rowBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rowEnd: {
+    alignItems: "flex-end",
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: spacing.lg + 22 + spacing.md,
   },
   footer: {
     position: "absolute",
@@ -542,14 +655,20 @@ const styles = StyleSheet.create({
   },
   modalHandle: {
     alignSelf: "center",
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "rgba(128,128,128,0.35)",
     marginBottom: spacing.lg,
   },
   dirRow: {
     flexDirection: "row",
     gap: spacing.md,
+  },
+  dirChip: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
