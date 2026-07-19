@@ -265,7 +265,9 @@ export default function SettingsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.pageTitle}>Settings</Text>
+        <Text variant="hero" style={styles.pageTitle}>
+          Settings
+        </Text>
 
         {/* Account identity — system-settings style profile row */}
         <View
@@ -574,11 +576,14 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontFamily: typography.fontSansBold,
-    fontSize: 32,
+    fontSize: 34,
+    lineHeight: 42,
     letterSpacing: -0.6,
     marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
     paddingHorizontal: 2,
+    // Android clips large titles when the default body lineHeight (22) wins.
+    includeFontPadding: false,
   },
   group: {
     borderRadius: GROUP_RADIUS,
