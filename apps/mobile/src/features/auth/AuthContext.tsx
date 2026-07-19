@@ -170,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [applySession]
   );
 
+  /** Full wipe after phone lock / biometrics verification. */
   const recoverClearAll = useCallback(async () => {
     await api.verifyDevice();
     await api.clearAllDataRecovery();

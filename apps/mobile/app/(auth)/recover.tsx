@@ -1,11 +1,10 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -13,91 +12,62 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { PinPad } from "@/src/components/PinPad";
-import { Button, Card, Screen, Text } from "@/src/components/ui";
+import { Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
 
+const ERASE_RED = "#E53935";
+
 type Step = "choose" | "newPin" | "confirmPin";
-type Action = "reset" | "clearHistory" | "clearAll";
 
 export default function RecoverScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
-  const {
-    recoverResetPasscode,
-    recoverClearHistory,
-    recoverClearAll,
-    refreshAccountState,
-  } = useAuth();
+  const { recoverResetPasscode, recoverClearAll, refreshAccountState } =
+    useAuth();
 
   const [step, setStep] = useState<Step>("choose");
-  const [action, setAction] = useState<Action | null>(null);
   const [pin, setPin] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
 
-  const startAction = (next: Action) => {
+  const eraseEverything = () => {
     setError(null);
-    if (next === "clearAll") {
-      Alert.alert(
-        "Erase everything?",
-        "This deletes your account and all spending history on this device. You will create a new account.",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Erase all",
-            style: "destructive",
-            onPress: async () => {
-              setLoading(true);
-              setError(null);
-              try {
-                await recoverClearAll();
-                await refreshAccountState();
-                router.replace("/(auth)/register");
-              } catch (e) {
-                setError(
-                  e instanceof ApiError
-                    ? e.message
-                    : e instanceof Error
-                      ? e.message
-                      : "Could not erase data."
-                );
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-        ]
-      );
-      return;
-    }
+    Alert.alert("Erase everything?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Erase all",
+        style: "destructive",
+        onPress: async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            // Phone lock / biometrics required before wipe
+            await recoverClearAll();
+            await refreshAccountState();
+            router.replace("/(auth)/register");
+          } catch (e) {
+            setError(
+              e instanceof ApiError
+                ? e.message
+                : e instanceof Error
+                  ? e.message
+                  : "Could not erase data."
+            );
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]);
+  };
 
-    if (next === "clearHistory") {
-      Alert.alert(
-        "Clear spending history?",
-        "All expenses will be deleted. Your name stays. You’ll set a new passcode next (phone lock required).",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Clear history",
-            style: "destructive",
-            onPress: () => {
-              setAction("clearHistory");
-              setPin("");
-              setConfirm("");
-              setStep("newPin");
-            },
-          },
-        ]
-      );
-      return;
-    }
-
-    setAction("reset");
+  const startReset = () => {
+    setError(null);
     setPin("");
     setConfirm("");
     setStep("newPin");
@@ -111,7 +81,6 @@ export default function RecoverScreen() {
   useEffect(() => {
     if (step !== "confirmPin" || confirm.length !== 6 || submitting.current)
       return;
-    if (!action || action === "clearAll") return;
 
     if (confirm !== pin) {
       setError("Passcodes do not match");
@@ -125,12 +94,7 @@ export default function RecoverScreen() {
 
     (async () => {
       try {
-        if (action === "reset") {
-          await recoverResetPasscode(pin);
-        } else {
-          await recoverClearHistory(pin);
-        }
-        // Session unlocked → AuthGate sends to app
+        await recoverResetPasscode(pin);
         router.replace("/(app)");
       } catch (e) {
         setPin("");
@@ -148,126 +112,171 @@ export default function RecoverScreen() {
         submitting.current = false;
       }
     })();
-  }, [
-    confirm,
-    pin,
-    step,
-    action,
-    recoverResetPasscode,
-    recoverClearHistory,
-    router,
-  ]);
+  }, [confirm, pin, step, recoverResetPasscode, router]);
 
-  return (
-    <Screen style={{ paddingTop: insets.top }}>
-      <AppHeader
-        title="Forgot passcode"
-        subtitle="Verify with your phone lock"
-        backTo="/(auth)/login"
-      />
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={{
-            padding: spacing.xl,
-            paddingBottom: insets.bottom + 40,
-            gap: spacing.lg,
-          }}
-          keyboardShouldPersistTaps="handled"
+  if (step === "choose") {
+    return (
+      <Screen style={{ paddingTop: insets.top }}>
+        <AppHeader
+          title="Forgot passcode"
+          subtitle="Two ways to recover"
+          backTo="/(auth)/login"
+        />
+        <View
+          style={[
+            styles.chooseBody,
+            { paddingBottom: insets.bottom + spacing.xl },
+          ]}
         >
-          {step === "choose" ? (
-            <>
-              <Text muted style={{ lineHeight: 22 }}>
-                Use your phone’s fingerprint, face, or lock-screen password.
-                Then choose how to recover.
-              </Text>
-
-              <OptionCard
-                title="Reset passcode"
-                body="Keep all spending history. Set a new 6-digit app passcode."
-                onPress={() => startAction("reset")}
-                disabled={loading}
-              />
-              <OptionCard
-                title="Clear history"
-                body="Delete all expenses. Keep your name. Set a new passcode."
-                onPress={() => startAction("clearHistory")}
-                disabled={loading}
-                danger
-              />
-              <OptionCard
-                title="Erase everything"
-                body="Delete account and data on this device. Start over."
-                onPress={() => startAction("clearAll")}
-                disabled={loading}
-                danger
-              />
-            </>
-          ) : (
-            <Card variant="soft">
-              <Text variant="label">
-                {step === "newPin" ? "New passcode" : "Confirm passcode"}
-              </Text>
-              <Text muted style={{ marginTop: 4, marginBottom: spacing.lg }}>
-                {step === "newPin"
-                  ? "You’ll unlock Spentd with these 6 digits."
-                  : "Re-enter the same 6 digits. Phone lock will be asked next."}
-              </Text>
-              <PinPad
-                value={step === "newPin" ? pin : confirm}
-                onChange={step === "newPin" ? setPin : setConfirm}
-                disabled={loading}
-              />
-              <Button
-                title="Back"
-                variant="ghost"
-                style={{ marginTop: spacing.lg }}
-                disabled={loading}
-                onPress={() => {
-                  setError(null);
-                  if (step === "confirmPin") {
-                    setConfirm("");
-                    setPin("");
-                    setStep("newPin");
-                  } else {
-                    setAction(null);
-                    setPin("");
-                    setStep("choose");
-                  }
-                }}
-              />
-            </Card>
-          )}
+          <View style={styles.chooseSpacer} />
 
           {error ? (
-            <Text color={colors.danger} style={{ textAlign: "center" }}>
+            <Text
+              color={colors.danger}
+              style={{ textAlign: "center", marginBottom: spacing.md }}
+            >
               {error}
             </Text>
           ) : null}
+          {loading ? (
+            <ActivityIndicator
+              color={colors.accent}
+              style={{ marginBottom: spacing.md }}
+            />
+          ) : null}
 
-          {loading ? <Button title="Working…" loading /> : null}
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <View style={styles.bottomActions}>
+            <OptionCard
+              title="Reset passcode"
+              icon="key-outline"
+              onPress={startReset}
+              disabled={loading}
+            />
+            <OptionCard
+              title="Erase everything"
+              icon="trash-outline"
+              onPress={eraseEverything}
+              disabled={loading}
+              danger
+            />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen style={styles.screen}>
+      <View
+        style={[
+          styles.root,
+          {
+            paddingTop: insets.top + spacing.xl,
+            paddingBottom: insets.bottom + spacing.lg,
+          },
+        ]}
+      >
+        <View style={styles.top}>
+          <Text
+            style={{
+              fontFamily: typography.fontSansSemi,
+              fontSize: 18,
+              color: colors.text,
+              textAlign: "center",
+            }}
+          >
+            {step === "newPin" ? "New passcode" : "Confirm passcode"}
+          </Text>
+          <Text
+            muted
+            style={{
+              marginTop: spacing.sm,
+              textAlign: "center",
+              fontSize: 14,
+              lineHeight: 20,
+            }}
+          >
+            {step === "newPin"
+              ? "Choose 6 digits. Your phone lock is asked when you confirm."
+              : "Re-enter the same 6 digits."}
+          </Text>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <View style={styles.padBlock}>
+          <PinPad
+            value={step === "newPin" ? pin : confirm}
+            onChange={(next) => {
+              if (error) setError(null);
+              if (step === "newPin") setPin(next);
+              else setConfirm(next);
+            }}
+            disabled={loading}
+          />
+
+          <View style={styles.status}>
+            {loading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : error ? (
+              <Text
+                color={colors.danger}
+                style={{ textAlign: "center", fontSize: 14 }}
+              >
+                {error}
+              </Text>
+            ) : (
+              <View style={styles.statusPlaceholder} />
+            )}
+          </View>
+
+          <Pressable
+            onPress={() => {
+              setError(null);
+              if (step === "confirmPin") {
+                setConfirm("");
+                setPin("");
+                setStep("newPin");
+              } else {
+                setPin("");
+                setStep("choose");
+              }
+            }}
+            disabled={loading}
+            hitSlop={12}
+            style={styles.backLink}
+          >
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 14,
+                color: colors.textMuted,
+              }}
+            >
+              Back
+            </Text>
+          </Pressable>
+        </View>
+      </View>
     </Screen>
   );
 }
 
 function OptionCard({
   title,
-  body,
+  icon,
   onPress,
   disabled,
   danger,
 }: {
   title: string;
-  body: string;
+  icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   disabled?: boolean;
   danger?: boolean;
 }) {
   const { colors } = useTheme();
+  const textColor = danger ? "#FFFFFF" : colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -275,32 +284,75 @@ function OptionCard({
       style={({ pressed }) => [
         styles.option,
         {
-          backgroundColor: colors.bgElevated,
-          borderColor: danger ? colors.danger : colors.border,
-          opacity: disabled ? 0.5 : pressed ? 0.9 : 1,
+          backgroundColor: danger ? ERASE_RED : colors.bgElevated,
+          borderColor: danger ? "#FFFFFF" : colors.border,
+          borderWidth: danger ? 1.5 : StyleSheet.hairlineWidth,
+          opacity: disabled ? 0.5 : pressed ? 0.88 : 1,
         },
       ]}
     >
+      <Ionicons name={icon} size={20} color={textColor} />
       <Text
         style={{
           fontFamily: typography.fontSansSemi,
           fontSize: 16,
-          color: danger ? colors.danger : colors.text,
+          color: textColor,
+          textAlign: "center",
         }}
       >
         {title}
-      </Text>
-      <Text muted style={{ marginTop: 6, lineHeight: 20 }}>
-        {body}
       </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  root: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  chooseBody: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  chooseSpacer: {
+    flex: 1,
+  },
+  bottomActions: {
+    gap: spacing.md,
+  },
   option: {
-    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+  },
+  top: {
+    alignItems: "center",
+    paddingTop: spacing.md,
+  },
+  spacer: {
+    flex: 1,
+    minHeight: spacing.xl,
+  },
+  padBlock: {
+    alignItems: "center",
+    paddingBottom: spacing.sm,
+  },
+  status: {
+    minHeight: 24,
+    marginTop: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusPlaceholder: { height: 18 },
+  backLink: {
+    alignSelf: "center",
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
 });
