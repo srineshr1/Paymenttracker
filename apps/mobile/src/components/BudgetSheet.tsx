@@ -48,6 +48,7 @@ function dismissWithVelocity(
   currentY: number,
   velocityY: number
 ): { toValue: number; duration: number } {
+  "worklet";
   const remaining = Math.max(CLOSED_Y - currentY, 1);
   // px/s — keep a floor so a slow drag past the threshold still finishes cleanly
   const speed = Math.max(Math.abs(velocityY), 900);
@@ -55,15 +56,16 @@ function dismissWithVelocity(
   return { toValue: CLOSED_Y, duration };
 }
 
-const snapSpring = (velocity: number): WithSpringConfig => ({
-  velocity,
-  damping: 22,
-  stiffness: 260,
-  mass: 0.7,
-  overshootClamping: true,
-  restDisplacementThreshold: 0.5,
-  restSpeedThreshold: 8,
-});
+function snapSpring(velocity: number): WithSpringConfig {
+  "worklet";
+  return {
+    velocity,
+    damping: 22,
+    stiffness: 260,
+    mass: 0.7,
+    overshootClamping: true,
+  };
+}
 
 type Props = {
   open: boolean;

@@ -273,18 +273,21 @@ async function insertExpense(
     }
   }
 
-  const soft = await findSoftDuplicate(
-    userId,
-    data.merchant,
-    data.amount,
-    paidAt
-  );
-  if (soft) {
-    throw new LocalDataError(
-      "Same merchant and amount already exist on this day.",
-      409,
-      { existingId: soft.id }
+  // Cash wallet logs can repeat the same amount many times in a day.
+  if (data.source !== "cash") {
+    const soft = await findSoftDuplicate(
+      userId,
+      data.merchant,
+      data.amount,
+      paidAt
     );
+    if (soft) {
+      throw new LocalDataError(
+        "Same merchant and amount already exist on this day.",
+        409,
+        { existingId: soft.id }
+      );
+    }
   }
 
   const [amountEnc, merchantEnc, notesEnc, rawEnc, upiEnc] =

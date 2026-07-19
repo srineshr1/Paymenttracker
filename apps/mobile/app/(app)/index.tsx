@@ -25,6 +25,11 @@ import {
   getBudgetPrefs,
 } from "@/src/data/budget";
 import {
+  getWallets,
+  totalLiquid,
+  type WalletsState,
+} from "@/src/data/cash";
+import {
   formatINR,
   formatINRCompact,
   formatMonthShort,
@@ -61,8 +66,9 @@ function startOfWeekMonday(d = new Date()) {
   return start;
 }
 
+/** MoM spend change. Null when there’s no meaningful baseline. */
 function pctChange(current: number, previous: number): number | null {
-  if (previous <= 0) return current > 0 ? 100 : null;
+  if (previous <= 0) return null;
   return Math.round(((current - previous) / previous) * 100);
 }
 
@@ -157,6 +163,12 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
+  const [wallets, setWallets] = useState<WalletsState>({
+    accountBalance: 0,
+    cashBalance: 0,
+    movements: [],
+  });
+  const [showLeftToSpend, setShowLeftToSpend] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -175,7 +187,7 @@ export default function HomeScreen() {
         return { year: d.getFullYear(), month: d.getMonth() + 1 };
       });
 
-      const [s, prevS, monthList, weekList, recentList, prefs, ...hist] =
+      const [s, prevS, monthList, weekList, recentList, prefs, walletState, ...hist] =
         await Promise.all([
           api.monthSummary(cursor.year, cursor.month),
           api.monthSummary(prev.getFullYear(), prev.getMonth() + 1),
@@ -191,8 +203,11 @@ export default function HomeScreen() {
           }),
           api.listExpenses({ limit: 6 }),
           getBudgetPrefs(),
+          getWallets(),
           ...histMonths.map((m) => api.monthSummary(m.year, m.month)),
         ]);
+
+      setWallets(walletState);
 
       let incomeSum = 0;
       let spendSum = 0;
@@ -347,13 +362,14 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={{
           padding: spacing.xl,
-          paddingBottom: insets.bottom + 120,
+          // Clear the floating Add payments control
+          paddingBottom: insets.bottom + 160,
           gap: spacing.xl,
         }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={{ flex: 1, paddingRight: spacing.md }}>
+          <View style={{ flex: 1, minWidth: 0, paddingRight: spacing.md }}>
             <Text variant="label">Welcome back</Text>
             <Text
               style={{
@@ -364,6 +380,7 @@ export default function HomeScreen() {
                 color: colors.text,
                 marginTop: 2,
               }}
+              numberOfLines={1}
             >
               {user?.username ?? "there"}
             </Text>
@@ -379,35 +396,37 @@ export default function HomeScreen() {
             style={({ pressed }) => [
               styles.iconBtn,
               {
-                backgroundColor: colors.bgMuted,
+                backgroundColor: colors.bgElevated,
                 borderColor: colors.border,
                 opacity: pressed ? 0.85 : 1,
               },
             ]}
           >
-            <Ionicons name="settings-outline" size={22} color={colors.text} />
+            <Ionicons name="settings-outline" size={20} color={colors.text} />
           </Pressable>
         </View>
 
-        <Card
-          variant="hero"
-          style={{ gap: spacing.sm, padding: spacing.lg }}
-        >
+        <Card variant="hero" style={styles.heroCard}>
           <View style={styles.monthNav}>
             <Pressable
               onPress={() => shiftMonth(-1)}
               hitSlop={10}
               style={styles.monthBtn}
+              accessibilityLabel="Previous month"
             >
-              <Ionicons name="chevron-back" size={18} color={colors.textSecondary} />
+              <Ionicons
+                name="chevron-back"
+                size={18}
+                color={colors.textSecondary}
+              />
             </Pressable>
             <Text
               style={{
                 flex: 1,
                 textAlign: "center",
                 fontFamily: typography.fontSansSemi,
-                fontSize: 11,
-                letterSpacing: 1.2,
+                fontSize: 12,
+                letterSpacing: 1.1,
                 color: colors.textSecondary,
               }}
             >
@@ -417,6 +436,7 @@ export default function HomeScreen() {
               onPress={() => shiftMonth(1)}
               hitSlop={10}
               style={styles.monthBtn}
+              accessibilityLabel="Next month"
             >
               <Ionicons
                 name="chevron-forward"
@@ -433,64 +453,155 @@ export default function HomeScreen() {
             />
           ) : (
             <>
-              <View style={styles.spentRow}>
-                <Text
-                  style={{
-                    fontFamily: typography.fontSansBold,
-                    fontSize: 34,
-                    lineHeight: 40,
-                    letterSpacing: -0.4,
-                    color: colors.text,
-                    flexShrink: 1,
-                  }}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.55}
-                >
-                  {formatINR(spent)}
-                </Text>
-                {change != null ? (
-                  <View
-                    style={[
-                      styles.changePill,
-                      {
-                        backgroundColor:
-                          change !== 0
-                            ? "rgba(143,203,176,0.14)"
-                            : colors.bgMuted,
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        change > 0
-                          ? "arrow-up"
-                          : change < 0
-                            ? "arrow-down"
-                            : "remove"
-                      }
-                      size={11}
-                      color={colors.credit}
-                    />
+              <View style={styles.spentBlock}>
+                <View style={styles.spentCol}>
+                  <View style={styles.spentRow}>
                     <Text
                       style={{
-                        fontFamily: typography.fontSansSemi,
-                        fontSize: 11,
-                        color: colors.credit,
+                        fontFamily: typography.fontSansBold,
+                        fontSize: 36,
+                        lineHeight: 42,
+                        letterSpacing: -0.5,
+                        color: colors.text,
+                        flexShrink: 1,
+                      }}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.55}
+                    >
+                      {formatINR(spent)}
+                    </Text>
+                    {change != null ? (
+                      <View
+                        style={[
+                          styles.changePill,
+                          {
+                            backgroundColor:
+                              change > 0
+                                ? "rgba(217,123,123,0.14)"
+                                : change < 0
+                                  ? "rgba(143,203,176,0.14)"
+                                  : colors.bgMuted,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={
+                            change > 0
+                              ? "arrow-up"
+                              : change < 0
+                                ? "arrow-down"
+                                : "remove"
+                          }
+                          size={11}
+                          color={
+                            change > 0
+                              ? colors.danger
+                              : change < 0
+                                ? colors.credit
+                                : colors.textSecondary
+                          }
+                        />
+                        <Text
+                          style={{
+                            fontFamily: typography.fontSansSemi,
+                            fontSize: 11,
+                            color:
+                              change > 0
+                                ? colors.danger
+                                : change < 0
+                                  ? colors.credit
+                                  : colors.textSecondary,
+                          }}
+                        >
+                          {Math.abs(change)}%
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text muted style={{ fontSize: 13, marginTop: 2 }}>
+                    Spent this month
+                  </Text>
+                </View>
+
+                <View style={styles.leftToSpendCol}>
+                  <View style={styles.leftToSpendLabelRow}>
+                    <Text
+                      muted
+                      style={{
+                        fontSize: 13,
+                        textAlign: "right",
                       }}
                     >
-                      {Math.abs(change)}%
+                      Left to spend
                     </Text>
+                    <Pressable
+                      onPress={() => setShowLeftToSpend((v) => !v)}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showLeftToSpend
+                          ? "Hide left to spend amount"
+                          : "Show left to spend amount"
+                      }
+                      style={({ pressed }) => [
+                        styles.eyeBtn,
+                        {
+                          backgroundColor: colors.bgMuted,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={showLeftToSpend ? "eye-outline" : "eye-off-outline"}
+                        size={14}
+                        color={colors.textSecondary}
+                      />
+                    </Pressable>
                   </View>
-                ) : null}
+                  <Text
+                    style={{
+                      fontFamily: typography.fontSansBold,
+                      fontSize: 22,
+                      lineHeight: 28,
+                      letterSpacing: -0.4,
+                      color: showLeftToSpend
+                        ? plan.remaining < 0
+                          ? colors.danger
+                          : colors.text
+                        : colors.textMuted,
+                      textAlign: "right",
+                      marginTop: 2,
+                    }}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.6}
+                  >
+                    {showLeftToSpend ? (
+                      <>
+                        {formatINR(plan.remaining)}
+                        <Text
+                          style={{
+                            fontFamily: typography.fontSansMedium,
+                            fontSize: 13,
+                            color: colors.textMuted,
+                            letterSpacing: 0,
+                          }}
+                        >
+                          {" "}
+                          ({formatINR(totalLiquid(wallets))})
+                        </Text>
+                      </>
+                    ) : (
+                      "••••••"
+                    )}
+                  </Text>
+                </View>
               </View>
-              <Text muted style={{ fontSize: 13, marginTop: -2 }}>
-                Spent this month
-              </Text>
 
               <Pressable
                 onPress={() => setBudgetOpen(true)}
-                style={{ gap: 6, marginTop: 2 }}
+                style={styles.budgetBlock}
                 accessibilityRole="button"
                 accessibilityLabel="Edit monthly budget"
               >
@@ -518,7 +629,9 @@ export default function HomeScreen() {
                       fontFamily: typography.fontSansMedium,
                       fontSize: 12,
                       color: colors.textSecondary,
+                      flexShrink: 0,
                     }}
+                    numberOfLines={1}
                   >
                     {formatINR(spent)} of {formatINR(budget)}
                   </Text>
@@ -540,47 +653,6 @@ export default function HomeScreen() {
                   />
                 </View>
               </Pressable>
-
-              <View
-                style={[styles.heroMeta, { borderTopColor: colors.border }]}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text variant="caption">Left to spend</Text>
-                  <Text
-                    style={{
-                      fontFamily: typography.fontSansSemi,
-                      color:
-                        plan.remaining < 0 ? colors.danger : colors.text,
-                      marginTop: 2,
-                      fontSize: 15,
-                    }}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                  >
-                    {formatINR(plan.remaining)}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text variant="caption">
-                    {plan.isCurrentMonth ? "Daily allowance" : "Per day left"}
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: typography.fontSansSemi,
-                      color: colors.text,
-                      marginTop: 2,
-                      fontSize: 15,
-                    }}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.7}
-                  >
-                    {formatINR(Math.round(plan.dailyAllowance))}
-                    {plan.isCurrentMonth ? "/day" : ""}
-                  </Text>
-                </View>
-              </View>
 
               {paceLabel ? (
                 <View
@@ -625,6 +697,7 @@ export default function HomeScreen() {
                             ? colors.credit
                             : colors.textSecondary,
                     }}
+                    numberOfLines={1}
                   >
                     {paceLabel.text}
                   </Text>
@@ -632,7 +705,7 @@ export default function HomeScreen() {
               ) : null}
 
               <View
-                style={[styles.heroMeta, { borderTopColor: colors.border }]}
+                style={[styles.heroStats, { borderTopColor: colors.border }]}
               >
                 <View style={styles.statCol}>
                   <Text
@@ -651,6 +724,12 @@ export default function HomeScreen() {
                     {formatINR(received)}
                   </Text>
                 </View>
+                <View
+                  style={[
+                    styles.statDivider,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
                 <View style={styles.statCol}>
                   <Text
                     variant="caption"
@@ -674,6 +753,12 @@ export default function HomeScreen() {
                     {formatINR(Math.abs(plan.net))}
                   </Text>
                 </View>
+                <View
+                  style={[
+                    styles.statDivider,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
                 <View style={styles.statCol}>
                   <Text
                     variant="caption"
@@ -893,6 +978,7 @@ export default function HomeScreen() {
           setBudgetPrefsState(next);
         }}
       />
+
     </Screen>
   );
 }
@@ -911,20 +997,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  heroCard: {
+    gap: spacing.md,
+    padding: spacing.lg,
+    overflow: "hidden",
+  },
   monthNav: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: -spacing.xs,
   },
   monthBtn: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
+  },
+  spentBlock: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  spentCol: {
+    flex: 1,
+    minWidth: 0,
   },
   spentRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+  },
+  leftToSpendCol: {
+    flexShrink: 1,
+    maxWidth: "48%",
+    alignItems: "flex-end",
+  },
+  leftToSpendLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  eyeBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.xs,
+    alignItems: "center",
+    justifyContent: "center",
   },
   changePill: {
     flexDirection: "row",
@@ -933,6 +1052,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: radius.xs,
+  },
+  budgetBlock: {
+    gap: 8,
   },
   budgetRow: {
     flexDirection: "row",
@@ -944,7 +1066,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
-    flexShrink: 1,
+    flex: 1,
+    minWidth: 0,
   },
   budgetTrack: {
     height: 4,
@@ -963,15 +1086,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: radius.sm,
-    marginTop: 2,
   },
-  heroMeta: {
+  heroStats: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginTop: spacing.xs,
+    alignItems: "stretch",
     paddingTop: spacing.md,
-    paddingHorizontal: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   statCol: {
@@ -979,6 +1098,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignItems: "center",
     gap: 3,
+    paddingHorizontal: 4,
+  },
+  statDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: "stretch",
+    marginVertical: 2,
   },
   statLabel: {
     textAlign: "center",

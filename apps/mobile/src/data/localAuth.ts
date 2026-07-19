@@ -327,6 +327,12 @@ export async function clearAllLocalData(): Promise<void> {
   await wipeDatabaseTables();
   await wipeVaultSecrets();
   await clearLastUsername();
+  try {
+    const { clearWallets } = await import("./cash");
+    await clearWallets();
+  } catch {
+    /* ignore */
+  }
   // Keep categories via migrate seed on next open
   await getDb();
 }

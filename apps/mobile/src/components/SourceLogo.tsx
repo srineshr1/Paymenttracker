@@ -8,7 +8,7 @@ const logos = {
   manual: require("../../assets/images/brands/manual.png"),
 } as const;
 
-type Source = "phonepe" | "gpay" | "sms" | "manual" | string;
+type Source = "phonepe" | "gpay" | "sms" | "manual" | "cash" | string;
 
 export function SourceLogo({
   source,
@@ -38,6 +38,30 @@ export function SourceLogo({
           size={Math.round(size * 0.48)}
           color={colors.accentStrong}
           accessibilityLabel="SMS"
+        />
+      </View>
+    );
+  }
+
+  if (source === "cash") {
+    return (
+      <View
+        style={[
+          styles.wrap,
+          {
+            width: size,
+            height: size,
+            borderRadius: Math.max(10, size * 0.28),
+            borderColor: colors.border,
+            backgroundColor: colors.bgMuted,
+          },
+        ]}
+      >
+        <Ionicons
+          name="cash-outline"
+          size={Math.round(size * 0.48)}
+          color={colors.text}
+          accessibilityLabel="Cash"
         />
       </View>
     );
