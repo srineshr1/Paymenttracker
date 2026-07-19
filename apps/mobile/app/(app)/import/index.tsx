@@ -22,6 +22,7 @@ import {
   recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
 import { TesseractHost } from "@/src/features/ocr/TesseractHost";
+import { useAuth } from "@/src/features/auth/AuthContext";
 import {
   enableSmsAutoImport,
   getSmsAutoImportEnabled,
@@ -52,6 +53,7 @@ export default function ImportScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
   const { colors } = useTheme();
+  const { runWithoutAppLock } = useAuth();
   const fastOcr = useMemo(() => isFastOcrAvailable(), []);
   const autoSmsStarted = useRef(false);
 
@@ -147,14 +149,17 @@ export default function ImportScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.85,
-      base64: true,
-      allowsEditing: false,
-      allowsMultipleSelection: true,
-      selectionLimit: 6,
-    });
+    // Gallery backgrounds the app — don't treat that as "leave app → lock".
+    const result = await runWithoutAppLock(() =>
+      ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.85,
+        base64: true,
+        allowsEditing: false,
+        allowsMultipleSelection: true,
+        selectionLimit: 6,
+      })
+    );
     if (result.canceled || !result.assets?.length) return;
 
     const added: Picked[] = result.assets.map((asset, i) => ({

@@ -1,7 +1,8 @@
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import { Stack } from "expo-router";
 import { enableFreeze } from "react-native-screens";
 import { useTheme } from "@/src/design/ThemeContext";
+import { useAuth } from "@/src/features/auth/AuthContext";
 import { SmsAutoImportHost } from "@/src/features/sms/SmsAutoImportHost";
 
 // Freezing inactive screens blanks the previous scene on back (esp. Android +
@@ -10,6 +11,13 @@ enableFreeze(false);
 
 export default function AppLayout() {
   const { colors, isDark } = useTheme();
+  const { token } = useAuth();
+
+  // Hard gate: never mount app screens without an unlocked session.
+  // Root AuthGate redirects to login; this prevents dashboard flash/data loads.
+  if (!token) {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
 
   return (
     <>

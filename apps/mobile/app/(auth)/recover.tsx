@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -148,13 +147,11 @@ export default function RecoverScreen() {
           <View style={styles.bottomActions}>
             <OptionCard
               title="Reset passcode"
-              icon="key-outline"
               onPress={startReset}
               disabled={loading}
             />
             <OptionCard
               title="Erase everything"
-              icon="trash-outline"
               onPress={eraseEverything}
               disabled={loading}
               danger
@@ -264,13 +261,11 @@ export default function RecoverScreen() {
 
 function OptionCard({
   title,
-  icon,
   onPress,
   disabled,
   danger,
 }: {
   title: string;
-  icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   disabled?: boolean;
   danger?: boolean;
@@ -285,13 +280,12 @@ function OptionCard({
         styles.option,
         {
           backgroundColor: danger ? ERASE_RED : colors.bgElevated,
-          borderColor: danger ? "#FFFFFF" : colors.border,
-          borderWidth: danger ? 1.5 : StyleSheet.hairlineWidth,
+          borderColor: danger ? ERASE_RED : colors.border,
+          borderWidth: danger ? 0 : StyleSheet.hairlineWidth,
           opacity: disabled ? 0.5 : pressed ? 0.88 : 1,
         },
       ]}
     >
-      <Ionicons name={icon} size={20} color={textColor} />
       <Text
         style={{
           fontFamily: typography.fontSansSemi,
@@ -326,10 +320,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.sm,
   },
   top: {
     alignItems: "center",

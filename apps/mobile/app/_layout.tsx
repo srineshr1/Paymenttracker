@@ -42,15 +42,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
 
+  const inAuth = segments[0] === "(auth)";
+  const authScreen = segments[1];
+  const appScreen = segments[1];
+
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
 
     (async () => {
-      const inAuth = segments[0] === "(auth)";
-      const authScreen = segments[1];
-      const appScreen = segments[1];
-
       if (token) {
         const needsConsent = await isSmsConsentPending();
         if (cancelled) return;
@@ -71,7 +71,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Locked / signed out
+      // Locked / signed out — always force passcode (or register)
       if (!inAuth) {
         router.replace(hasAccount ? "/(auth)/login" : "/(auth)/register");
         return;
@@ -90,9 +90,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token, ready, hasAccount, segments, router]);
+  }, [token, ready, hasAccount, inAuth, authScreen, appScreen, router]);
 
-  if (!ready) {
+  // Hold the tree until auth is ready, and while locked off the auth stack
+  // (redirect in flight). Keeps the navigator mounted so replace() works,
+  // but never leaves the user staring at a cached dashboard.
+  if (!ready || (!token && !inAuth)) {
     return (
       <View
         style={{
@@ -103,6 +106,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         }}
       >
         <ActivityIndicator color={colors.accent} />
+        {/* Keep children mounted so expo-router can apply replace() */}
+        <View style={{ width: 0, height: 0, overflow: "hidden" }} pointerEvents="none">
+          {children}
+        </View>
       </View>
     );
   }

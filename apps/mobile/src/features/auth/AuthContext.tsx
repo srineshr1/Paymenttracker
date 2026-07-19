@@ -11,12 +11,10 @@ import { AppState, type AppStateStatus } from "react-native";
 import type { UserPublic } from "@paymenttracker/shared";
 import { api, configureApi } from "@/src/api/client";
 import { lockLocal } from "@/src/data/localAuth";
-import { clearActiveDek } from "@/src/data/crypto";
+import { clearActiveDek, isUnlocked } from "@/src/data/crypto";
 import { getDb } from "@/src/data/db";
 import { getLastUsername, saveLastUsername } from "@/src/lib/secure";
 import { markSmsConsentPending } from "@/src/features/sms/prefs";
-
-const LOCK_AFTER_MS = 5 * 60 * 1000;
 
 type AuthState = {
   user: UserPublic | null;
@@ -42,6 +40,11 @@ type AuthState = {
   recoverClearAll: () => Promise<void>;
   logout: () => void;
   lock: () => void;
+  /**
+   * Run work that leaves the app (gallery, share sheet) without locking.
+   * Always pair leave/return so a crash mid-flow still locks next background.
+   */
+  runWithoutAppLock: <T>(fn: () => Promise<T>) => Promise<T>;
   refreshAccountState: () => Promise<void>;
 };
 
@@ -56,7 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     null
   );
   const tokenRef = useRef<string | null>(null);
-  const backgroundedAt = useRef<number | null>(null);
+  /** >0 while gallery / share / system UI holds the app in background. */
+  const suppressLockCount = useRef(0);
 
   useEffect(() => {
     configureApi({
@@ -188,17 +192,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearSession();
   }, [clearSession]);
 
+  const runWithoutAppLock = useCallback(
+    async <T,>(fn: () => Promise<T>): Promise<T> => {
+      suppressLockCount.current += 1;
+      try {
+        return await fn();
+      } finally {
+        suppressLockCount.current = Math.max(0, suppressLockCount.current - 1);
+      }
+    },
+    []
+  );
+
+  // Require passcode whenever the app leaves the foreground (home, recents,
+  // another app). Brief "inactive" (control center, etc.) does not lock.
+  // Gallery / share flows use runWithoutAppLock to suppress this.
   useEffect(() => {
     const onChange = (state: AppStateStatus) => {
-      if (state === "background" || state === "inactive") {
-        backgroundedAt.current = Date.now();
+      if (state === "background") {
+        if (suppressLockCount.current > 0) return;
+        if (tokenRef.current) clearSession();
+        return;
       }
-      if (state === "active" && backgroundedAt.current != null) {
-        const elapsed = Date.now() - backgroundedAt.current;
-        backgroundedAt.current = null;
-        if (elapsed >= LOCK_AFTER_MS && tokenRef.current) {
-          clearSession();
-        }
+      // Safety net: never stay "signed in" with a locked vault.
+      if (state === "active" && tokenRef.current && !isUnlocked()) {
+        clearSession();
       }
     };
     const sub = AppState.addEventListener("change", onChange);
@@ -222,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       recoverClearAll,
       logout,
       lock,
+      runWithoutAppLock,
       refreshAccountState,
     }),
     [
@@ -240,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       recoverClearAll,
       logout,
       lock,
+      runWithoutAppLock,
       refreshAccountState,
     ]
   );

@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -12,10 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api/client";
-import { AppHeader } from "@/src/components/AppHeader";
-import { AppLogo } from "@/src/components/AppLogo";
 import { BudgetSheet } from "@/src/components/BudgetSheet";
-import { Card, Screen, Segmented, Text } from "@/src/components/ui";
+import { Screen, Text } from "@/src/components/ui";
 import {
   type BudgetPrefs,
   computeBudgetPlan,
@@ -35,11 +34,17 @@ import {
 } from "@/src/features/sms/autoImport";
 import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
 
+/** Docs page for SMS auto-import — update when the site is live. */
+const SMS_AUTO_IMPORT_INFO_URL = "https://spentd.app/sms-auto-import";
+
+const GROUP_RADIUS = radius.lg;
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { colors, preference, setPreference, mode, isDark } = useTheme();
-  const { user, logout } = useAuth();
+  const navigation = useNavigation();
+  const { colors, preference, setPreference } = useTheme();
+  const { user, logout, runWithoutAppLock } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetPrefs, setBudgetPrefsState] = useState<BudgetPrefs>({
@@ -138,7 +143,7 @@ export default function SettingsScreen() {
   const onExport = (format: "csv" | "json") => {
     Alert.alert(
       format === "csv" ? "Export CSV?" : "Export JSON?",
-      "Shares a file of decrypted expenses from this device (while unlocked).",
+      "Share a file of expenses from this device.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -146,7 +151,9 @@ export default function SettingsScreen() {
           onPress: async () => {
             setExporting(true);
             try {
-              const { count } = await exportExpensesShare(format);
+              const { count } = await runWithoutAppLock(() =>
+                exportExpensesShare(format)
+              );
               Alert.alert(
                 "Export ready",
                 count === 0
@@ -166,15 +173,41 @@ export default function SettingsScreen() {
       ]
     );
   };
-  const modeLabel =
+
+  const themeValue =
     preference === "system"
-      ? `System · ${mode === "dark" ? "Dark" : "Light"}`
-      : mode === "dark"
-        ? "Dark mode"
-        : "Light mode";
+      ? "System"
+      : preference === "dark"
+        ? "Dark"
+        : "Light";
+
+  const budgetValue =
+    budgetPrefs.mode === "manual"
+      ? formatINR(budgetPrefs.manualBudget)
+      : `${Math.round(budgetPrefs.savingsRate * 100)}% · ${formatINR(autoPreview)}`;
+
+  const onBack = useCallback(() => {
+    try {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
+    try {
+      if (router.canGoBack()) {
+        router.back();
+        return;
+      }
+    } catch {
+      /* fall through */
+    }
+    router.replace("/(app)");
+  }, [navigation, router]);
 
   const onSignOut = () => {
-    Alert.alert("Lock Spentd?", "You’ll need your passcode to unlock again.", [
+    Alert.alert("Lock app?", "You’ll need your passcode to unlock again.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Lock",
@@ -187,288 +220,191 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const onPickTheme = () => {
+    Alert.alert("Appearance", undefined, [
+      {
+        text: "System",
+        onPress: () => setPreference("system"),
+      },
+      {
+        text: "Light",
+        onPress: () => setPreference("light"),
+      },
+      {
+        text: "Dark",
+        onPress: () => setPreference("dark"),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   return (
-    <Screen style={{ paddingTop: insets.top }}>
-      <AppHeader title="Settings" subtitle="Appearance & account" />
-      <ScrollView
-        contentContainerStyle={{
-          padding: spacing.xl,
-          paddingBottom: insets.bottom + spacing.xxxl,
-          gap: spacing.xl,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Profile */}
-        <View style={styles.profile}>
-          <View
-            style={[
-              styles.monogram,
-              { backgroundColor: isDark ? colors.bgMuted : colors.bgElevated },
-            ]}
-          >
-            <Text
-              style={{
-                fontFamily: typography.fontSansSemi,
-                fontSize: 18,
-                color: colors.text,
-                letterSpacing: 0.5,
-              }}
-            >
-              {initial}
-            </Text>
-          </View>
-          <View style={styles.profileText}>
-            <Text
-              style={{
-                fontFamily: typography.fontSansSemi,
-                fontSize: 20,
-                letterSpacing: -0.3,
-                color: colors.text,
-              }}
-              numberOfLines={1}
-            >
-              {user?.username ?? "—"}
-            </Text>
-            <Text
-              muted
-              style={{
-                marginTop: 4,
-                fontSize: 13,
-                color: colors.textMuted,
-              }}
-            >
-              Local account · on this device
-            </Text>
-          </View>
-        </View>
-
-        {/* Appearance */}
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label" style={{ marginLeft: 4 }}>
-            Appearance
-          </Text>
-          <Card variant="elevated" style={styles.sectionCard}>
-            <View style={styles.sectionHead}>
-              <View
-                style={[
-                  styles.iconWrap,
-                  {
-                    backgroundColor: colors.accentSoft,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={mode === "dark" ? "moon" : "sunny"}
-                  size={18}
-                  color={colors.accentStrong}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontFamily: typography.fontSansSemi,
-                    fontSize: 16,
-                    color: colors.text,
-                  }}
-                >
-                  {modeLabel}
-                </Text>
-                <Text muted style={{ fontSize: 13, marginTop: 2 }}>
-                  Warm paper in light · ink & gold in dark
-                </Text>
-              </View>
-            </View>
-            <Segmented
-              value={preference}
-              onChange={(v) =>
-                setPreference(v as "system" | "light" | "dark")
-              }
-              options={[
-                { label: "System", value: "system" },
-                { label: "Light", value: "light" },
-                { label: "Dark", value: "dark" },
-              ]}
-            />
-          </Card>
-        </View>
-
-        {/* Budget */}
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label" style={{ marginLeft: 4 }}>
-            Budget
-          </Text>
-          <Card variant="elevated" style={styles.listCard}>
-            <SettingsRow
-              position="only"
-              title="Budget & savings"
-              subtitle={
-                budgetPrefs.mode === "manual"
-                  ? `Custom · ${formatINR(budgetPrefs.manualBudget)}`
-                  : `Smart · save ${Math.round(budgetPrefs.savingsRate * 100)}% · ~${formatINR(autoPreview)}`
-              }
-              onPress={() => setBudgetOpen(true)}
-            />
-          </Card>
-        </View>
-
-        {/* SMS auto-import (Android native build) */}
-        {smsSupported ? (
-          <View style={{ gap: spacing.sm }}>
-            <Text variant="label" style={{ marginLeft: 4 }}>
-              Payments from SMS
-            </Text>
-            <Card variant="elevated" style={styles.sectionCard}>
-              <View style={styles.sectionHead}>
-                <View
-                  style={[
-                    styles.iconWrap,
-                    {
-                      backgroundColor: colors.accentSoft,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="chatbubble-ellipses-outline"
-                    size={18}
-                    color={colors.accentStrong}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontFamily: typography.fontSansSemi,
-                      fontSize: 16,
-                      color: colors.text,
-                    }}
-                  >
-                    Auto-import SMS
-                  </Text>
-                  <Text muted style={{ fontSize: 13, marginTop: 2, lineHeight: 18 }}>
-                    {smsAuto
-                      ? "On · new bank/UPI messages save while unlocked"
-                      : "Off · turn on to parse payments as SMS arrives"}
-                  </Text>
-                </View>
-                <Switch
-                  value={smsAuto}
-                  onValueChange={(v) => void onToggleSmsAuto(v)}
-                  disabled={smsBusy}
-                  trackColor={{
-                    false: colors.borderStrong,
-                    true: colors.accent,
-                  }}
-                  thumbColor={colors.bgCard}
-                  accessibilityLabel="Auto-import payments from SMS"
-                />
-              </View>
-              <Text muted style={{ fontSize: 12, lineHeight: 18 }}>
-                Stays on this phone. Only high-confidence payment SMS is saved;
-                duplicates are skipped. Needs the app unlocked (passcode).
-              </Text>
-            </Card>
-          </View>
-        ) : null}
-
-        {/* Account */}
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label" style={{ marginLeft: 4 }}>
-            Account
-          </Text>
-          <Card variant="elevated" style={styles.listCard}>
-            <SettingsRow
-              position="first"
-              title="Edit username"
-              subtitle="Change how you appear"
-              onPress={() => router.push("/(app)/edit-username")}
-            />
-            <RowDivider />
-            <SettingsRow
-              position="middle"
-              title="Change passcode"
-              subtitle="Update your 6-digit code"
-              onPress={() => router.push("/(app)/change-passcode")}
-            />
-            <RowDivider />
-            <SettingsRow
-              position="last"
-              title="Lock now"
-              subtitle="Require passcode again"
-              onPress={() => {
-                logout();
-                router.replace("/(auth)/login");
-              }}
-            />
-          </Card>
-        </View>
-
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label" style={{ marginLeft: 4 }}>
-            Data
-          </Text>
-          <Card variant="elevated" style={styles.listCard}>
-            <SettingsRow
-              position="first"
-              title="Export CSV"
-              subtitle={exporting ? "Preparing…" : "Share expenses as spreadsheet"}
-              onPress={() => !exporting && onExport("csv")}
-            />
-            <RowDivider />
-            <SettingsRow
-              position="last"
-              title="Export JSON"
-              subtitle="Full local backup file"
-              onPress={() => !exporting && onExport("json")}
-            />
-          </Card>
-          <Text muted style={{ marginLeft: 4, fontSize: 12, lineHeight: 18 }}>
-            Everything stays on this device. Export only works while unlocked.
-          </Text>
-        </View>
-
-        {/* Sign out */}
+    <Screen style={{ paddingTop: insets.top, backgroundColor: colors.bg }}>
+      <View style={styles.topBar}>
         <Pressable
-          onPress={onSignOut}
+          onPress={onBack}
+          hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Lock app"
+          accessibilityLabel="Go back"
           style={({ pressed }) => [
-            styles.signOutBtn,
+            styles.backBtn,
             {
-              backgroundColor: colors.dangerSoft,
-              borderColor: isDark
-                ? "rgba(217,123,123,0.28)"
-                : "rgba(181,74,74,0.22)",
-              opacity: pressed ? 0.88 : 1,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
+              backgroundColor: colors.bgMuted,
+              opacity: pressed ? 0.7 : 1,
             },
           ]}
         >
-          <Ionicons name="lock-closed-outline" size={18} color={colors.danger} />
-          <Text
-            style={{
-              fontFamily: typography.fontSansSemi,
-              fontSize: 15,
-              color: colors.danger,
-            }}
-          >
-            Lock app
-          </Text>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
+      </View>
 
-        <View style={styles.brandFooter}>
-          <AppLogo size={28} />
-          <Text
-            muted
-            style={{
-              textAlign: "center",
-              fontSize: 12,
-              marginTop: spacing.sm,
-            }}
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          paddingBottom: insets.bottom + spacing.xxxl,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.pageTitle}>Settings</Text>
+
+        {/* Account identity — system-settings style profile row */}
+        <View
+          style={[
+            styles.group,
+            { backgroundColor: colors.bgElevated, marginTop: spacing.lg },
+          ]}
+        >
+          <Pressable
+            onPress={() => router.push("/(app)/edit-username")}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.profileRow,
+              pressed && { backgroundColor: colors.bgMuted },
+            ]}
           >
-            Spentd · v1.0
-          </Text>
+            <View
+              style={[styles.avatar, { backgroundColor: colors.bgMuted }]}
+            >
+              <Text style={[styles.avatarLetter, { color: colors.text }]}>
+                {initial}
+              </Text>
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, { color: colors.text }]} numberOfLines={1}>
+                {user?.username ?? "Account"}
+              </Text>
+              <Text style={[styles.rowSub, { color: colors.textSecondary }]}>
+                Local account on this device
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={colors.textMuted}
+            />
+          </Pressable>
         </View>
+
+        <SectionLabel>General</SectionLabel>
+        <View style={[styles.group, { backgroundColor: colors.bgElevated }]}>
+          <SettingsRow
+            icon="contrast-outline"
+            title="Appearance"
+            value={themeValue}
+            onPress={onPickTheme}
+            position="first"
+            showDivider
+          />
+          <SettingsRow
+            icon="wallet-outline"
+            title="Budget & savings"
+            value={budgetValue}
+            onPress={() => setBudgetOpen(true)}
+            position={smsSupported ? "middle" : "last"}
+            showDivider={smsSupported}
+          />
+          {smsSupported ? (
+            <SettingsToggleRow
+              icon="chatbubble-ellipses-outline"
+              title="Auto-import SMS"
+              value={smsAuto}
+              onValueChange={(v) => void onToggleSmsAuto(v)}
+              disabled={smsBusy}
+              onInfo={() => void Linking.openURL(SMS_AUTO_IMPORT_INFO_URL)}
+              position="last"
+            />
+          ) : null}
+        </View>
+
+        <SectionLabel>Security</SectionLabel>
+        <View style={[styles.group, { backgroundColor: colors.bgElevated }]}>
+          <SettingsRow
+            icon="keypad-outline"
+            title="Change passcode"
+            onPress={() => router.push("/(app)/change-passcode")}
+            position="only"
+          />
+        </View>
+
+        <SectionLabel>Data</SectionLabel>
+        <View style={[styles.group, { backgroundColor: colors.bgElevated }]}>
+          <SettingsRow
+            icon="document-text-outline"
+            title="Export CSV"
+            value={exporting ? "Preparing…" : undefined}
+            onPress={() => !exporting && onExport("csv")}
+            position="first"
+            showDivider
+          />
+          <SettingsRow
+            icon="code-slash-outline"
+            title="Export JSON"
+            onPress={() => !exporting && onExport("json")}
+            position="last"
+          />
+        </View>
+
+        <View
+          style={[
+            styles.group,
+            { backgroundColor: colors.bgElevated, marginTop: spacing.xl },
+          ]}
+        >
+          <Pressable
+            onPress={onSignOut}
+            accessibilityRole="button"
+            accessibilityLabel="Lock app"
+            style={({ pressed }) => [
+              styles.lockRow,
+              pressed && { backgroundColor: colors.bgMuted },
+            ]}
+          >
+            <View
+              style={[
+                styles.iconBadge,
+                { backgroundColor: colors.dangerSoft },
+              ]}
+            >
+              <Ionicons
+                name="lock-closed-outline"
+                size={18}
+                color={colors.danger}
+              />
+            </View>
+            <Text style={[styles.rowTitle, { color: colors.danger, flex: 1 }]}>
+              Lock app
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text
+          style={[
+            styles.footer,
+            { color: colors.textMuted },
+          ]}
+        >
+          Spentd 1.0
+        </Text>
       </ScrollView>
 
       <BudgetSheet
@@ -485,157 +421,251 @@ export default function SettingsScreen() {
   );
 }
 
-function RowDivider() {
+function SectionLabel({ children }: { children: string }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.rowDivider, { backgroundColor: colors.border }]} />
+    <Text
+      style={[
+        styles.sectionLabel,
+        { color: colors.textSecondary },
+      ]}
+    >
+      {children}
+    </Text>
   );
 }
 
 type RowPosition = "first" | "middle" | "last" | "only";
 
-/** Match Card elevated radius (radius.xl) so press fill follows the card shape. */
-const CARD_RADIUS = radius.xl;
-
 function rowRadius(position: RowPosition) {
   switch (position) {
     case "first":
       return {
-        borderTopLeftRadius: CARD_RADIUS,
-        borderTopRightRadius: CARD_RADIUS,
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
+        borderTopLeftRadius: GROUP_RADIUS,
+        borderTopRightRadius: GROUP_RADIUS,
       };
     case "last":
       return {
-        borderTopLeftRadius: 0,
-        borderTopRightRadius: 0,
-        borderBottomLeftRadius: CARD_RADIUS,
-        borderBottomRightRadius: CARD_RADIUS,
+        borderBottomLeftRadius: GROUP_RADIUS,
+        borderBottomRightRadius: GROUP_RADIUS,
       };
     case "only":
-      return { borderRadius: CARD_RADIUS };
+      return { borderRadius: GROUP_RADIUS };
     default:
-      return {
-        borderTopLeftRadius: 0,
-        borderTopRightRadius: 0,
-        borderBottomLeftRadius: 0,
-        borderBottomRightRadius: 0,
-      };
+      return {};
   }
 }
 
 function SettingsRow({
+  icon,
   title,
-  subtitle,
+  value,
   onPress,
   position = "middle",
+  showDivider,
 }: {
+  icon: keyof typeof Ionicons.glyphMap;
   title: string;
-  subtitle: string;
+  value?: string;
   onPress: () => void;
+  position?: RowPosition;
+  showDivider?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.row,
+          rowRadius(position),
+          pressed && { backgroundColor: colors.bgMuted },
+        ]}
+      >
+        <View style={[styles.iconBadge, { backgroundColor: colors.bgMuted }]}>
+          <Ionicons name={icon} size={18} color={colors.text} />
+        </View>
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>
+          {title}
+        </Text>
+        {value ? (
+          <Text
+            style={[styles.rowValue, { color: colors.textSecondary }]}
+            numberOfLines={1}
+          >
+            {value}
+          </Text>
+        ) : null}
+        <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+      </Pressable>
+      {showDivider ? (
+        <View
+          style={[
+            styles.divider,
+            { backgroundColor: colors.border },
+          ]}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function SettingsToggleRow({
+  icon,
+  title,
+  value,
+  onValueChange,
+  disabled,
+  onInfo,
+  position = "middle",
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  disabled?: boolean;
+  onInfo?: () => void;
   position?: RowPosition;
 }) {
   const { colors } = useTheme();
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.row,
-        rowRadius(position),
-        pressed && { backgroundColor: colors.bgMuted },
-      ]}
-    >
-      <View style={styles.rowText}>
-        <Text
-          style={{
-            fontFamily: typography.fontSansSemi,
-            fontSize: 15,
-            color: colors.text,
-          }}
-        >
-          {title}
-        </Text>
-        <Text muted style={{ fontSize: 12, marginTop: 2 }}>
-          {subtitle}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-    </Pressable>
+    <View style={[styles.row, rowRadius(position)]}>
+      <Pressable
+        onPress={onInfo}
+        disabled={!onInfo}
+        accessibilityRole={onInfo ? "link" : "text"}
+        style={styles.toggleLabel}
+      >
+        <View style={[styles.iconBadge, { backgroundColor: colors.bgMuted }]}>
+          <Ionicons name={icon} size={18} color={colors.text} />
+        </View>
+        <Text style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
+      </Pressable>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        disabled={disabled}
+        trackColor={{
+          false: colors.borderStrong,
+          true: colors.accent,
+        }}
+        thumbColor={colors.bgCard}
+        accessibilityLabel={title}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  profile: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
+  topBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
-  monogram: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.md,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
   },
-  profileText: {
-    flex: 1,
-    minWidth: 0,
+  pageTitle: {
+    fontFamily: typography.fontSansBold,
+    fontSize: 32,
+    letterSpacing: -0.6,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingHorizontal: 2,
   },
-
-  sectionCard: {
-    gap: spacing.lg,
-    padding: spacing.lg,
+  group: {
+    borderRadius: GROUP_RADIUS,
+    overflow: "hidden",
   },
-  sectionHead: {
+  sectionLabel: {
+    fontFamily: typography.fontSansMedium,
+    fontSize: 13,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.sm,
+  },
+  profileRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.md,
   },
-  listCard: {
-    padding: 0,
-    overflow: "hidden",
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarLetter: {
+    fontFamily: typography.fontSansSemi,
+    fontSize: 18,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.md + 2,
-    paddingHorizontal: spacing.lg,
+    minHeight: 54,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
   },
-  rowText: {
+  rowBody: {
     flex: 1,
     minWidth: 0,
   },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+  rowTitle: {
+    fontFamily: typography.fontSansMedium,
+    fontSize: 16,
+  },
+  rowSub: {
+    fontFamily: typography.fontSans,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  rowValue: {
+    fontFamily: typography.fontSans,
+    fontSize: 15,
+    maxWidth: "42%",
+    textAlign: "right",
+  },
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
   },
-  rowDivider: {
+  divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.lg,
-    marginRight: spacing.lg,
+    marginLeft: spacing.md + 32 + spacing.md,
   },
-
-  signOutBtn: {
+  toggleLabel: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    minHeight: 52,
-    borderRadius: radius.lg,
-    borderWidth: 1,
+    gap: spacing.md,
+    minWidth: 0,
   },
-  brandFooter: {
+  lockRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: spacing.sm,
-    gap: 2,
+    gap: spacing.md,
+    minHeight: 54,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+  },
+  footer: {
+    fontFamily: typography.fontSans,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: spacing.xxl,
   },
 });
