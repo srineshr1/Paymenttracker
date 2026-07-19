@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
   iconBtn: {
     width: 44,
     height: 44,
-    borderRadius: radius.pill,
+    borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
@@ -932,7 +932,7 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: radius.pill,
+    borderRadius: radius.xs,
   },
   budgetRow: {
     flexDirection: "row",
@@ -947,13 +947,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   budgetTrack: {
-    height: 5,
-    borderRadius: radius.pill,
+    height: 4,
+    borderRadius: radius.xs,
     overflow: "hidden",
   },
   budgetFill: {
     height: "100%",
-    borderRadius: radius.pill,
+    borderRadius: radius.xs,
     minWidth: 4,
   },
   paceRow: {
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     marginTop: 2,
   },
   heroMeta: {
@@ -1028,7 +1028,7 @@ const styles = StyleSheet.create({
   catChip: {
     width: 40,
     height: 40,
-    borderRadius: radius.pill,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
   },

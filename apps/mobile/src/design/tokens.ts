@@ -110,16 +110,22 @@ export const spacing = {
   xxxl: 48,
 } as const;
 
-/** Shape language — intentionally uneven so UI doesn’t look templatized */
+/**
+ * Shape language — mixed, not everything pill-soft.
+ * sharp/xs → chips, inputs, badges
+ * sm/md   → most cards & rows (slightly squared)
+ * lg/xl   → larger panels (still restrained)
+ * pill    → true capsules only (progress tracks, rare FABs)
+ */
 export const radius = {
   xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 18,
-  xl: 28,
-  xxl: 36,
+  sm: 6,
+  md: 10,
+  lg: 12,
+  xl: 16,
+  xxl: 20,
   pill: 999,
-  sharp: 6,
+  sharp: 4,
 } as const;
 
 export const typography = {
@@ -140,9 +146,9 @@ export const typography = {
 export function cardShadow(mode: ThemeMode, color: string) {
   return {
     shadowColor: color,
-    shadowOffset: { width: 0, height: mode === "light" ? 10 : 8 },
-    shadowOpacity: mode === "light" ? 0.1 : 0.35,
-    shadowRadius: mode === "light" ? 24 : 18,
-    elevation: mode === "light" ? 4 : 8,
+    shadowOffset: { width: 0, height: mode === "light" ? 4 : 3 },
+    shadowOpacity: mode === "light" ? 0.06 : 0.22,
+    shadowRadius: mode === "light" ? 10 : 8,
+    elevation: mode === "light" ? 2 : 3,
   };
 }

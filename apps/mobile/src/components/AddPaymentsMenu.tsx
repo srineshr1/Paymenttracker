@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   sheet: {
     width: "100%",
     maxWidth: 320,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     height: BTN_SIZE,
-    borderRadius: radius.pill,
+    borderRadius: radius.lg,
     overflow: "hidden",
   },
   mainIconBox: {

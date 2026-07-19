@@ -140,38 +140,43 @@ export function Card({
 }: ViewProps & { children: React.ReactNode; variant?: CardVariant }) {
   const { colors, mode } = useTheme();
   const base = {
+    // Default cards — slightly squared
     elevated: {
       backgroundColor: colors.bgCard,
-      borderRadius: radius.xl,
+      borderRadius: radius.md,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       padding: spacing.lg,
       ...cardShadow(mode, colors.shadow),
     },
+    // Outlined panels — sharper
     outline: {
       backgroundColor: "transparent",
-      borderRadius: radius.md,
+      borderRadius: radius.sm,
       borderWidth: 1.5,
       borderColor: colors.borderStrong,
       padding: spacing.lg,
     },
+    // Soft fills — a touch rounder
     soft: {
       backgroundColor: colors.bgMuted,
       borderRadius: radius.lg,
       padding: spacing.lg,
     },
+    // Accent rail — boxy with a hard left edge
     accent: {
       backgroundColor: colors.bgCard,
-      borderRadius: radius.lg,
-      borderLeftWidth: 4,
+      borderRadius: radius.sm,
+      borderLeftWidth: 3,
       borderLeftColor: colors.accent,
       padding: spacing.lg,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
     },
+    // Hero spend card — restrained, not a bubble
     hero: {
       backgroundColor: colors.heroWash,
-      borderRadius: radius.xxl,
+      borderRadius: radius.lg,
       padding: spacing.xl,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
@@ -246,7 +251,7 @@ function buttonShape(colors: ColorTokens) {
       container: {
         minHeight: 54,
         paddingHorizontal: 28,
-        borderRadius: radius.pill,
+        borderRadius: radius.lg,
         backgroundColor: colors.accent,
         alignItems: "center" as const,
         justifyContent: "center" as const,
@@ -336,7 +341,7 @@ function buttonShape(colors: ColorTokens) {
       container: {
         minHeight: 36,
         paddingHorizontal: 14,
-        borderRadius: radius.pill,
+        borderRadius: radius.sm,
         backgroundColor: colors.accentSoft,
         alignItems: "center" as const,
         justifyContent: "center" as const,
@@ -362,7 +367,7 @@ export function Input(props: TextInputProps) {
       style={[
         {
           minHeight: 52,
-          borderRadius: radius.lg,
+          borderRadius: radius.sm,
           borderWidth: 1.5,
           borderColor: colors.borderStrong,
           backgroundColor: colors.bgElevated,
@@ -510,9 +515,9 @@ export function Segmented({
       style={{
         flexDirection: "row",
         backgroundColor: colors.bgMuted,
-        borderRadius: radius.pill,
-        padding: 4,
-        gap: 4,
+        borderRadius: radius.sm,
+        padding: 3,
+        gap: 3,
       }}
     >
       {options.map((opt) => {
@@ -524,7 +529,7 @@ export function Segmented({
             style={{
               flex: 1,
               paddingVertical: 10,
-              borderRadius: radius.pill,
+              borderRadius: radius.xs,
               backgroundColor: active ? colors.bgCard : "transparent",
               alignItems: "center",
               borderWidth: active ? StyleSheet.hairlineWidth : 0,

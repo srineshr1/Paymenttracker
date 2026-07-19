@@ -123,13 +123,13 @@ const styles = StyleSheet.create({
   bar: {
     width: "72%",
     maxWidth: 28,
-    borderRadius: radius.sm,
+    borderRadius: radius.xs,
     minHeight: 4,
   },
   barEmpty: {
     width: "72%",
     maxWidth: 28,
-    borderRadius: radius.sm,
+    borderRadius: radius.xs,
     borderWidth: 1.5,
     borderStyle: "dashed",
     backgroundColor: "transparent",

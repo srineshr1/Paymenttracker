@@ -43,7 +43,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
-  const { colors, preference, setPreference } = useTheme();
+  const { colors, preference, setPreference, isDark } = useTheme();
   const { user, logout, runWithoutAppLock } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -238,42 +238,31 @@ export default function SettingsScreen() {
     ]);
   };
 
-  return (
-    <Screen style={{ paddingTop: insets.top, backgroundColor: colors.bg }}>
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={onBack}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          style={({ pressed }) => [
-            styles.backBtn,
-            {
-              backgroundColor: colors.bgMuted,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
-        >
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </Pressable>
-      </View>
+  const topBarBg = isDark
+    ? "rgba(10, 11, 13, 0.52)"
+    : "rgba(246, 242, 235, 0.52)";
+  const chipBg = isDark
+    ? "rgba(28, 33, 43, 0.4)"
+    : "rgba(255, 255, 255, 0.4)";
+  /** Back + title row under the status bar. */
+  const topBarBody = 52;
+  const topBarHeight = insets.top + spacing.sm + topBarBody + spacing.md;
 
+  return (
+    <Screen style={{ backgroundColor: colors.bg }}>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: spacing.lg,
+          paddingTop: topBarHeight + spacing.md,
           paddingBottom: insets.bottom + spacing.xxxl,
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Text variant="hero" style={styles.pageTitle}>
-          Settings
-        </Text>
-
         {/* Account identity — system-settings style profile row */}
         <View
           style={[
             styles.group,
-            { backgroundColor: colors.bgElevated, marginTop: spacing.lg },
+            { backgroundColor: colors.bgElevated },
           ]}
         >
           <Pressable
@@ -408,6 +397,41 @@ export default function SettingsScreen() {
           Spentd 1.0
         </Text>
       </ScrollView>
+
+      {/* Translucent overlay — content scrolls underneath */}
+      <View
+        pointerEvents="box-none"
+        style={[
+          styles.topBar,
+          {
+            height: topBarHeight,
+            paddingTop: insets.top + spacing.sm,
+            backgroundColor: topBarBg,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <Pressable
+          onPress={onBack}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          style={({ pressed }) => [
+            styles.backBtn,
+            {
+              backgroundColor: chipBg,
+              borderColor: colors.border,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
+
+        <Text style={[styles.pageTitle, { color: colors.text, flex: 1 }]}>
+          Settings
+        </Text>
+      </View>
 
       <BudgetSheet
         open={budgetOpen}
@@ -563,26 +587,31 @@ function SettingsToggleRow({
 
 const styles = StyleSheet.create({
   topBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
   },
   pageTitle: {
     fontFamily: typography.fontSansBold,
-    fontSize: 34,
-    lineHeight: 42,
-    letterSpacing: -0.6,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-    paddingHorizontal: 2,
-    // Android clips large titles when the default body lineHeight (22) wins.
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.5,
     includeFontPadding: false,
   },
   group: {
