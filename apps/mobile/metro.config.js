@@ -17,4 +17,7 @@ config.resolver.extraNodeModules = {
   "@paymenttracker/shared": path.resolve(monorepoRoot, "packages/shared"),
 };
 
+// expo-sqlite web worker imports wa-sqlite.wasm
+config.resolver.assetExts = [...config.resolver.assetExts, "wasm"];
+
 module.exports = config;

@@ -120,7 +120,9 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        <View style={styles.middle}>
+        <View style={styles.spacer} />
+
+        <View style={styles.padBlock}>
           <PinPad
             value={passcode}
             onChange={(next) => {
@@ -144,23 +146,23 @@ export default function LoginScreen() {
               <View style={styles.statusPlaceholder} />
             )}
           </View>
-        </View>
 
-        <Pressable
-          onPress={() => router.push("/(auth)/recover")}
-          hitSlop={16}
-          style={styles.forgot}
-        >
-          <Text
-            style={{
-              color: colors.textMuted,
-              fontFamily: typography.fontSansMedium,
-              fontSize: 14,
-            }}
+          <Pressable
+            onPress={() => router.push("/(auth)/recover")}
+            hitSlop={16}
+            style={styles.forgot}
           >
-            Forgot passcode?
-          </Text>
-        </Pressable>
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontFamily: typography.fontSansMedium,
+                fontSize: 14,
+              }}
+            >
+              Forgot passcode?
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </Screen>
   );
@@ -183,22 +185,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: spacing.md,
   },
-  middle: {
+  spacer: {
     flex: 1,
-    justifyContent: "center",
+    minHeight: spacing.xl,
+  },
+  padBlock: {
     alignItems: "center",
+    paddingBottom: spacing.sm,
   },
   status: {
-    minHeight: 28,
-    marginTop: spacing.lg,
+    minHeight: 24,
+    marginTop: spacing.md,
     alignItems: "center",
     justifyContent: "center",
   },
   statusPlaceholder: {
-    height: 20,
+    height: 18,
   },
   forgot: {
     alignSelf: "center",
-    paddingVertical: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
 });

@@ -14,6 +14,7 @@ import { lockLocal } from "@/src/data/localAuth";
 import { clearActiveDek } from "@/src/data/crypto";
 import { getDb } from "@/src/data/db";
 import { getLastUsername, saveLastUsername } from "@/src/lib/secure";
+import { markSmsConsentPending } from "@/src/features/sms/prefs";
 
 const LOCK_AFTER_MS = 5 * 60 * 1000;
 
@@ -130,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(
     async (username: string, passcode: string) => {
       const res = await api.register(username, passcode);
+      await markSmsConsentPending();
       await applySession(res.token, res.user);
     },
     [applySession]

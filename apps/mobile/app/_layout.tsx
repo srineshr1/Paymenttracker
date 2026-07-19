@@ -30,6 +30,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { AuthProvider, useAuth } from "@/src/features/auth/AuthContext";
 import { ThemeProvider, useTheme } from "@/src/design/ThemeContext";
+import { isSmsConsentPending } from "@/src/features/sms/prefs";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -43,29 +44,52 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
-    const inAuth = segments[0] === "(auth)";
-    const authScreen = segments[1];
+    let cancelled = false;
 
-    if (token) {
-      if (inAuth) router.replace("/(app)");
-      return;
-    }
+    (async () => {
+      const inAuth = segments[0] === "(auth)";
+      const authScreen = segments[1];
+      const appScreen = segments[1];
 
-    // Locked / signed out
-    if (!inAuth) {
-      router.replace(hasAccount ? "/(auth)/login" : "/(auth)/register");
-      return;
-    }
+      if (token) {
+        const needsConsent = await isSmsConsentPending();
+        if (cancelled) return;
 
-    // Has account → only passcode login (no re-register)
-    // Allow recover screen when account exists
-    if (hasAccount && authScreen === "register") {
-      router.replace("/(auth)/login");
-    }
-    // No account → force create account (not recover)
-    if (!hasAccount && (authScreen === "login" || authScreen === "recover")) {
-      router.replace("/(auth)/register");
-    }
+        if (needsConsent) {
+          if (appScreen !== "sms-consent") {
+            router.replace("/(app)/sms-consent");
+          }
+          return;
+        }
+
+        if (appScreen === "sms-consent") {
+          router.replace("/(app)");
+          return;
+        }
+
+        if (inAuth) router.replace("/(app)");
+        return;
+      }
+
+      // Locked / signed out
+      if (!inAuth) {
+        router.replace(hasAccount ? "/(auth)/login" : "/(auth)/register");
+        return;
+      }
+
+      // Has account → only passcode login (no re-register)
+      if (hasAccount && authScreen === "register") {
+        router.replace("/(auth)/login");
+      }
+      // No account → force create account (not recover)
+      if (!hasAccount && (authScreen === "login" || authScreen === "recover")) {
+        router.replace("/(auth)/register");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token, ready, hasAccount, segments, router]);
 
   if (!ready) {

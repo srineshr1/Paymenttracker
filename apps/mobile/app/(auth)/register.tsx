@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -26,13 +27,13 @@ export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const submitting = useRef(false);
-  // Snapshot the create-PIN so confirm can't race with a cleared state.
   const createdPin = useRef("");
 
   useEffect(() => {
     if (step !== "pin" || passcode.length !== 6) return;
     createdPin.current = passcode;
     setConfirm("");
+    setError(null);
     setStep("confirm");
   }, [passcode, step]);
 
@@ -80,76 +81,42 @@ export default function RegisterScreen() {
     })();
   }, [confirm, register, username, step]);
 
-  return (
-    <Screen style={{ paddingTop: insets.top + spacing.xxl }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: insets.bottom + spacing.xl },
-          ]}
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
+  if (step === "user") {
+    return (
+      <Screen style={{ paddingTop: insets.top + spacing.xxl }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.top}>
-            <AppLogo size={52} style={{ marginBottom: spacing.lg }} />
-            <Text
-              variant="display"
-              style={{ fontSize: 34, lineHeight: 40, letterSpacing: -1 }}
-            >
-              Welcome to{"\n"}Spentd
-            </Text>
-            <Text
-              muted
-              style={{
-                marginTop: spacing.md,
-                maxWidth: 300,
-                lineHeight: 22,
-                fontSize: 15,
-              }}
-            >
-              {step === "user"
-                ? "Choose a username. You’ll unlock with a 6-digit passcode after this."
-                : step === "pin"
-                  ? "Create a 6-digit passcode. You’ll enter it every time you open the app."
-                  : "Re-enter the same 6 digits to confirm."}
-            </Text>
-
-            {step === "user" ? (
-              <View
-                style={[
-                  styles.featureCard,
-                  {
-                    backgroundColor: colors.bgMuted,
-                    borderColor: colors.border,
-                  },
-                ]}
+          <ScrollView
+            contentContainerStyle={[
+              styles.userContent,
+              { paddingBottom: insets.bottom + spacing.xl },
+            ]}
+            keyboardShouldPersistTaps="always"
+            showsVerticalScrollIndicator={false}
+          >
+            <View>
+              <AppLogo size={52} style={{ marginBottom: spacing.lg }} />
+              <Text
+                variant="display"
+                style={{ fontSize: 34, lineHeight: 40, letterSpacing: -1 }}
               >
-                <Text
-                  style={{
-                    fontFamily: typography.fontSansSemi,
-                    fontSize: 14,
-                    color: colors.text,
-                    marginBottom: 6,
-                  }}
-                >
-                  Auto-updates from bank SMS
-                </Text>
-                <Text
-                  muted
-                  style={{ fontSize: 13, lineHeight: 19 }}
-                >
-                  Spentd can read bank and UPI messages on this phone to
-                  track payments and keep your balance in sync. Everything
-                  stays on your device — nothing is uploaded.
-                </Text>
-              </View>
-            ) : null}
+                Welcome to{"\n"}Spentd
+              </Text>
+              <Text
+                muted
+                style={{
+                  marginTop: spacing.md,
+                  maxWidth: 300,
+                  lineHeight: 22,
+                  fontSize: 15,
+                }}
+              >
+                Choose a username. You’ll unlock with a 6-digit passcode after
+                this.
+              </Text>
 
-            {step === "user" ? (
               <View style={styles.form}>
                 <Text
                   style={{
@@ -204,46 +171,17 @@ export default function RegisterScreen() {
                     setStep("pin");
                   }}
                 />
+                {error ? (
+                  <Text
+                    color={colors.danger}
+                    style={{ textAlign: "center", marginTop: spacing.md }}
+                  >
+                    {error}
+                  </Text>
+                ) : null}
               </View>
-            ) : (
-              <View style={styles.pinBlock}>
-                <Text
-                  style={{
-                    fontFamily: typography.fontSansSemi,
-                    fontSize: 17,
-                    color: colors.text,
-                    textAlign: "center",
-                    marginBottom: spacing.lg,
-                  }}
-                >
-                  {step === "pin" ? "Create passcode" : "Confirm passcode"}
-                </Text>
-                <PinPad
-                  value={step === "pin" ? passcode : confirm}
-                  onChange={step === "pin" ? setPasscode : setConfirm}
-                  disabled={loading}
-                />
-              </View>
-            )}
+            </View>
 
-            {error ? (
-              <Text
-                color={colors.danger}
-                style={{ textAlign: "center", marginTop: spacing.md }}
-              >
-                {error}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={styles.footer}>
-            {loading ? (
-              <Button
-                title="Creating…"
-                loading
-                style={{ marginBottom: spacing.lg }}
-              />
-            ) : null}
             <Text
               muted
               style={{
@@ -251,43 +189,127 @@ export default function RegisterScreen() {
                 fontSize: 12,
                 letterSpacing: 0.3,
                 color: colors.textMuted,
+                marginTop: spacing.xxl,
               }}
             >
               Local · secure on this device
             </Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Screen>
+    );
+  }
+
+  // pin + confirm — same placement as login numpad
+  return (
+    <Screen style={styles.screen}>
+      <View
+        style={[
+          styles.root,
+          {
+            paddingTop: insets.top + spacing.xl,
+            paddingBottom: insets.bottom + spacing.lg,
+          },
+        ]}
+      >
+        <View style={styles.top}>
+          <AppLogo size={48} />
+          <Text
+            style={{
+              marginTop: spacing.md,
+              fontFamily: typography.fontSansMedium,
+              fontSize: 16,
+              color: colors.textSecondary,
+              textAlign: "center",
+            }}
+          >
+            {step === "pin" ? "Create a 6-digit passcode" : "Confirm passcode"}
+          </Text>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <View style={styles.padBlock}>
+          <PinPad
+            value={step === "pin" ? passcode : confirm}
+            onChange={(next) => {
+              if (error) setError(null);
+              if (step === "pin") setPasscode(next);
+              else setConfirm(next);
+            }}
+            disabled={loading}
+          />
+
+          <View style={styles.status}>
+            {loading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : error ? (
+              <Text
+                color={colors.danger}
+                style={{ textAlign: "center", fontSize: 14 }}
+              >
+                {error}
+              </Text>
+            ) : (
+              <View style={styles.statusPlaceholder} />
+            )}
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          <Text
+            muted
+            style={{
+              textAlign: "center",
+              fontSize: 12,
+              letterSpacing: 0.3,
+              color: colors.textMuted,
+              paddingTop: spacing.lg,
+              paddingBottom: spacing.sm,
+            }}
+          >
+            Local · secure on this device
+          </Text>
+        </View>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
+  screen: {
+    flex: 1,
+  },
+  root: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  userContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
     justifyContent: "space-between",
   },
-  top: {
-    paddingTop: spacing.sm,
-  },
-  featureCard: {
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    maxWidth: 360,
-  },
   form: {
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     width: "100%",
   },
-  pinBlock: {
-    marginTop: spacing.xl,
+  top: {
     alignItems: "center",
+    paddingTop: spacing.md,
   },
-  footer: {
-    paddingTop: spacing.xl,
+  spacer: {
+    flex: 1,
+    minHeight: spacing.xl,
+  },
+  padBlock: {
+    alignItems: "center",
     paddingBottom: spacing.sm,
+  },
+  status: {
+    minHeight: 24,
+    marginTop: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusPlaceholder: {
+    height: 18,
   },
 });

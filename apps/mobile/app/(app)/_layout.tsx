@@ -32,6 +32,7 @@ export default function AppLayout() {
         }}
       >
         <Stack.Screen name="index" />
+        <Stack.Screen name="sms-consent" options={{ gestureEnabled: false }} />
         <Stack.Screen name="expenses/index" />
         <Stack.Screen name="expenses/[id]" />
         <Stack.Screen name="import/index" />
