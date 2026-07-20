@@ -33,7 +33,7 @@ jobs:
       - run: npm ci
       - run: npm run build -w @paymenttracker/shared
 
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
