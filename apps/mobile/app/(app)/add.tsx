@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
+  type LayoutChangeEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, api } from "@/src/api/client";
@@ -50,6 +52,8 @@ export default function AddExpenseScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
+  const fieldOffsets = useRef<Record<string, number>>({});
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -58,10 +62,54 @@ export default function AddExpenseScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [keyboardPad, setKeyboardPad] = useState(0);
 
   const parsedAmount = useMemo(() => normalizeAmount(amount), [amount]);
   const canSave =
     merchant.trim().length > 0 && parsedAmount != null && !loading;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const onShow = Keyboard.addListener(showEvent, (e) => {
+      // iOS: full keyboard height (KAV + padding).
+      // Android: window already adjustResize — just leave room to scroll Notes up.
+      setKeyboardPad(
+        Platform.OS === "android"
+          ? Math.max(160, Math.round(e.endCoordinates.height * 0.35))
+          : e.endCoordinates.height
+      );
+    });
+    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardPad(0));
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  const rememberFieldY = (key: string) => (e: LayoutChangeEvent) => {
+    fieldOffsets.current[key] = e.nativeEvent.layout.y;
+  };
+
+  const scrollFieldIntoView = (key: string) => {
+    const y = fieldOffsets.current[key];
+    if (y == null) {
+      // Notes/save sit near the bottom — ensure they're reachable
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+      });
+      return;
+    }
+    // Small delay so keyboard height is applied to content padding first
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, y - spacing.lg),
+        animated: true,
+      });
+    }, Platform.OS === "ios" ? 50 : 120);
+  };
 
   const save = async () => {
     const name = merchant.trim();
@@ -115,17 +163,23 @@ export default function AddExpenseScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 8 : 0}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{
             padding: spacing.xl,
-            paddingBottom: insets.bottom + spacing.xxl,
+            // Keyboard pad lets Notes / Save scroll fully above the keyboard
+            paddingBottom:
+              insets.bottom + spacing.xxl + Math.max(keyboardPad, 0),
             gap: spacing.xl,
           }}
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
         >
-          <View style={styles.field}>
+          <View style={styles.field} onLayout={rememberFieldY("merchant")}>
             <Text
               style={{
                 fontFamily: typography.fontSansMedium,
@@ -150,10 +204,11 @@ export default function AddExpenseScreen() {
               autoFocus
               returnKeyType="next"
               style={inputStyle(colors.bgMuted)}
+              onFocus={() => scrollFieldIntoView("merchant")}
             />
           </View>
 
-          <View style={styles.field}>
+          <View style={styles.field} onLayout={rememberFieldY("amount")}>
             <Text
               style={{
                 fontFamily: typography.fontSansMedium,
@@ -180,6 +235,7 @@ export default function AddExpenseScreen() {
                   letterSpacing: 0.2,
                 },
               ]}
+              onFocus={() => scrollFieldIntoView("amount")}
             />
           </View>
 
@@ -212,7 +268,7 @@ export default function AddExpenseScreen() {
             <CategoryChips value={categoryId} onChange={setCategoryId} />
           </View>
 
-          <View style={styles.field}>
+          <View style={styles.field} onLayout={rememberFieldY("notes")}>
             <Text
               style={{
                 fontFamily: typography.fontSansMedium,
@@ -228,6 +284,7 @@ export default function AddExpenseScreen() {
               onChangeText={setNotes}
               placeholder="Optional"
               style={inputStyle(colors.bgMuted)}
+              onFocus={() => scrollFieldIntoView("notes")}
             />
           </View>
 
