@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -27,7 +28,7 @@ import {
   enableSmsAutoImport,
   getSmsAutoImportEnabled,
 } from "@/src/features/sms/autoImport";
-import { importPaymentsFromSms } from "@/src/features/sms/importSms";
+import { importAndSavePaymentsFromSms } from "@/src/features/sms/importSms";
 import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
 
 const SAMPLE_PHONEPE = `PhonePe
@@ -198,41 +199,46 @@ export default function ImportScreen() {
     }
 
     setBusy(true);
-    setStatus("Scanning SMS on this device…");
+    setStatus("Scanning messages…");
     try {
-      const { parsed, scanned, paymentLike } = await importPaymentsFromSms({
-        lookbackDays: 90,
-        maxCount: 800,
-      });
+      const result = await importAndSavePaymentsFromSms(
+        { lookbackDays: 90, maxCount: 2000 },
+        (msg) => setStatus(msg),
+      );
 
-      if (!parsed.length) {
+      if (result.considered === 0 && result.created === 0) {
         setError(
-          scanned === 0
+          result.scanned === 0
             ? "No SMS found in the last 90 days."
-            : paymentLike === 0
-              ? `Scanned ${scanned} messages — none looked like bank/UPI payments.`
-              : `Found ${paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`,
+            : result.paymentLike === 0
+              ? `Scanned ${result.scanned} messages — none looked like bank/UPI payments.`
+              : `Found ${result.paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`,
         );
         return;
       }
 
-      // First successful SMS scan → turn on live auto-import for next messages
+      // First successful SMS import → turn on live auto-import for next messages
       try {
         const already = await getSmsAutoImportEnabled();
         if (!already) await enableSmsAutoImport();
       } catch {
-        /* permission edge — bulk review still works */
+        /* permission edge — bulk import already finished */
       }
 
       setStatus(null);
-      router.push({
-        pathname: "/(app)/import/select",
-        params: {
-          imageUri: "",
-          list: JSON.stringify(parsed),
-          rawText: "",
-        },
-      });
+      const parts = [
+        result.created > 0 ? `Added ${result.created}` : null,
+        result.skipped > 0
+          ? `skipped ${result.skipped} duplicate${result.skipped === 1 ? "" : "s"}`
+          : null,
+        result.failed > 0 ? `${result.failed} failed` : null,
+      ].filter(Boolean);
+
+      Alert.alert(
+        result.created > 0 ? "Import complete" : "Nothing new added",
+        parts.join(" · ") || "No changes",
+        [{ text: "OK", onPress: () => router.replace("/(app)") }],
+      );
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not read SMS on this device.",
@@ -280,7 +286,14 @@ export default function ImportScreen() {
               as they arrive (while the app is unlocked). Nothing is uploaded.
             </Text>
             <Button
-              title={busy ? "Scanning…" : "Import from SMS"}
+              title={
+                busy
+                  ? status?.startsWith("Found") ||
+                    status?.startsWith("Importing")
+                    ? "Importing…"
+                    : "Scanning…"
+                  : "Import from SMS"
+              }
               loading={busy}
               onPress={scanSms}
               disabled={busy}

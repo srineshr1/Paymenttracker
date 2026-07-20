@@ -20,26 +20,9 @@ import { applyPaymentToAccount } from "@/src/data/cash";
 import { formatDateTime, formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
+import { dayKey, isJunk } from "@/src/features/sms/quality";
 
 type Row = ParsedExpense & { id: string; notes?: string | null };
-
-function isJunk(item: ParsedExpense): boolean {
-  const m = (item.merchant ?? "").trim();
-  if (!item.amount) return true;
-  if (!m || m.length < 3) return true;
-  if (/^(zl|to|from|paid|na|n\/a|unknown)$/i.test(m)) return true;
-  if ((item.confidence ?? 0) < 0.45) return true;
-  return false;
-}
-
-function dayKey(iso: string | null | undefined) {
-  if (!iso) return "unknown";
-  try {
-    return new Date(iso).toISOString().slice(0, 10);
-  } catch {
-    return "unknown";
-  }
-}
 
 function sanitizeAmountInput(raw: string): string {
   let next = raw.replace(/,/g, "").replace(/[^\d.]/g, "");
@@ -207,7 +190,22 @@ export default function ImportSelectScreen() {
         rawOcrText: r.rawText || params.rawText || null,
       }));
 
-      const res = await api.createExpensesBatch(payload);
+      const CHUNK = 80;
+      let created = 0;
+      let skipped = 0;
+      let failed = 0;
+      for (let i = 0; i < payload.length; i += CHUNK) {
+        const chunk = payload.slice(i, i + CHUNK);
+        if (payload.length > CHUNK) {
+          setStatus(
+            `Saving ${Math.min(i + CHUNK, payload.length)} of ${payload.length}…`,
+          );
+        }
+        const res = await api.createExpensesBatch(chunk);
+        created += res.created;
+        skipped += res.skipped;
+        failed += res.failed;
+      }
 
       // Newest absolute bank balance from this batch (if any SMS include Avl Bal)
       const withBal = unique
@@ -217,7 +215,7 @@ export default function ImportSelectScreen() {
           const tb = b.paidAt ? Date.parse(b.paidAt) : 0;
           return tb - ta;
         });
-      if (withBal[0]?.availableBalance) {
+      if (withBal[0]?.availableBalance && withBal[0].amount) {
         try {
           await applyPaymentToAccount({
             amount: withBal[0].amount,
@@ -231,15 +229,15 @@ export default function ImportSelectScreen() {
       }
 
       const parts = [
-        res.created > 0 ? `Added ${res.created}` : null,
-        res.skipped > 0
-          ? `skipped ${res.skipped} duplicate${res.skipped === 1 ? "" : "s"}`
+        created > 0 ? `Added ${created}` : null,
+        skipped > 0
+          ? `skipped ${skipped} duplicate${skipped === 1 ? "" : "s"}`
           : null,
-        res.failed > 0 ? `${res.failed} failed` : null,
+        failed > 0 ? `${failed} failed` : null,
       ].filter(Boolean);
 
       Alert.alert(
-        res.created > 0 ? "Import complete" : "Nothing new added",
+        created > 0 ? "Import complete" : "Nothing new added",
         parts.join(" · ") || "No changes",
         [{ text: "OK", onPress: () => router.replace("/(app)") }],
       );

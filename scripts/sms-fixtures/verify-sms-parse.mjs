@@ -228,7 +228,7 @@ async function main() {
   console.log("\n── parseSmsMessages pipeline ──");
   console.log(`  returned expenses: ${parsed.length}`);
   console.log(
-    `  (app import caps at 120 newest; full lookback is available via maxCount)`,
+    `  (app bulk import saves all confident parses; inbox scan maxCount up to 2000)`,
   );
 
   console.log("\n── field accuracy (on expected payments that pass filter) ──");

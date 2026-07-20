@@ -372,8 +372,9 @@ export async function createExpensesBatch(items: CreateInput[]): Promise<{
   if (!items.length) {
     throw new LocalDataError("Send { expenses: [...] }", 400);
   }
-  if (items.length > 40) {
-    throw new LocalDataError("Max 40 expenses per batch", 400);
+  // Soft ceiling so a runaway payload cannot freeze the UI; SMS bulk import needs >> 40.
+  if (items.length > 500) {
+    throw new LocalDataError("Max 500 expenses per batch", 400);
   }
 
   const created: Expense[] = [];

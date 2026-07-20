@@ -1,6 +1,6 @@
-import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
@@ -9,6 +9,7 @@ import {
   disableSmsAutoImport,
   enableSmsAutoImport,
 } from "@/src/features/sms/autoImport";
+import { importAndSavePaymentsFromSms } from "@/src/features/sms/importSms";
 import {
   clearSmsConsentPending,
   setSmsAutoImportEnabled,
@@ -19,17 +20,29 @@ export default function SmsConsentScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
   const finish = async (enable: boolean) => {
     if (busy) return;
     setBusy(true);
+    setStatus(null);
     try {
       if (enable && Platform.OS === "android") {
         try {
+          setStatus("Turning on SMS import…");
           await enableSmsAutoImport();
         } catch {
           // Permission denied or Expo Go — keep preference off
           await setSmsAutoImportEnabled(false);
+        }
+        // Backfill last 90 days so the dashboard is ready immediately
+        try {
+          await importAndSavePaymentsFromSms(
+            { lookbackDays: 90, maxCount: 2000 },
+            (msg) => setStatus(msg)
+          );
+        } catch {
+          /* bulk fail still lands on home; live auto-import may still work */
         }
       } else {
         await disableSmsAutoImport();
@@ -38,6 +51,7 @@ export default function SmsConsentScreen() {
       router.replace("/(app)");
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   };
 
@@ -97,8 +111,29 @@ export default function SmsConsentScreen() {
       </View>
 
       <View style={styles.actions}>
+        {status ? (
+          <Text
+            muted
+            style={{
+              textAlign: "center",
+              fontSize: 13,
+              lineHeight: 18,
+              marginBottom: spacing.md,
+            }}
+          >
+            {status}
+          </Text>
+        ) : null}
         <Button
-          title={busy ? "Please wait…" : "Agree"}
+          title={
+            busy
+              ? status?.startsWith("Found") || status?.startsWith("Importing")
+                ? "Importing…"
+                : status?.includes("Scanning")
+                  ? "Scanning…"
+                  : "Please wait…"
+              : "Agree"
+          }
           loading={busy}
           disabled={busy}
           onPress={() => finish(true)}

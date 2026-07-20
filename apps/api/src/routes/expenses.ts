@@ -141,8 +141,8 @@ expenseRoutes.post("/batch", async (c) => {
   if (!items || items.length === 0) {
     return c.json({ error: "Send { expenses: [...] }" }, 400);
   }
-  if (items.length > 40) {
-    return c.json({ error: "Max 40 expenses per batch" }, 400);
+  if (items.length > 500) {
+    return c.json({ error: "Max 500 expenses per batch" }, 400);
   }
 
   const created: unknown[] = [];
