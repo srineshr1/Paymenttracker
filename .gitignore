@@ -20,5 +20,8 @@ web-build/
 coverage/
 .turbo/
 *.tsbuildinfo
+*.apk
+eas-*.json
+.playwright-mcp/
 apps/api/drizzle/meta
 !apps/api/drizzle/meta/.gitkeep

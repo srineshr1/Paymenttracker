@@ -20,9 +20,16 @@
     "sms:verify": "node scripts/sms-fixtures/verify-sms-parse.mjs",
     "sms:inject": "node scripts/sms-fixtures/inject-sms-emulator.mjs",
     "sms:inject:clear": "node scripts/sms-fixtures/inject-sms-emulator.mjs --clear",
-    "sms:fixture": "npm run sms:generate && npm run sms:verify"
+    "sms:fixture": "npm run sms:generate && npm run sms:verify",
+    "lint": "biome check .",
+    "lint:fix": "biome check --apply .",
+    "format": "biome format .",
+    "format:fix": "biome format --write ."
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.4"
   }
 }

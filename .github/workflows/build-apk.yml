@@ -1,0 +1,49 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile"
+        required: true
+        default: preview
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @paymenttracker/shared
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build APK with EAS
+        run: |
+          PROFILE="${{ github.event.inputs.profile || 'preview' }}"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            PROFILE="production"
+          fi
+          eas build --platform android --profile "$PROFILE" --non-interactive
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: spentd-apk
+          path: apps/mobile/*.apk
+          retention-days: 7
