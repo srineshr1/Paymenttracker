@@ -49,19 +49,74 @@ export function detectSource(text: string): ParsedSource {
   return "unknown";
 }
 
+/**
+ * Parse an amount token, repairing common OCR glitches for ₹ on PhonePe/GPay:
+ *   ₹4,000  → 74,000 / %4,000
+ *   ₹49,999 → 249,999 / 749,999
+ *
+ * Prefer {@link parseHistoryAmountToken} inside history-list parsing when the
+ * token may also have a glued leading "2" (₹100 → 2100) — that heuristic is
+ * too aggressive for success-screen IDs / real ₹2,xxx amounts.
+ */
 export function parseAmountToken(raw: string): string | null {
-  const cleaned = raw.replace(/[₹%\s]/g, "").replace(/,/g, "");
-  // Strip a leading 7 that is a misread ₹ when pattern is 7 + typical amount
+  let s = raw.replace(/[₹%¥₽]/g, "").replace(/[^\d,.]/g, "").trim();
+  if (!s) return null;
+
+  // Comma-grouped: strip glued leading 7 (₹→7) e.g. 74,000 → 4,000
+  // Also 249,999 / 749,999 → 49,999 when first digit is 2|7 and rest groups cleanly
+  const commaGlued = s.match(/^([27])(\d{1,2}),(\d{3})(?:\.(\d{1,2}))?$/);
+  if (commaGlued) {
+    const rest = Number(`${commaGlued[2]}${commaGlued[3]}`);
+    // Only strip when remainder looks like a typical UPI amount (≤ 1e6)
+    if (rest >= 1 && rest <= 1_000_000) {
+      s = `${commaGlued[2]},${commaGlued[3]}${
+        commaGlued[4] != null ? `.${commaGlued[4]}` : ""
+      }`;
+    }
+  }
+
+  const cleaned = s.replace(/,/g, "");
   let nStr = cleaned;
-  if (/^7\d{3,5}(\.\d{1,2})?$/.test(cleaned) && !cleaned.includes(".")) {
-    // e.g. 74000 from ₹4,000 — only strip if remainder looks like round money
+
+  // No-comma: leading 7 glued onto 3–5 digit amounts (₹4,000 → 74000)
+  // Do NOT strip leading 2 here — breaks real ₹2,500 and txn ids.
+  if (/^7\d{3,5}(\.\d{1,2})?$/.test(cleaned)) {
     const alt = cleaned.slice(1);
     const altN = Number(alt);
-    if (altN >= 1 && altN <= 500000) nStr = alt;
+    if (Number.isFinite(altN) && altN >= 1 && altN <= 500000) nStr = alt;
   }
+
   const n = Number(nStr);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n.toFixed(2);
+}
+
+/**
+ * History-list amount token: same as parseAmountToken plus leading-2 ₹ glue
+ * (₹100 → 2100, ₹1 → 21) which is common when ML Kit/Tesseract eat the glyph.
+ *
+ * Never applies the no-comma "2xxx→xxx" strip when the source token had a comma
+ * (so real ₹2,500 stays 2500, while OCR "2100" for ₹100 still becomes 100).
+ */
+export function parseHistoryAmountToken(raw: string): string | null {
+  const base = parseAmountToken(raw);
+  let s = raw.replace(/[₹%¥₽]/g, "").replace(/[^\d,.]/g, "").trim();
+  if (!s) return base;
+
+  const hadComma = s.includes(",");
+  const cleaned = s.replace(/,/g, "");
+  // ₹1 → 21 / ₹5 → 25 (2-digit, single-digit remainder only)
+  if (!hadComma && /^2[1-9]$/.test(cleaned)) {
+    return Number(cleaned.slice(1)).toFixed(2);
+  }
+  // ₹100 → 2100 — only when OCR omitted commas (not "2,500")
+  if (!hadComma && /^2\d{3}(\.\d{1,2})?$/.test(cleaned)) {
+    const alt = cleaned.slice(1);
+    const altN = Number(alt);
+    if (altN >= 100 && altN <= 999) return altN.toFixed(2);
+  }
+  // Prefer base (handles 249,999 → 49,999 etc.)
+  return base;
 }
 
 export function extractAmount(text: string): string | null {
@@ -178,9 +233,11 @@ export function extractRelativePaidAt(text: string, now = new Date()): string | 
   if (/\byesterday\b/.test(t)) {
     const d = new Date(now);
     d.setDate(d.getDate() - 1);
+    d.setHours(12, 0, 0, 0);
     return d.toISOString();
   }
-  const mMin = t.match(/(\d+)\s*mins?\s*ago/);
+  // "1 min ago" / "3 mins ago" / "2 minutes ago" / OCR "1 minago"
+  const mMin = t.match(/(\d+)\s*min(?:ute)?s?\s*ago/);
   if (mMin) {
     const d = new Date(now);
     d.setMinutes(d.getMinutes() - Number(mMin[1]));
@@ -287,14 +344,26 @@ export function cleanMerchantName(raw: string): string | null {
 export function isLikelyMerchantLine(line: string): boolean {
   const t = line.trim();
   if (t.length < 2 || t.length > 80) return false;
-  if (/paid\s+to|sent\s+to|debited|received|search|month|categor|filter|home|stores|history/i.test(t)) {
+  // Whole-line chrome only (don't reject "Asha Stores" because of "Stores")
+  if (
+    /^(paid\s*to|payment\s*to|sent\s+to|received\s+from|you\s+paid|debited(\s+from)?|search|month|categories|filters|home|stores|insurance|wealth|history|share|edit|lens|delete)$/i.test(
+      t
+    )
+  ) {
     return false;
   }
-  if (/^\d+\s*(mins?|hours?|days?|weeks?)\s*ago/i.test(t)) return false;
-  if (/^(₹|rs\.?|%)/i.test(t)) return false;
-  if (/^[\d,\.\s%₹]+$/.test(t)) return false;
+  if (/\b(paid\s*to|sent\s+to|debited\s+from|received\s+from)\b/i.test(t)) {
+    return false;
+  }
+  if (/^\d+\s*min(?:ute)?s?\s*ago/i.test(t)) return false;
+  if (/^\d+\s*hours?\s*ago/i.test(t)) return false;
+  if (/^\d+\s*days?\s*ago/i.test(t)) return false;
+  if (/^(₹|rs\.?|%|x)/i.test(t) && /[0-9]/.test(t)) return false; // amount-only "X250"
+  if (/^[\d,\.\s%₹xX]+$/.test(t)) return false;
   // Needs at least one letter
   if (!/[A-Za-z]/.test(t)) return false;
+  // Reject "X100"-style amount lines with a single letter prefix
+  if (/^[A-Za-z][0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?$/.test(t)) return false;
   return true;
 }
 

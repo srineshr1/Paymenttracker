@@ -1,0 +1,4452 @@
+{
+  "meta": {
+    "generatedAt": "2026-07-20T14:23:22.569Z",
+    "seed": 42,
+    "days": 90,
+    "range": {
+      "from": "2026-04-21T18:30:00.000Z",
+      "to": "2026-07-20T18:29:59.999Z"
+    },
+    "counts": {
+      "total": 317,
+      "paymentLike": 221,
+      "noise": 96
+    },
+    "note": "Fake SMS for testing Spentd read/parse. Inject with inject-sms-emulator.mjs. Verify with verify-sms-parse.mjs."
+  },
+  "messages": [
+    {
+      "id": "fake-00001",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 180.00 debited from A/c XX9012 on 22-04-26 to swiggy@ybl. UPI Ref No 417600044853. Avl Bal: INR 51,390.50",
+      "dateMs": 1776825191000,
+      "dateIso": "2026-04-22T02:33:11.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "180.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "sms",
+        "availableBalance": "51,390.50",
+        "upiRef": "417600044853"
+      }
+    },
+    {
+      "id": "fake-00002",
+      "address": "VK-SWIGGY",
+      "body": "Swiggy: Hungry? Get free delivery on orders above Rs.199 today. Order now!",
+      "dateMs": 1776830714000,
+      "dateIso": "2026-04-22T04:05:14.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00003",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 450.00 on 22-Apr-26; UPI:nykaa@ybl. UPI:417600044839. Call 18001080 if not you. Avl Bal Rs 51,567.00",
+      "dateMs": 1776831096000,
+      "dateIso": "2026-04-22T04:11:36.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "450.00",
+        "direction": "debit",
+        "merchantHint": "Nykaa",
+        "source": "sms",
+        "availableBalance": "51,567.00",
+        "upiRef": "417600044839"
+      }
+    },
+    {
+      "id": "fake-00004",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1776846090000,
+      "dateIso": "2026-04-22T08:21:30.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00005",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 1,999.00 debited from A/c XX1234 on 22Apr26 for UPI/Myntra/417600044838. Avl Bal Rs 52,016.10",
+      "dateMs": 1776863271000,
+      "dateIso": "2026-04-22T13:07:51.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,999.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "52,016.10",
+        "upiRef": "417600044838"
+      }
+    },
+    {
+      "id": "fake-00006",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 114258. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1776965168000,
+      "dateIso": "2026-04-23T17:26:08.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00007",
+      "address": "VM-ICICIB",
+      "body": "Your OTP for login is 924508. Do not share with anyone. Valid for 5 minutes. - ICICI Bank",
+      "dateMs": 1777045079000,
+      "dateIso": "2026-04-24T15:37:59.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00008",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1777088843000,
+      "dateIso": "2026-04-25T03:47:23.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00009",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 780.00 on 25-Apr-26; UPI:uber@axisbank. UPI:417600044899. Call 18001080 if not you. Avl Bal Rs 49,102.70",
+      "dateMs": 1777090999000,
+      "dateIso": "2026-04-25T04:23:19.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "780.00",
+        "direction": "debit",
+        "merchantHint": "Uber India",
+        "source": "sms",
+        "availableBalance": "49,102.70",
+        "upiRef": "417600044899"
+      }
+    },
+    {
+      "id": "fake-00010",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.649.00 debited from A/c **1234 on 25-04-26 to VPA netflix@axisbank. UPI Ref 417600044881. Not you? Call 18002586161. Avl Bal Rs.50,135.70",
+      "dateMs": 1777092527000,
+      "dateIso": "2026-04-25T04:48:47.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "649.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "50,135.70",
+        "upiRef": "417600044881"
+      }
+    },
+    {
+      "id": "fake-00011",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹600.00 to BookMyShow. UPI transaction ID 417600044865 on 25 Apr 2026, 6:26 pm",
+      "dateMs": 1777121810000,
+      "dateIso": "2026-04-25T12:56:50.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "600.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "gpay",
+        "upiRef": "417600044865"
+      }
+    },
+    {
+      "id": "fake-00012",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.5,000.00 withdrawn from A/c **1234 at ATM on 25-04-26. Avl Bal Rs 45,099.90. If not you call customer care.",
+      "dateMs": 1777128436000,
+      "dateIso": "2026-04-25T14:47:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "5,000.00",
+        "direction": "debit",
+        "merchantHint": null,
+        "source": "sms",
+        "availableBalance": "45,099.90"
+      }
+    },
+    {
+      "id": "fake-00013",
+      "address": "VM-HDFCBK",
+      "body": "Your A/c **1234 is credited for Rs.1,000.00 on 25-04-26 from VPA amit.patel@okicici (UPI Ref No 417600044908). Avl Bal Rs 50,102.70",
+      "dateMs": 1777130574000,
+      "dateIso": "2026-04-25T15:22:54.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "credit",
+        "merchantHint": "Amit",
+        "source": "sms",
+        "availableBalance": "50,102.70",
+        "upiRef": "417600044908"
+      }
+    },
+    {
+      "id": "fake-00014",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 250.00 on 25-Apr-26; UPI:ola@ybl. UPI:417600044885. Call 18001080 if not you. Avl Bal Rs 49,884.00",
+      "dateMs": 1777133561000,
+      "dateIso": "2026-04-25T16:12:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "49,884.00",
+        "upiRef": "417600044885"
+      }
+    },
+    {
+      "id": "fake-00015",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1777172440000,
+      "dateIso": "2026-04-26T03:00:40.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00016",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.450.00 to BigBasket. UPI Ref 417600044922. Debited from SBI XX1234",
+      "dateMs": 1777187413000,
+      "dateIso": "2026-04-26T07:10:13.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "450.00",
+        "direction": "debit",
+        "merchantHint": "BigBasket",
+        "source": "phonepe",
+        "upiRef": "417600044922"
+      }
+    },
+    {
+      "id": "fake-00017",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 239.00 debited from A/c XX9012 on 26-04-26 to jio@ybl. UPI Ref No 417600044919. Avl Bal: INR 44,859.10",
+      "dateMs": 1777193369000,
+      "dateIso": "2026-04-26T08:49:29.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "239.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "44,859.10",
+        "upiRef": "417600044919"
+      }
+    },
+    {
+      "id": "fake-00018",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹250.00 to BookMyShow. UPI transaction ID 417600044935 on 26 Apr 2026, 6:28 pm",
+      "dateMs": 1777208302000,
+      "dateIso": "2026-04-26T12:58:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "gpay",
+        "upiRef": "417600044935"
+      }
+    },
+    {
+      "id": "fake-00019",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 280.00 debited from A/c XX9012 on 26-04-26 to starbucks@icici. UPI Ref No 417600044938. Avl Bal: INR 43,877.10",
+      "dateMs": 1777220607000,
+      "dateIso": "2026-04-26T16:23:27.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "280.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "sms",
+        "availableBalance": "43,877.10",
+        "upiRef": "417600044938"
+      }
+    },
+    {
+      "id": "fake-00020",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.2,400.00 debited from A/c **1234 on 27-04-26 to VPA bescom@sbi. UPI Ref 417600044947. Not you? Call 18002586161. Avl Bal Rs.40,813.00",
+      "dateMs": 1777279161000,
+      "dateIso": "2026-04-27T08:39:21.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,400.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "sms",
+        "availableBalance": "40,813.00",
+        "upiRef": "417600044947"
+      }
+    },
+    {
+      "id": "fake-00021",
+      "address": "VM-FLIPKT",
+      "body": "Flipkart: Big Billion Days start soon! Pre-book deals worth Rs.5000. Visit flipkart.com",
+      "dateMs": 1777298188000,
+      "dateIso": "2026-04-27T13:56:28.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00022",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.220.00 debited from A/c **1234 on 27-04-26 to VPA zomato@paytm. UPI Ref 417600044952. Not you? Call 18002586161. Avl Bal Rs.40,592.40",
+      "dateMs": 1777309928000,
+      "dateIso": "2026-04-27T17:12:08.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "220.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "sms",
+        "availableBalance": "40,592.40",
+        "upiRef": "417600044952"
+      }
+    },
+    {
+      "id": "fake-00023",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹670.00 to Blinkit. UPI transaction ID 417600044946 on 27 Apr 2026, 11:35 pm",
+      "dateMs": 1777313121000,
+      "dateIso": "2026-04-27T18:05:21.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "670.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "gpay",
+        "upiRef": "417600044946"
+      }
+    },
+    {
+      "id": "fake-00024",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: A/c **1234 credited with Rs.67,532.00 on 28-04-26 by NEFT from ACME CORP SALARY. Ref NEFT221342818. Avl Bal Rs 108,124.40",
+      "dateMs": 1777348320000,
+      "dateIso": "2026-04-28T03:52:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "67,532.00",
+        "direction": "credit",
+        "merchantHint": "ACME",
+        "source": "sms",
+        "availableBalance": "108,124.40",
+        "upiRef": "NEFT221342818"
+      }
+    },
+    {
+      "id": "fake-00025",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank: Rs.5,000.00 withdrawn from A/c XX5678 at ATM on 28-04-26. Avl Bal Rs 103,120.30. If not you call customer care.",
+      "dateMs": 1777350892000,
+      "dateIso": "2026-04-28T04:34:52.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "5,000.00",
+        "direction": "debit",
+        "merchantHint": null,
+        "source": "sms",
+        "availableBalance": "103,120.30"
+      }
+    },
+    {
+      "id": "fake-00026",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 969753. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1777356753000,
+      "dateIso": "2026-04-28T06:12:33.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00027",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.1,850.00 to BESCOM. UPI Ref 417600044957. Debited from Axis Bank XX9012",
+      "dateMs": 1777430103000,
+      "dateIso": "2026-04-29T02:35:03.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,850.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "phonepe",
+        "upiRef": "417600044957"
+      }
+    },
+    {
+      "id": "fake-00028",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 200.00 debited from A/c XX1234 on 29Apr26 for UPI/PhonePe Recharge/417600044967. Avl Bal Rs 101,063.10",
+      "dateMs": 1777445269000,
+      "dateIso": "2026-04-29T06:47:49.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "101,063.10",
+        "upiRef": "417600044967"
+      }
+    },
+    {
+      "id": "fake-00029",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.1,850.00 to BigBasket. UPI Ref 417600044984. Debited from ICICI Bank XX5678",
+      "dateMs": 1777557778000,
+      "dateIso": "2026-04-30T14:02:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,850.00",
+        "direction": "debit",
+        "merchantHint": "BigBasket",
+        "source": "phonepe",
+        "upiRef": "417600044984"
+      }
+    },
+    {
+      "id": "fake-00030",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1777565272000,
+      "dateIso": "2026-04-30T16:07:52.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00031",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1777603042000,
+      "dateIso": "2026-05-01T02:37:22.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00032",
+      "address": "VK-SBIINB",
+      "body": "SBI: A/c XX1234 credited with Rs.69,253.00 on 01-05-26 by NEFT from ACME CORP SALARY. Ref NEFT479011699. Avl Bal Rs 166,370.30",
+      "dateMs": 1777607400000,
+      "dateIso": "2026-05-01T03:50:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "69,253.00",
+        "direction": "credit",
+        "merchantHint": "ACME",
+        "source": "sms",
+        "availableBalance": "166,370.30",
+        "upiRef": "NEFT479011699"
+      }
+    },
+    {
+      "id": "fake-00033",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 2,100.00 debited from A/c XX1234 on 01May26 for UPI/Nykaa/417600044997. Avl Bal Rs 97,117.30",
+      "dateMs": 1777623404000,
+      "dateIso": "2026-05-01T08:16:44.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,100.00",
+        "direction": "debit",
+        "merchantHint": "Nykaa",
+        "source": "sms",
+        "availableBalance": "97,117.30",
+        "upiRef": "417600044997"
+      }
+    },
+    {
+      "id": "fake-00034",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 3,499.00 debited from A/c XX9012 on 02-05-26 to myntra@ybl. UPI Ref No 417600045012. Avl Bal: INR 162,869.70",
+      "dateMs": 1777691536000,
+      "dateIso": "2026-05-02T03:12:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "3,499.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "162,869.70",
+        "upiRef": "417600045012"
+      }
+    },
+    {
+      "id": "fake-00035",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 800.00 on 02-May-26; UPI:bescom@sbi. UPI:417600045048. Call 18001080 if not you. Avl Bal Rs 160,420.40",
+      "dateMs": 1777692574000,
+      "dateIso": "2026-05-02T03:29:34.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "800.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "sms",
+        "availableBalance": "160,420.40",
+        "upiRef": "417600045048"
+      }
+    },
+    {
+      "id": "fake-00036",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 1,500.00 debited from A/c XX1234 on 02May26 for UPI/Petrol Pump/417600045017. Avl Bal Rs 161,369.60",
+      "dateMs": 1777693468000,
+      "dateIso": "2026-05-02T03:44:28.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,500.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "161,369.60",
+        "upiRef": "417600045017"
+      }
+    },
+    {
+      "id": "fake-00037",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1777697752000,
+      "dateIso": "2026-05-02T04:55:52.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00038",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.150.00 debited from A/c **1234 on 02-05-26 to VPA zomato@paytm. UPI Ref 417600045033. Not you? Call 18002586161. Avl Bal Rs.161,218.00",
+      "dateMs": 1777724201000,
+      "dateIso": "2026-05-02T12:16:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "150.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "sms",
+        "availableBalance": "161,218.00",
+        "upiRef": "417600045033"
+      }
+    },
+    {
+      "id": "fake-00039",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,299.00 to Amazon. UPI transaction ID 417600045080 on 03 May 2026, 8:42 am",
+      "dateMs": 1777777965000,
+      "dateIso": "2026-05-03T03:12:45.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "gpay",
+        "upiRef": "417600045080"
+      }
+    },
+    {
+      "id": "fake-00040",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 340.00 debited from A/c XX1234 on 03May26 for UPI/Uber India/417600045062. Avl Bal Rs 160,081.40",
+      "dateMs": 1777781412000,
+      "dateIso": "2026-05-03T04:10:12.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "340.00",
+        "direction": "debit",
+        "merchantHint": "Uber India",
+        "source": "sms",
+        "availableBalance": "160,081.40",
+        "upiRef": "417600045062"
+      }
+    },
+    {
+      "id": "fake-00041",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 499.00 debited from A/c XX1234 on 03May26 for UPI/Netflix/417600045097. Avl Bal Rs 157,783.50",
+      "dateMs": 1777782908000,
+      "dateIso": "2026-05-03T04:35:08.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "499.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "157,783.50",
+        "upiRef": "417600045097"
+      }
+    },
+    {
+      "id": "fake-00042",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 1,299.00 on 03-May-26; UPI:amazon@apl. UPI:417600045112. Call 18001080 if not you. Avl Bal Rs 156,487.10",
+      "dateMs": 1777793998000,
+      "dateIso": "2026-05-03T07:39:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "sms",
+        "availableBalance": "156,487.10",
+        "upiRef": "417600045112"
+      }
+    },
+    {
+      "id": "fake-00043",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1777811085000,
+      "dateIso": "2026-05-03T12:24:45.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00044",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.499.00 debited from A/c **1234 on 03-05-26 to VPA googleplay@okaxis. UPI Ref 417600045075. Not you? Call 18002586161. Avl Bal Rs.159,580.20",
+      "dateMs": 1777814731000,
+      "dateIso": "2026-05-03T13:25:31.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "499.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "159,580.20",
+        "upiRef": "417600045075"
+      }
+    },
+    {
+      "id": "fake-00045",
+      "address": "VK-SWIGGY",
+      "body": "Swiggy: Hungry? Get free delivery on orders above Rs.199 today. Order now!",
+      "dateMs": 1777827315000,
+      "dateIso": "2026-05-03T16:55:15.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00046",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1777896670000,
+      "dateIso": "2026-05-04T12:11:10.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00047",
+      "address": "VM-AXISBK",
+      "body": "Your OTP for login is 711268. Do not share with anyone. Valid for 5 minutes. - Axis Bank",
+      "dateMs": 1777955549000,
+      "dateIso": "2026-05-05T04:32:29.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00048",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 999.00 debited from A/c XX9012 on 05-05-26 to googleplay@okaxis. UPI Ref No 417600045145. Avl Bal: INR 154,830.20",
+      "dateMs": 1777968216000,
+      "dateIso": "2026-05-05T08:03:36.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "999.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "154,830.20",
+        "upiRef": "417600045145"
+      }
+    },
+    {
+      "id": "fake-00049",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.10.00 debited from A/c **1234 on 05-05-26 to VPA recharge@ybl. UPI Ref 417600045130. Not you? Call 18002586161. Avl Bal Rs.155,824.50",
+      "dateMs": 1777991209000,
+      "dateIso": "2026-05-05T14:26:49.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "10.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "155,824.50",
+        "upiRef": "417600045130"
+      }
+    },
+    {
+      "id": "fake-00050",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 649.00 on 05-May-26; UPI:netflix@axisbank. UPI:417600045121. Call 18001080 if not you. Avl Bal Rs 155,834.30",
+      "dateMs": 1777998754000,
+      "dateIso": "2026-05-05T16:32:34.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "649.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "155,834.30",
+        "upiRef": "417600045121"
+      }
+    },
+    {
+      "id": "fake-00051",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1778001939000,
+      "dateIso": "2026-05-05T17:25:39.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00052",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 560.00 on 06-May-26; UPI:starbucks@icici. UPI:417600045162. Call 18001080 if not you. Avl Bal Rs 154,265.30",
+      "dateMs": 1778039558000,
+      "dateIso": "2026-05-06T03:52:38.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "560.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "sms",
+        "availableBalance": "154,265.30",
+        "upiRef": "417600045162"
+      }
+    },
+    {
+      "id": "fake-00053",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 420.00 debited from A/c XX9012 on 06-05-26 to zomato@paytm. UPI Ref No 417600045181. Avl Bal: INR 150,349.60",
+      "dateMs": 1778050919000,
+      "dateIso": "2026-05-06T07:01:59.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "420.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "sms",
+        "availableBalance": "150,349.60",
+        "upiRef": "417600045181"
+      }
+    },
+    {
+      "id": "fake-00054",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 3,500.00 on 06-May-26; UPI:irctc@sbi. UPI:417600045178. Call 18001080 if not you. Avl Bal Rs 150,766.60",
+      "dateMs": 1778082335000,
+      "dateIso": "2026-05-06T15:45:35.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "3,500.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "sms",
+        "availableBalance": "150,766.60",
+        "upiRef": "417600045178"
+      }
+    },
+    {
+      "id": "fake-00055",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1778083842000,
+      "dateIso": "2026-05-06T16:10:42.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00056",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.119.00 debited from A/c **1234 on 07-05-26 to VPA spotify@ybl. UPI Ref 417600045182. Not you? Call 18002586161. Avl Bal Rs.150,233.10",
+      "dateMs": 1778121354000,
+      "dateIso": "2026-05-07T02:35:54.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "119.00",
+        "direction": "debit",
+        "merchantHint": "Spotify",
+        "source": "sms",
+        "availableBalance": "150,233.10",
+        "upiRef": "417600045182"
+      }
+    },
+    {
+      "id": "fake-00057",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 699.00 debited from A/c XX1234 on 07May26 for UPI/Dominos/417600045188. Avl Bal Rs 149,529.60",
+      "dateMs": 1778154889000,
+      "dateIso": "2026-05-07T11:54:49.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "699.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "sms",
+        "availableBalance": "149,529.60",
+        "upiRef": "417600045188"
+      }
+    },
+    {
+      "id": "fake-00058",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 719.00 debited from A/c XX9012 on 09-05-26 to airtel@airtel. UPI Ref No 417600045205. Avl Bal: INR 148,784.60",
+      "dateMs": 1778317258000,
+      "dateIso": "2026-05-09T09:00:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "719.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "sms",
+        "availableBalance": "148,784.60",
+        "upiRef": "417600045205"
+      }
+    },
+    {
+      "id": "fake-00059",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1778342972000,
+      "dateIso": "2026-05-09T16:09:32.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00060",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 499.00 on 09-May-26; UPI:amazon@apl. UPI:417600045214. Call 18001080 if not you. Avl Bal Rs 148,290.10",
+      "dateMs": 1778343978000,
+      "dateIso": "2026-05-09T16:26:18.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "499.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "sms",
+        "availableBalance": "148,290.10",
+        "upiRef": "417600045214"
+      }
+    },
+    {
+      "id": "fake-00061",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 20.00 debited from A/c XX9012 on 09-05-26 to recharge@ybl. UPI Ref No 417600045204. Avl Bal: INR 149,506.10",
+      "dateMs": 1778350280000,
+      "dateIso": "2026-05-09T18:11:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "20.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "149,506.10",
+        "upiRef": "417600045204"
+      }
+    },
+    {
+      "id": "fake-00062",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 490.00 on 10-May-26; UPI:blinkit@ybl. UPI:417600045248. Call 18001080 if not you. Avl Bal Rs 147,388.90",
+      "dateMs": 1778388136000,
+      "dateIso": "2026-05-10T04:42:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "490.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "sms",
+        "availableBalance": "147,388.90",
+        "upiRef": "417600045248"
+      }
+    },
+    {
+      "id": "fake-00063",
+      "address": "VK-SWIGGY",
+      "body": "Swiggy: Hungry? Get free delivery on orders above Rs.199 today. Order now!",
+      "dateMs": 1778388822000,
+      "dateIso": "2026-05-10T04:53:42.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00064",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 320.00 debited from A/c XX1234 on 10May26 for UPI/Swiggy/417600045237. Avl Bal Rs 147,879.20",
+      "dateMs": 1778394667000,
+      "dateIso": "2026-05-10T06:31:07.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "320.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "sms",
+        "availableBalance": "147,879.20",
+        "upiRef": "417600045237"
+      }
+    },
+    {
+      "id": "fake-00065",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 95.00 on 10-May-26; UPI:ola@ybl. UPI:417600045225. Call 18001080 if not you. Avl Bal Rs 148,197.20",
+      "dateMs": 1778421939000,
+      "dateIso": "2026-05-10T14:05:39.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "95.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "148,197.20",
+        "upiRef": "417600045225"
+      }
+    },
+    {
+      "id": "fake-00066",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.1,999.00 debited from A/c **1234 on 10-05-26 to VPA myntra@ybl. UPI Ref 417600045271. Not you? Call 18002586161. Avl Bal Rs.145,189.20",
+      "dateMs": 1778426784000,
+      "dateIso": "2026-05-10T15:26:24.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,999.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "145,189.20",
+        "upiRef": "417600045271"
+      }
+    },
+    {
+      "id": "fake-00067",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹199.00 to Netflix. UPI transaction ID 417600045264 on 10 May 2026, 9:11 pm",
+      "dateMs": 1778427680000,
+      "dateIso": "2026-05-10T15:41:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "gpay",
+        "upiRef": "417600045264"
+      }
+    },
+    {
+      "id": "fake-00068",
+      "address": "VM-ICICIB",
+      "body": "Your A/c XX5678 is credited for Rs.5,000.00 on 10-05-26 from VPA kavya.n@oksbi (UPI Ref No 417600045280). Avl Bal Rs 150,189.20",
+      "dateMs": 1778428951000,
+      "dateIso": "2026-05-10T16:02:31.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "5,000.00",
+        "direction": "credit",
+        "merchantHint": "Kavya",
+        "source": "sms",
+        "availableBalance": "150,189.20",
+        "upiRef": "417600045280"
+      }
+    },
+    {
+      "id": "fake-00069",
+      "address": "VM-AXISBK",
+      "body": "Your OTP for login is 574299. Do not share with anyone. Valid for 5 minutes. - Axis Bank",
+      "dateMs": 1778467040000,
+      "dateIso": "2026-05-11T02:37:20.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00070",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 699.00 debited from A/c XX9012 on 11-05-26 to dominos@ybl. UPI Ref No 417600045289. Avl Bal: INR 149,489.30",
+      "dateMs": 1778521475000,
+      "dateIso": "2026-05-11T17:44:35.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "699.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "sms",
+        "availableBalance": "149,489.30",
+        "upiRef": "417600045289"
+      }
+    },
+    {
+      "id": "fake-00071",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1778522180000,
+      "dateIso": "2026-05-11T17:56:20.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00072",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 249.00 on 12-May-26; UPI:swiggy@ybl. UPI:417600045298. Call 18001080 if not you. Avl Bal Rs 149,000.60",
+      "dateMs": 1778561038000,
+      "dateIso": "2026-05-12T04:43:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "249.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "sms",
+        "availableBalance": "149,000.60",
+        "upiRef": "417600045298"
+      }
+    },
+    {
+      "id": "fake-00073",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.239.00 to Jio. UPI Ref 417600045290. Debited from ICICI Bank XX5678",
+      "dateMs": 1778603876000,
+      "dateIso": "2026-05-12T16:37:56.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "239.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "phonepe",
+        "upiRef": "417600045290"
+      }
+    },
+    {
+      "id": "fake-00074",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 720241. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1778607787000,
+      "dateIso": "2026-05-12T17:43:07.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00075",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 109680. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1778696713000,
+      "dateIso": "2026-05-13T18:25:13.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00076",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs.2,000.00 withdrawn from A/c XX1234 at ATM on 14-05-26. Avl Bal Rs 147,004.60. If not you call customer care.",
+      "dateMs": 1778774482000,
+      "dateIso": "2026-05-14T16:01:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,000.00",
+        "direction": "debit",
+        "merchantHint": null,
+        "source": "sms",
+        "availableBalance": "147,004.60"
+      }
+    },
+    {
+      "id": "fake-00077",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1778775920000,
+      "dateIso": "2026-05-14T16:25:20.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00078",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 320.00 on 16-May-26; UPI:blinkit@ybl. UPI:417600045310. Call 18001080 if not you. Avl Bal Rs 145,903.90",
+      "dateMs": 1778904393000,
+      "dateIso": "2026-05-16T04:06:33.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "320.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "sms",
+        "availableBalance": "145,903.90",
+        "upiRef": "417600045310"
+      }
+    },
+    {
+      "id": "fake-00079",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1778921189000,
+      "dateIso": "2026-05-16T08:46:29.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00080",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 780.00 on 16-May-26; UPI:uber@axisbank. UPI:417600045302. Call 18001080 if not you. Avl Bal Rs 146,221.60",
+      "dateMs": 1778943348000,
+      "dateIso": "2026-05-16T14:55:48.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "780.00",
+        "direction": "debit",
+        "merchantHint": "Uber India",
+        "source": "sms",
+        "availableBalance": "146,221.60",
+        "upiRef": "417600045302"
+      }
+    },
+    {
+      "id": "fake-00081",
+      "address": "VM-HDFCBK",
+      "body": "Your A/c **1234 is credited for Rs.800.00 on 16-05-26 from VPA rohit.das@okhdfcbank (UPI Ref No 417600045324). Avl Bal Rs 146,703.90",
+      "dateMs": 1778944132000,
+      "dateIso": "2026-05-16T15:08:52.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "800.00",
+        "direction": "credit",
+        "merchantHint": "Rohit",
+        "source": "sms",
+        "availableBalance": "146,703.90",
+        "upiRef": "417600045324"
+      }
+    },
+    {
+      "id": "fake-00082",
+      "address": "VM-CRED",
+      "body": "CRED: Pay your credit card bill and earn rewards. Pay now on CRED app.",
+      "dateMs": 1778954155000,
+      "dateIso": "2026-05-16T17:55:55.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00083",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.280.00 debited from A/c **1234 on 17-05-26 to VPA starbucks@icici. UPI Ref 417600045337. Not you? Call 18002586161. Avl Bal Rs.145,725.00",
+      "dateMs": 1778987529000,
+      "dateIso": "2026-05-17T03:12:09.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "280.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "sms",
+        "availableBalance": "145,725.00",
+        "upiRef": "417600045337"
+      }
+    },
+    {
+      "id": "fake-00084",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 560.00 debited from A/c XX1234 on 17May26 for UPI/Starbucks/417600045348. Avl Bal Rs 145,167.40",
+      "dateMs": 1779025838000,
+      "dateIso": "2026-05-17T13:50:38.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "560.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "sms",
+        "availableBalance": "145,167.40",
+        "upiRef": "417600045348"
+      }
+    },
+    {
+      "id": "fake-00085",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 400.00 debited from A/c XX1234 on 17May26 for UPI/BookMyShow/417600045365. Avl Bal Rs 144,765.30",
+      "dateMs": 1779025955000,
+      "dateIso": "2026-05-17T13:52:35.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "400.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "sms",
+        "availableBalance": "144,765.30",
+        "upiRef": "417600045365"
+      }
+    },
+    {
+      "id": "fake-00086",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 699.00 debited from A/c XX1234 on 17May26 for UPI/Flipkart/417600045332. Avl Bal Rs 146,002.60",
+      "dateMs": 1779035204000,
+      "dateIso": "2026-05-17T16:26:44.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "699.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "availableBalance": "146,002.60",
+        "upiRef": "417600045332"
+      }
+    },
+    {
+      "id": "fake-00087",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 2,500.00 on 18-May-26; UPI:iocl@ybl. UPI:417600045384. Call 18001080 if not you. Avl Bal Rs 142,150.70",
+      "dateMs": 1779072022000,
+      "dateIso": "2026-05-18T02:40:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,500.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "142,150.70",
+        "upiRef": "417600045384"
+      }
+    },
+    {
+      "id": "fake-00088",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.899.00 to Dominos. UPI Ref 417600045385. Debited from SBI XX1234",
+      "dateMs": 1779094275000,
+      "dateIso": "2026-05-18T08:51:15.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "899.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "phonepe",
+        "upiRef": "417600045385"
+      }
+    },
+    {
+      "id": "fake-00089",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 120.00 debited from A/c XX9012 on 18-05-26 to swiggy@ybl. UPI Ref No 417600045367. Avl Bal: INR 144,647.60",
+      "dateMs": 1779110475000,
+      "dateIso": "2026-05-18T13:21:15.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "120.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "sms",
+        "availableBalance": "144,647.60",
+        "upiRef": "417600045367"
+      }
+    },
+    {
+      "id": "fake-00090",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1779168578000,
+      "dateIso": "2026-05-19T05:29:38.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00091",
+      "address": "VM-ICICIB",
+      "body": "Your OTP for login is 322298. Do not share with anyone. Valid for 5 minutes. - ICICI Bank",
+      "dateMs": 1779205679000,
+      "dateIso": "2026-05-19T15:47:59.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00092",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.2,400.00 debited from A/c **1234 on 19-05-26 to VPA bigbasket@icici. UPI Ref 417600045408. Not you? Call 18002586161. Avl Bal Rs.137,352.80",
+      "dateMs": 1779206062000,
+      "dateIso": "2026-05-19T15:54:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,400.00",
+        "direction": "debit",
+        "merchantHint": "BigBasket",
+        "source": "sms",
+        "availableBalance": "137,352.80",
+        "upiRef": "417600045408"
+      }
+    },
+    {
+      "id": "fake-00093",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,500.00 to Priya Sharma. UPI transaction ID 417600045398 on 19 May 2026, 11:05 pm",
+      "dateMs": 1779212152000,
+      "dateIso": "2026-05-19T17:35:52.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,500.00",
+        "direction": "debit",
+        "merchantHint": "Priya",
+        "source": "gpay",
+        "upiRef": "417600045398"
+      }
+    },
+    {
+      "id": "fake-00094",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 499.00 debited from A/c XX9012 on 21-05-26 to dominos@ybl. UPI Ref No 417600045410. Avl Bal: INR 136,849.00",
+      "dateMs": 1779331252000,
+      "dateIso": "2026-05-21T02:40:52.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "499.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "sms",
+        "availableBalance": "136,849.00",
+        "upiRef": "417600045410"
+      }
+    },
+    {
+      "id": "fake-00095",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 399.00 debited from A/c XX9012 on 21-05-26 to jio@ybl. UPI Ref No 417600045415. Avl Bal: INR 136,453.40",
+      "dateMs": 1779344248000,
+      "dateIso": "2026-05-21T06:17:28.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "399.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "136,453.40",
+        "upiRef": "417600045415"
+      }
+    },
+    {
+      "id": "fake-00096",
+      "address": "VM-AXISBK",
+      "body": "Your OTP for login is 544271. Do not share with anyone. Valid for 5 minutes. - Axis Bank",
+      "dateMs": 1779351224000,
+      "dateIso": "2026-05-21T08:13:44.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00097",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: UPI payment of Rs.699.00 to flipkart@ybl on 21-05-26 FAILED. UPI Ref 417600045423. Money will be refunded if debited.",
+      "dateMs": 1779386464000,
+      "dateIso": "2026-05-21T18:01:04.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "699.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "status": "failed",
+        "upiRef": "417600045423"
+      }
+    },
+    {
+      "id": "fake-00098",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.899.00 to Dominos. UPI Ref 417600045457. Debited from Axis Bank XX9012",
+      "dateMs": 1779418838000,
+      "dateIso": "2026-05-22T03:00:38.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "899.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "phonepe",
+        "upiRef": "417600045457"
+      }
+    },
+    {
+      "id": "fake-00099",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1779420418000,
+      "dateIso": "2026-05-22T03:26:58.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00100",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹99.00 to Google Play. UPI transaction ID 417600045440 on 22 May 2026, 9:37 am",
+      "dateMs": 1779422836000,
+      "dateIso": "2026-05-22T04:07:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "99.00",
+        "direction": "debit",
+        "merchantHint": "Google",
+        "source": "gpay",
+        "upiRef": "417600045440"
+      }
+    },
+    {
+      "id": "fake-00101",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.890.00 debited from A/c **1234 on 22-05-26 to VPA irctc@sbi. UPI Ref 417600045467. Not you? Call 18002586161. Avl Bal Rs.134,573.90",
+      "dateMs": 1779470662000,
+      "dateIso": "2026-05-22T17:24:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "890.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "sms",
+        "availableBalance": "134,573.90",
+        "upiRef": "417600045467"
+      }
+    },
+    {
+      "id": "fake-00102",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.560.00 to Starbucks. UPI Ref 417600045483. Debited from ICICI Bank XX5678",
+      "dateMs": 1779504034000,
+      "dateIso": "2026-05-23T02:40:34.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "560.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "phonepe",
+        "upiRef": "417600045483"
+      }
+    },
+    {
+      "id": "fake-00103",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 199.00 on 23-May-26; UPI:netflix@axisbank. UPI:417600045523. Call 18001080 if not you. Avl Bal Rs 131,050.60",
+      "dateMs": 1779504296000,
+      "dateIso": "2026-05-23T02:44:56.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "131,050.60",
+        "upiRef": "417600045523"
+      }
+    },
+    {
+      "id": "fake-00104",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.666.00 debited from A/c **1234 on 23-05-26 to VPA jio@ybl. UPI Ref 417600045500. Not you? Call 18002586161. Avl Bal Rs.133,348.50",
+      "dateMs": 1779504853000,
+      "dateIso": "2026-05-23T02:54:13.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "666.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "133,348.50",
+        "upiRef": "417600045500"
+      }
+    },
+    {
+      "id": "fake-00105",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 799.00 debited from A/c XX9012 on 23-05-26 to myntra@ybl. UPI Ref No 417600045507. Avl Bal: INR 131,249.50",
+      "dateMs": 1779505583000,
+      "dateIso": "2026-05-23T03:06:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "799.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "131,249.50",
+        "upiRef": "417600045507"
+      }
+    },
+    {
+      "id": "fake-00106",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 1,299.00 debited from A/c XX9012 on 23-05-26 to myntra@ybl. UPI Ref No 417600045504. Avl Bal: INR 132,052.80",
+      "dateMs": 1779559931000,
+      "dateIso": "2026-05-23T18:12:11.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "132,052.80",
+        "upiRef": "417600045504"
+      }
+    },
+    {
+      "id": "fake-00107",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 349.00 on 24-May-26; UPI:dominos@ybl. UPI:417600045535. Call 18001080 if not you. Avl Bal Rs 130,596.60",
+      "dateMs": 1779606086000,
+      "dateIso": "2026-05-24T07:01:26.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "349.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "sms",
+        "availableBalance": "130,596.60",
+        "upiRef": "417600045535"
+      }
+    },
+    {
+      "id": "fake-00108",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹100.00 to Amit Patel. UPI transaction ID 417600045533 on 24 May 2026, 8:07 pm",
+      "dateMs": 1779633428000,
+      "dateIso": "2026-05-24T14:37:08.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "100.00",
+        "direction": "debit",
+        "merchantHint": "Amit",
+        "source": "gpay",
+        "upiRef": "417600045533"
+      }
+    },
+    {
+      "id": "fake-00109",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1779716729000,
+      "dateIso": "2026-05-25T13:45:29.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00110",
+      "address": "VM-AXISBK",
+      "body": "Your OTP for login is 695796. Do not share with anyone. Valid for 5 minutes. - Axis Bank",
+      "dateMs": 1779769945000,
+      "dateIso": "2026-05-26T04:32:25.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00111",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1779795709000,
+      "dateIso": "2026-05-26T11:41:49.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00112",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.200.00 to PhonePe Recharge. UPI Ref 417600045540. Debited from Axis Bank XX9012",
+      "dateMs": 1779872843000,
+      "dateIso": "2026-05-27T09:07:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "phonepe",
+        "upiRef": "417600045540"
+      }
+    },
+    {
+      "id": "fake-00113",
+      "address": "+919876543210",
+      "body": "Hey, are we still on for dinner tonight?",
+      "dateMs": 1779873764000,
+      "dateIso": "2026-05-27T09:22:44.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00114",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 644733. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1779904772000,
+      "dateIso": "2026-05-27T17:59:32.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00115",
+      "address": "VM-ICICIB",
+      "body": "Your OTP for login is 641879. Do not share with anyone. Valid for 5 minutes. - ICICI Bank",
+      "dateMs": 1779939766000,
+      "dateIso": "2026-05-28T03:42:46.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00116",
+      "address": "VK-SBIINB",
+      "body": "SBI: A/c XX1234 credited with Rs.66,378.00 on 28-05-26 by NEFT from ACME CORP SALARY. Ref NEFT758492704. Avl Bal Rs 196,877.60",
+      "dateMs": 1779939780000,
+      "dateIso": "2026-05-28T03:43:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "66,378.00",
+        "direction": "credit",
+        "merchantHint": "ACME",
+        "source": "sms",
+        "availableBalance": "196,877.60",
+        "upiRef": "NEFT758492704"
+      }
+    },
+    {
+      "id": "fake-00117",
+      "address": "VK-SBIINB",
+      "body": "Your A/c XX1234 is credited for Rs.100.00 on 28-05-26 from VPA vikram.s@okaxis (UPI Ref No 417600045556). Avl Bal Rs 130,499.60",
+      "dateMs": 1779952851000,
+      "dateIso": "2026-05-28T07:20:51.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "100.00",
+        "direction": "credit",
+        "merchantHint": "Vikram",
+        "source": "sms",
+        "availableBalance": "130,499.60",
+        "upiRef": "417600045556"
+      }
+    },
+    {
+      "id": "fake-00118",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1780031099000,
+      "dateIso": "2026-05-29T05:04:59.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00119",
+      "address": "VM-HDFCBK",
+      "body": "Your A/c **1234 is credited for Rs.500.00 on 29-05-26 from VPA amit.patel@okicici (UPI Ref No 417600045576). Avl Bal Rs 196,975.80",
+      "dateMs": 1780031542000,
+      "dateIso": "2026-05-29T05:12:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "credit",
+        "merchantHint": "Amit",
+        "source": "sms",
+        "availableBalance": "196,975.80",
+        "upiRef": "417600045576"
+      }
+    },
+    {
+      "id": "fake-00120",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 250.00 on 29-May-26; UPI:bms@ybl. UPI:417600045561. Call 18001080 if not you. Avl Bal Rs 196,630.00",
+      "dateMs": 1780068724000,
+      "dateIso": "2026-05-29T15:32:04.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "sms",
+        "availableBalance": "196,630.00",
+        "upiRef": "417600045561"
+      }
+    },
+    {
+      "id": "fake-00121",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹150.00 to Zomato. UPI transaction ID 417600045563 on 29 May 2026, 10:28 pm",
+      "dateMs": 1780073902000,
+      "dateIso": "2026-05-29T16:58:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "150.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "gpay",
+        "upiRef": "417600045563"
+      }
+    },
+    {
+      "id": "fake-00122",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹200.00 to Meera Joshi. UPI transaction ID 417600045599 on 30 May 2026, 8:39 am",
+      "dateMs": 1780110595000,
+      "dateIso": "2026-05-30T03:09:55.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "debit",
+        "merchantHint": "Meera",
+        "source": "gpay",
+        "upiRef": "417600045599"
+      }
+    },
+    {
+      "id": "fake-00123",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 180.00 on 30-May-26; UPI:swiggy@ybl. UPI:417600045612. Call 18001080 if not you. Avl Bal Rs 196,192.70",
+      "dateMs": 1780124458000,
+      "dateIso": "2026-05-30T07:00:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "180.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "sms",
+        "availableBalance": "196,192.70",
+        "upiRef": "417600045612"
+      }
+    },
+    {
+      "id": "fake-00124",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 400.00 debited from A/c XX9012 on 30-05-26 to bms@ybl. UPI Ref No 417600045592. Avl Bal: INR 196,577.80",
+      "dateMs": 1780162854000,
+      "dateIso": "2026-05-30T17:40:54.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "400.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "sms",
+        "availableBalance": "196,577.80",
+        "upiRef": "417600045592"
+      }
+    },
+    {
+      "id": "fake-00125",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: UPI payment of Rs.2,400.00 to bescom@sbi on 30-05-26 FAILED. UPI Ref 417600045615. Money will be refunded if debited.",
+      "dateMs": 1780164868000,
+      "dateIso": "2026-05-30T18:14:28.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,400.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "sms",
+        "status": "failed",
+        "upiRef": "417600045615"
+      }
+    },
+    {
+      "id": "fake-00126",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 199.00 debited from A/c XX9012 on 31-05-26 to googleplay@okaxis. UPI Ref No 417600045632. Avl Bal: INR 195,990.40",
+      "dateMs": 1780198793000,
+      "dateIso": "2026-05-31T03:39:53.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "195,990.40",
+        "upiRef": "417600045632"
+      }
+    },
+    {
+      "id": "fake-00127",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 3,100.00 debited from A/c XX9012 on 31-05-26 to bescom@sbi. UPI Ref No 417600045655. Avl Bal: INR 191,107.00",
+      "dateMs": 1780206055000,
+      "dateIso": "2026-05-31T05:40:55.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "3,100.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "sms",
+        "availableBalance": "191,107.00",
+        "upiRef": "417600045655"
+      }
+    },
+    {
+      "id": "fake-00128",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 780.00 debited from A/c XX1234 on 31May26 for UPI/Uber India/417600045647. Avl Bal Rs 194,208.00",
+      "dateMs": 1780210635000,
+      "dateIso": "2026-05-31T06:57:15.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "780.00",
+        "direction": "debit",
+        "merchantHint": "Uber India",
+        "source": "sms",
+        "availableBalance": "194,208.00",
+        "upiRef": "417600045647"
+      }
+    },
+    {
+      "id": "fake-00129",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.999.00 debited from A/c **1234 on 31-05-26 to VPA googleplay@okaxis. UPI Ref 417600045642. Not you? Call 18002586161. Avl Bal Rs.194,991.70",
+      "dateMs": 1780234509000,
+      "dateIso": "2026-05-31T13:35:09.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "999.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "194,991.70",
+        "upiRef": "417600045642"
+      }
+    },
+    {
+      "id": "fake-00130",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.100.00 debited from A/c **1234 on 31-05-26 to VPA recharge@ybl. UPI Ref 417600045661. Not you? Call 18002586161. Avl Bal Rs.191,009.70",
+      "dateMs": 1780235762000,
+      "dateIso": "2026-05-31T13:56:02.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "100.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "191,009.70",
+        "upiRef": "417600045661"
+      }
+    },
+    {
+      "id": "fake-00131",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1780248740000,
+      "dateIso": "2026-05-31T17:32:20.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00132",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: A/c **1234 credited with Rs.65,127.00 on 01-06-26 by NEFT from ACME CORP SALARY. Ref NEFT288479169. Avl Bal Rs 256,136.70",
+      "dateMs": 1780285020000,
+      "dateIso": "2026-06-01T03:37:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "65,127.00",
+        "direction": "credit",
+        "merchantHint": "ACME",
+        "source": "sms",
+        "availableBalance": "256,136.70",
+        "upiRef": "NEFT288479169"
+      }
+    },
+    {
+      "id": "fake-00133",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 970056. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1780292471000,
+      "dateIso": "2026-06-01T05:41:11.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00134",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1780320211000,
+      "dateIso": "2026-06-01T13:23:31.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00135",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1780331987000,
+      "dateIso": "2026-06-01T16:39:47.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00136",
+      "address": "VM-FLIPKT",
+      "body": "Flipkart: Big Billion Days start soon! Pre-book deals worth Rs.5000. Visit flipkart.com",
+      "dateMs": 1780381219000,
+      "dateIso": "2026-06-02T06:20:19.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00137",
+      "address": "VM-AXISBK",
+      "body": "Your OTP for login is 643767. Do not share with anyone. Valid for 5 minutes. - Axis Bank",
+      "dateMs": 1780470665000,
+      "dateIso": "2026-06-03T07:11:05.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00138",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 828939. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1780541828000,
+      "dateIso": "2026-06-04T02:57:08.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00139",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹299.00 to Amazon. UPI transaction ID 417600045662 on 04 Jun 2026, 10:51 am",
+      "dateMs": 1780550490000,
+      "dateIso": "2026-06-04T05:21:30.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "299.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "gpay",
+        "upiRef": "417600045662"
+      }
+    },
+    {
+      "id": "fake-00140",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 200.00 debited from A/c XX1234 on 04Jun26 for UPI/PhonePe Recharge/417600045668. Avl Bal Rs 255,637.50",
+      "dateMs": 1780553363000,
+      "dateIso": "2026-06-04T06:09:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "255,637.50",
+        "upiRef": "417600045668"
+      }
+    },
+    {
+      "id": "fake-00141",
+      "address": "VK-AMAZON",
+      "body": "Amazon: Flat 50% off on fashion. Shop now at amazon.in/deals. T&C apply. Reply STOP to opt out.",
+      "dateMs": 1780573015000,
+      "dateIso": "2026-06-04T11:36:55.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00142",
+      "address": "VK-SBIINB",
+      "body": "SBI: UPI payment of Rs.250.00 to ola@ybl on 04-06-26 FAILED. UPI Ref 417600045711. Money will be refunded if debited.",
+      "dateMs": 1780585240000,
+      "dateIso": "2026-06-04T15:00:40.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "status": "failed",
+        "upiRef": "417600045711"
+      }
+    },
+    {
+      "id": "fake-00143",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 10.00 debited from A/c XX9012 on 04-06-26 to recharge@ybl. UPI Ref No 417600045684. Avl Bal: INR 255,630.90",
+      "dateMs": 1780591665000,
+      "dateIso": "2026-06-04T16:47:45.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "10.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "255,630.90",
+        "upiRef": "417600045684"
+      }
+    },
+    {
+      "id": "fake-00144",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 299.00 debited from A/c XX9012 on 04-06-26 to jio@ybl. UPI Ref No 417600045700. Avl Bal: INR 255,327.80",
+      "dateMs": 1780595088000,
+      "dateIso": "2026-06-04T17:44:48.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "299.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "255,327.80",
+        "upiRef": "417600045700"
+      }
+    },
+    {
+      "id": "fake-00145",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1780632629000,
+      "dateIso": "2026-06-05T04:10:29.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00146",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 199.00 debited from A/c XX9012 on 05-06-26 to netflix@axisbank. UPI Ref No 417600045718. Avl Bal: INR 255,130.10",
+      "dateMs": 1780675841000,
+      "dateIso": "2026-06-05T16:10:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "255,130.10",
+        "upiRef": "417600045718"
+      }
+    },
+    {
+      "id": "fake-00147",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1780677536000,
+      "dateIso": "2026-06-05T16:38:56.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00148",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 199.00 debited from A/c XX1234 on 06Jun26 for UPI/Airtel/417600045755. Avl Bal Rs 250,526.90",
+      "dateMs": 1780719796000,
+      "dateIso": "2026-06-06T04:23:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "sms",
+        "availableBalance": "250,526.90",
+        "upiRef": "417600045755"
+      }
+    },
+    {
+      "id": "fake-00149",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 1,999.00 debited from A/c XX1234 on 06Jun26 for UPI/Myntra/417600045745. Avl Bal Rs 250,728.10",
+      "dateMs": 1780722048000,
+      "dateIso": "2026-06-06T05:00:48.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,999.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "250,728.10",
+        "upiRef": "417600045745"
+      }
+    },
+    {
+      "id": "fake-00150",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 535210. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1780729579000,
+      "dateIso": "2026-06-06T07:06:19.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00151",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.250.00 debited from A/c **1234 on 06-06-26 to VPA ola@ybl. UPI Ref 417600045770. Not you? Call 18002586161. Avl Bal Rs.250,276.30",
+      "dateMs": 1780745831000,
+      "dateIso": "2026-06-06T11:37:11.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "250,276.30",
+        "upiRef": "417600045770"
+      }
+    },
+    {
+      "id": "fake-00152",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 2,400.00 debited from A/c XX1234 on 06Jun26 for UPI/BESCOM/417600045732. Avl Bal Rs 252,731.80",
+      "dateMs": 1780752676000,
+      "dateIso": "2026-06-06T13:31:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,400.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "sms",
+        "availableBalance": "252,731.80",
+        "upiRef": "417600045732"
+      }
+    },
+    {
+      "id": "fake-00153",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: Rs.5,000.00 withdrawn from A/c XX9012 at ATM on 06-06-26. Avl Bal Rs 245,272.60. If not you call customer care.",
+      "dateMs": 1780758788000,
+      "dateIso": "2026-06-06T15:13:08.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "5,000.00",
+        "direction": "debit",
+        "merchantHint": null,
+        "source": "sms",
+        "availableBalance": "245,272.60"
+      }
+    },
+    {
+      "id": "fake-00154",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹500.00 to Ravi Kumar. UPI transaction ID 417600045797 on 07 Jun 2026, 12:44 pm",
+      "dateMs": 1780816487000,
+      "dateIso": "2026-06-07T07:14:47.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "debit",
+        "merchantHint": "Ravi",
+        "source": "gpay",
+        "upiRef": "417600045797"
+      }
+    },
+    {
+      "id": "fake-00155",
+      "address": "VM-HDFCBK",
+      "body": "Your A/c **1234 is credited for Rs.500.00 on 07-06-26 from VPA vikram.s@okaxis (UPI Ref No 417600045818). Avl Bal Rs 242,122.60",
+      "dateMs": 1780817565000,
+      "dateIso": "2026-06-07T07:32:45.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "credit",
+        "merchantHint": "Vikram",
+        "source": "sms",
+        "availableBalance": "242,122.60",
+        "upiRef": "417600045818"
+      }
+    },
+    {
+      "id": "fake-00156",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 1,299.00 on 07-Jun-26; UPI:myntra@ybl. UPI:417600045782. Call 18001080 if not you. Avl Bal Rs 243,726.70",
+      "dateMs": 1780819036000,
+      "dateIso": "2026-06-07T07:57:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "243,726.70",
+        "upiRef": "417600045782"
+      }
+    },
+    {
+      "id": "fake-00157",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 890.00 on 07-Jun-26; UPI:irctc@sbi. UPI:417600045809. Call 18001080 if not you. Avl Bal Rs 241,622.60",
+      "dateMs": 1780845579000,
+      "dateIso": "2026-06-07T15:19:39.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "890.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "sms",
+        "availableBalance": "241,622.60",
+        "upiRef": "417600045809"
+      }
+    },
+    {
+      "id": "fake-00158",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1780846390000,
+      "dateIso": "2026-06-07T15:33:10.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00159",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1780849423000,
+      "dateIso": "2026-06-07T16:23:43.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00160",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.719.00 to Airtel. UPI Ref 417600045788. Debited from SBI XX1234",
+      "dateMs": 1780850502000,
+      "dateIso": "2026-06-07T16:41:42.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "719.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "phonepe",
+        "upiRef": "417600045788"
+      }
+    },
+    {
+      "id": "fake-00161",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹249.00 to Swiggy. UPI transaction ID 417600045773 on 07 Jun 2026, 10:55 pm",
+      "dateMs": 1780853137000,
+      "dateIso": "2026-06-07T17:25:37.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "249.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "gpay",
+        "upiRef": "417600045773"
+      }
+    },
+    {
+      "id": "fake-00162",
+      "address": "VK-SBIINB",
+      "body": "Your A/c XX1234 is credited for Rs.100.00 on 08-06-26 from VPA amit.patel@okicici (UPI Ref No 417600045871). Avl Bal Rs 239,476.00",
+      "dateMs": 1780886950000,
+      "dateIso": "2026-06-08T02:49:10.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "100.00",
+        "direction": "credit",
+        "merchantHint": "Amit",
+        "source": "sms",
+        "availableBalance": "239,476.00",
+        "upiRef": "417600045871"
+      }
+    },
+    {
+      "id": "fake-00163",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹2,000.00 to Rohit Das. UPI transaction ID 417600045833 on 08 Jun 2026, 8:59 am",
+      "dateMs": 1780889384000,
+      "dateIso": "2026-06-08T03:29:44.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,000.00",
+        "direction": "debit",
+        "merchantHint": "Rohit",
+        "source": "gpay",
+        "upiRef": "417600045833"
+      }
+    },
+    {
+      "id": "fake-00164",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 299.00 debited from A/c XX1234 on 08Jun26 for UPI/Jio/417600045843. Avl Bal Rs 239,824.40",
+      "dateMs": 1780893273000,
+      "dateIso": "2026-06-08T04:34:33.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "299.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "239,824.40",
+        "upiRef": "417600045843"
+      }
+    },
+    {
+      "id": "fake-00165",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 449.00 debited from A/c XX9012 on 08-06-26 to airtel@airtel. UPI Ref No 417600045855. Avl Bal: INR 239,376.00",
+      "dateMs": 1780895980000,
+      "dateIso": "2026-06-08T05:19:40.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "449.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "sms",
+        "availableBalance": "239,376.00",
+        "upiRef": "417600045855"
+      }
+    },
+    {
+      "id": "fake-00166",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1780942811000,
+      "dateIso": "2026-06-08T18:20:11.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00167",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1780973254000,
+      "dateIso": "2026-06-09T02:47:34.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00168",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1780987129000,
+      "dateIso": "2026-06-09T06:38:49.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00169",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.150.00 debited from A/c **1234 on 09-06-26 to VPA zomato@paytm. UPI Ref 417600045879. Not you? Call 18002586161. Avl Bal Rs.239,325.40",
+      "dateMs": 1781010623000,
+      "dateIso": "2026-06-09T13:10:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "150.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "sms",
+        "availableBalance": "239,325.40",
+        "upiRef": "417600045879"
+      }
+    },
+    {
+      "id": "fake-00170",
+      "address": "VM-HDFCBK",
+      "body": "Your A/c **1234 is credited for Rs.1,000.00 on 09-06-26 from VPA ravi.kumar@oksbi (UPI Ref No 417600045882). Avl Bal Rs 240,325.40",
+      "dateMs": 1781019874000,
+      "dateIso": "2026-06-09T15:44:34.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "credit",
+        "merchantHint": "Ravi",
+        "source": "sms",
+        "availableBalance": "240,325.40",
+        "upiRef": "417600045882"
+      }
+    },
+    {
+      "id": "fake-00171",
+      "address": "VM-AXISBK",
+      "body": "Your OTP for login is 260985. Do not share with anyone. Valid for 5 minutes. - Axis Bank",
+      "dateMs": 1781061318000,
+      "dateIso": "2026-06-10T03:15:18.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00172",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹4,999.00 to Amazon. UPI transaction ID 417600045899 on 11 Jun 2026, 9:36 am",
+      "dateMs": 1781150801000,
+      "dateIso": "2026-06-11T04:06:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "4,999.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "gpay",
+        "upiRef": "417600045899"
+      }
+    },
+    {
+      "id": "fake-00173",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.1,500.00 debited from A/c **1234 on 11-06-26 to VPA iocl@ybl. UPI Ref 417600045908. Not you? Call 18002586161. Avl Bal Rs.233,821.80",
+      "dateMs": 1781156098000,
+      "dateIso": "2026-06-11T05:34:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,500.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "233,821.80",
+        "upiRef": "417600045908"
+      }
+    },
+    {
+      "id": "fake-00174",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1781234161000,
+      "dateIso": "2026-06-12T03:16:01.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00175",
+      "address": "VK-AMAZON",
+      "body": "Amazon: Flat 50% off on fashion. Shop now at amazon.in/deals. T&C apply. Reply STOP to opt out.",
+      "dateMs": 1781267875000,
+      "dateIso": "2026-06-12T12:37:55.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00176",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.239.00 debited from A/c **1234 on 13-06-26 to VPA jio@ybl. UPI Ref 417600045921. Not you? Call 18002586161. Avl Bal Rs.231,489.50",
+      "dateMs": 1781321885000,
+      "dateIso": "2026-06-13T03:38:05.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "239.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "231,489.50",
+        "upiRef": "417600045921"
+      }
+    },
+    {
+      "id": "fake-00177",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 2,100.00 debited from A/c XX1234 on 13Jun26 for UPI/IRCTC/417600045909. Avl Bal Rs 231,726.40",
+      "dateMs": 1781322273000,
+      "dateIso": "2026-06-13T03:44:33.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,100.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "sms",
+        "availableBalance": "231,726.40",
+        "upiRef": "417600045909"
+      }
+    },
+    {
+      "id": "fake-00178",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1781326901000,
+      "dateIso": "2026-06-13T05:01:41.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00179",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 667992. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1781335108000,
+      "dateIso": "2026-06-13T07:18:28.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00180",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 4,999.00 debited from A/c XX9012 on 13-06-26 to amazon@apl. UPI Ref No 417600045934. Avl Bal: INR 226,493.50",
+      "dateMs": 1781335678000,
+      "dateIso": "2026-06-13T07:27:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "4,999.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "sms",
+        "availableBalance": "226,493.50",
+        "upiRef": "417600045934"
+      }
+    },
+    {
+      "id": "fake-00181",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 999.00 on 13-Jun-26; UPI:googleplay@okaxis. UPI:417600045939. Call 18001080 if not you. Avl Bal Rs 225,494.30",
+      "dateMs": 1781337799000,
+      "dateIso": "2026-06-13T08:03:19.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "999.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "225,494.30",
+        "upiRef": "417600045939"
+      }
+    },
+    {
+      "id": "fake-00182",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.1,999.00 debited from A/c **1234 on 13-06-26 to VPA myntra@ybl. UPI Ref 417600045940. Not you? Call 18002586161. Avl Bal Rs.223,499.30",
+      "dateMs": 1781361005000,
+      "dateIso": "2026-06-13T14:30:05.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,999.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "223,499.30",
+        "upiRef": "417600045940"
+      }
+    },
+    {
+      "id": "fake-00183",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 198091. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1781408229000,
+      "dateIso": "2026-06-14T03:37:09.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00184",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1781409355000,
+      "dateIso": "2026-06-14T03:55:55.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00185",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 670.00 debited from A/c XX9012 on 14-06-26 to blinkit@ybl. UPI Ref No 417600045953. Avl Bal: INR 222,833.60",
+      "dateMs": 1781412429000,
+      "dateIso": "2026-06-14T04:47:09.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "670.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "sms",
+        "availableBalance": "222,833.60",
+        "upiRef": "417600045953"
+      }
+    },
+    {
+      "id": "fake-00186",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 1,299.00 debited from A/c XX1234 on 14Jun26 for UPI/Amazon/417600045979. Avl Bal Rs 221,125.50",
+      "dateMs": 1781412778000,
+      "dateIso": "2026-06-14T04:52:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "sms",
+        "availableBalance": "221,125.50",
+        "upiRef": "417600045979"
+      }
+    },
+    {
+      "id": "fake-00187",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 999.00 debited from A/c XX9012 on 14-06-26 to googleplay@okaxis. UPI Ref No 417600046003. Avl Bal: INR 218,129.40",
+      "dateMs": 1781418869000,
+      "dateIso": "2026-06-14T06:34:29.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "999.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "218,129.40",
+        "upiRef": "417600046003"
+      }
+    },
+    {
+      "id": "fake-00188",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1781439682000,
+      "dateIso": "2026-06-14T12:21:22.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00189",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 199.00 debited from A/c XX1234 on 14Jun26 for UPI/Netflix/417600045964. Avl Bal Rs 222,630.30",
+      "dateMs": 1781449297000,
+      "dateIso": "2026-06-14T15:01:37.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "222,630.30",
+        "upiRef": "417600045964"
+      }
+    },
+    {
+      "id": "fake-00190",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.200.00 debited from A/c **1234 on 14-06-26 to VPA recharge@ybl. UPI Ref 417600045978. Not you? Call 18002586161. Avl Bal Rs.222,429.10",
+      "dateMs": 1781451013000,
+      "dateIso": "2026-06-14T15:30:13.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "222,429.10",
+        "upiRef": "417600045978"
+      }
+    },
+    {
+      "id": "fake-00191",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,000.00 to Vikram Singh. UPI transaction ID 417600046012 on 14 Jun 2026, 10:11 pm",
+      "dateMs": 1781455286000,
+      "dateIso": "2026-06-14T16:41:26.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "debit",
+        "merchantHint": "Vikram",
+        "source": "gpay",
+        "upiRef": "417600046012"
+      }
+    },
+    {
+      "id": "fake-00192",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 399.00 debited from A/c XX9012 on 14-06-26 to flipkart@ybl. UPI Ref No 417600046013. Avl Bal: INR 216,616.60",
+      "dateMs": 1781455632000,
+      "dateIso": "2026-06-14T16:47:12.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "399.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "availableBalance": "216,616.60",
+        "upiRef": "417600046013"
+      }
+    },
+    {
+      "id": "fake-00193",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 1,999.00 debited from A/c XX9012 on 14-06-26 to myntra@ybl. UPI Ref No 417600045990. Avl Bal: INR 219,127.90",
+      "dateMs": 1781456420000,
+      "dateIso": "2026-06-14T17:00:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,999.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "sms",
+        "availableBalance": "219,127.90",
+        "upiRef": "417600045990"
+      }
+    },
+    {
+      "id": "fake-00194",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 119.00 debited from A/c XX9012 on 14-06-26 to spotify@ybl. UPI Ref No 417600046008. Avl Bal: INR 218,010.10",
+      "dateMs": 1781461203000,
+      "dateIso": "2026-06-14T18:20:03.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "119.00",
+        "direction": "debit",
+        "merchantHint": "Spotify",
+        "source": "sms",
+        "availableBalance": "218,010.10",
+        "upiRef": "417600046008"
+      }
+    },
+    {
+      "id": "fake-00195",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 449.00 debited from A/c XX1234 on 15Jun26 for UPI/Airtel/417600046015. Avl Bal Rs 216,170.70",
+      "dateMs": 1781494738000,
+      "dateIso": "2026-06-15T03:38:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "449.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "sms",
+        "availableBalance": "216,170.70",
+        "upiRef": "417600046015"
+      }
+    },
+    {
+      "id": "fake-00196",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 773999. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1781502531000,
+      "dateIso": "2026-06-15T05:48:51.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00197",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.2,000.00 debited from A/c **1234 on 15-06-26 to VPA iocl@ybl. UPI Ref 417600046031. Not you? Call 18002586161. Avl Bal Rs.214,171.70",
+      "dateMs": 1781539322000,
+      "dateIso": "2026-06-15T16:02:02.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,000.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "214,171.70",
+        "upiRef": "417600046031"
+      }
+    },
+    {
+      "id": "fake-00198",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.160.00 debited from A/c **1234 on 15-06-26 to VPA ola@ybl. UPI Ref 417600046041. Not you? Call 18002586161. Avl Bal Rs.214,008.70",
+      "dateMs": 1781541648000,
+      "dateIso": "2026-06-15T16:40:48.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "160.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "214,008.70",
+        "upiRef": "417600046041"
+      }
+    },
+    {
+      "id": "fake-00199",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1781752314000,
+      "dateIso": "2026-06-18T03:11:54.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00200",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 2,000.00 debited from A/c XX1234 on 18Jun26 for UPI/Petrol Pump/417600046065. Avl Bal Rs 209,047.20",
+      "dateMs": 1781755914000,
+      "dateIso": "2026-06-18T04:11:54.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,000.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "209,047.20",
+        "upiRef": "417600046065"
+      }
+    },
+    {
+      "id": "fake-00201",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹2,400.00 to BESCOM. UPI transaction ID 417600046063 on 18 Jun 2026, 9:36 pm",
+      "dateMs": 1781798781000,
+      "dateIso": "2026-06-18T16:06:21.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,400.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "gpay",
+        "upiRef": "417600046063"
+      }
+    },
+    {
+      "id": "fake-00202",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 560.00 debited from A/c XX1234 on 18Jun26 for UPI/Starbucks/417600046050. Avl Bal Rs 213,446.60",
+      "dateMs": 1781807284000,
+      "dateIso": "2026-06-18T18:28:04.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "560.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "sms",
+        "availableBalance": "213,446.60",
+        "upiRef": "417600046050"
+      }
+    },
+    {
+      "id": "fake-00203",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1781884446000,
+      "dateIso": "2026-06-19T15:54:06.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00204",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1781925644000,
+      "dateIso": "2026-06-20T03:20:44.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00205",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 580.00 on 20-Jun-26; UPI:swiggy@ybl. UPI:417600046076. Call 18001080 if not you. Avl Bal Rs 208,469.50",
+      "dateMs": 1781955281000,
+      "dateIso": "2026-06-20T11:34:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "580.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "sms",
+        "availableBalance": "208,469.50",
+        "upiRef": "417600046076"
+      }
+    },
+    {
+      "id": "fake-00206",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 1,299.00 debited from A/c XX1234 on 20Jun26 for UPI/Nykaa/417600046082. Avl Bal Rs 207,166.70",
+      "dateMs": 1781966955000,
+      "dateIso": "2026-06-20T14:49:15.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Nykaa",
+        "source": "sms",
+        "availableBalance": "207,166.70",
+        "upiRef": "417600046082"
+      }
+    },
+    {
+      "id": "fake-00207",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 95.00 on 20-Jun-26; UPI:ola@ybl. UPI:417600046084. Call 18001080 if not you. Avl Bal Rs 207,070.90",
+      "dateMs": 1781973080000,
+      "dateIso": "2026-06-20T16:31:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "95.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "207,070.90",
+        "upiRef": "417600046084"
+      }
+    },
+    {
+      "id": "fake-00208",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 390.00 debited from A/c XX9012 on 21-06-26 to ola@ybl. UPI Ref No 417600046091. Avl Bal: INR 204,688.80",
+      "dateMs": 1782011217000,
+      "dateIso": "2026-06-21T03:06:57.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "390.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "204,688.80",
+        "upiRef": "417600046091"
+      }
+    },
+    {
+      "id": "fake-00209",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹200.00 to Arjun Mehta. UPI transaction ID 417600046100 on 21 Jun 2026, 12:40 pm",
+      "dateMs": 1782025851000,
+      "dateIso": "2026-06-21T07:10:51.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "debit",
+        "merchantHint": "Arjun",
+        "source": "gpay",
+        "upiRef": "417600046100"
+      }
+    },
+    {
+      "id": "fake-00210",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹799.00 to Myntra. UPI transaction ID 417600046114 on 21 Jun 2026, 8:40 pm",
+      "dateMs": 1782054606000,
+      "dateIso": "2026-06-21T15:10:06.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "799.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "gpay",
+        "upiRef": "417600046114"
+      }
+    },
+    {
+      "id": "fake-00211",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,999.00 to Myntra. UPI transaction ID 417600046090 on 21 Jun 2026, 9:22 pm",
+      "dateMs": 1782057161000,
+      "dateIso": "2026-06-21T15:52:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,999.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "gpay",
+        "upiRef": "417600046090"
+      }
+    },
+    {
+      "id": "fake-00212",
+      "address": "VK-AMAZON",
+      "body": "Amazon: Flat 50% off on fashion. Shop now at amazon.in/deals. T&C apply. Reply STOP to opt out.",
+      "dateMs": 1782061996000,
+      "dateIso": "2026-06-21T17:13:16.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00213",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.160.00 to Ola Cabs. UPI Ref 417600046129. Debited from SBI XX1234",
+      "dateMs": 1782096431000,
+      "dateIso": "2026-06-22T02:47:11.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "160.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "phonepe",
+        "upiRef": "417600046129"
+      }
+    },
+    {
+      "id": "fake-00214",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 875933. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1782104463000,
+      "dateIso": "2026-06-22T05:01:03.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00215",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 250.00 debited from A/c XX9012 on 22-06-26 to ola@ybl. UPI Ref No 417600046122. Avl Bal: INR 203,435.50",
+      "dateMs": 1782136518000,
+      "dateIso": "2026-06-22T13:55:18.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "203,435.50",
+        "upiRef": "417600046122"
+      }
+    },
+    {
+      "id": "fake-00216",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1782143547000,
+      "dateIso": "2026-06-22T15:52:27.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00217",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 999.00 debited from A/c XX1234 on 22Jun26 for UPI/Flipkart/417600046138. Avl Bal Rs 202,273.70",
+      "dateMs": 1782145151000,
+      "dateIso": "2026-06-22T16:19:11.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "999.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "availableBalance": "202,273.70",
+        "upiRef": "417600046138"
+      }
+    },
+    {
+      "id": "fake-00218",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.2,000.00 to Petrol Pump. UPI Ref 417600046143. Debited from HDFC Bank **1234",
+      "dateMs": 1782148983000,
+      "dateIso": "2026-06-22T17:23:03.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,000.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "phonepe",
+        "upiRef": "417600046143"
+      }
+    },
+    {
+      "id": "fake-00219",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 95.00 debited from A/c XX9012 on 23-06-26 to ola@ybl. UPI Ref No 417600046160. Avl Bal: INR 200,183.80",
+      "dateMs": 1782184485000,
+      "dateIso": "2026-06-23T03:14:45.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "95.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "200,183.80",
+        "upiRef": "417600046160"
+      }
+    },
+    {
+      "id": "fake-00220",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.420.00 debited from A/c **1234 on 23-06-26 to VPA zomato@paytm. UPI Ref 417600046169. Not you? Call 18002586161. Avl Bal Rs.199,762.80",
+      "dateMs": 1782200183000,
+      "dateIso": "2026-06-23T07:36:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "420.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "sms",
+        "availableBalance": "199,762.80",
+        "upiRef": "417600046169"
+      }
+    },
+    {
+      "id": "fake-00221",
+      "address": "VM-ICICIB",
+      "body": "Your OTP for login is 149844. Do not share with anyone. Valid for 5 minutes. - ICICI Bank",
+      "dateMs": 1782203541000,
+      "dateIso": "2026-06-23T08:32:21.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00222",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.119.00 debited from A/c **1234 on 23-06-26 to VPA spotify@ybl. UPI Ref 417600046179. Not you? Call 18002586161. Avl Bal Rs.199,648.00",
+      "dateMs": 1782216681000,
+      "dateIso": "2026-06-23T12:11:21.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "119.00",
+        "direction": "debit",
+        "merchantHint": "Spotify",
+        "source": "sms",
+        "availableBalance": "199,648.00",
+        "upiRef": "417600046179"
+      }
+    },
+    {
+      "id": "fake-00223",
+      "address": "VK-AMAZON",
+      "body": "Amazon: Flat 50% off on fashion. Shop now at amazon.in/deals. T&C apply. Reply STOP to opt out.",
+      "dateMs": 1782374471000,
+      "dateIso": "2026-06-25T08:01:11.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00224",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 596451. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1782485575000,
+      "dateIso": "2026-06-26T14:52:55.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00225",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 399.00 debited from A/c XX1234 on 26Jun26 for UPI/Jio/417600046185. Avl Bal Rs 199,245.70",
+      "dateMs": 1782491963000,
+      "dateIso": "2026-06-26T16:39:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "399.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "199,245.70",
+        "upiRef": "417600046185"
+      }
+    },
+    {
+      "id": "fake-00226",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,000.00 to Sneha Reddy. UPI transaction ID 417600046197 on 26 Jun 2026, 10:17 pm",
+      "dateMs": 1782492420000,
+      "dateIso": "2026-06-26T16:47:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "debit",
+        "merchantHint": "Sneha",
+        "source": "gpay",
+        "upiRef": "417600046197"
+      }
+    },
+    {
+      "id": "fake-00227",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.1,200.00 to BESCOM. UPI Ref 417600046206. Debited from ICICI Bank XX5678",
+      "dateMs": 1782542483000,
+      "dateIso": "2026-06-27T06:41:23.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,200.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "phonepe",
+        "upiRef": "417600046206"
+      }
+    },
+    {
+      "id": "fake-00228",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 307898. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1782549196000,
+      "dateIso": "2026-06-27T08:33:16.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00229",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 50.00 debited from A/c XX9012 on 27-06-26 to recharge@ybl. UPI Ref No 417600046227. Avl Bal: INR 193,950.80",
+      "dateMs": 1782560681000,
+      "dateIso": "2026-06-27T11:44:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "50.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "193,950.80",
+        "upiRef": "417600046227"
+      }
+    },
+    {
+      "id": "fake-00230",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.150.00 to Zomato. UPI Ref 417600046232. Debited from ICICI Bank XX5678",
+      "dateMs": 1782579210000,
+      "dateIso": "2026-06-27T16:53:30.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "150.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "phonepe",
+        "upiRef": "417600046232"
+      }
+    },
+    {
+      "id": "fake-00231",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 2,999.00 debited from A/c XX9012 on 27-06-26 to flipkart@ybl. UPI Ref No 417600046221. Avl Bal: INR 194,000.90",
+      "dateMs": 1782584100000,
+      "dateIso": "2026-06-27T18:15:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,999.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "availableBalance": "194,000.90",
+        "upiRef": "417600046221"
+      }
+    },
+    {
+      "id": "fake-00232",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹50.00 to Sneha Reddy. UPI transaction ID 417600046201 on 27 Jun 2026, 11:47 pm",
+      "dateMs": 1782584234000,
+      "dateIso": "2026-06-27T18:17:14.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "50.00",
+        "direction": "debit",
+        "merchantHint": "Sneha",
+        "source": "gpay",
+        "upiRef": "417600046201"
+      }
+    },
+    {
+      "id": "fake-00233",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.320.00 to Swiggy. UPI Ref 417600046247. Debited from ICICI Bank XX5678",
+      "dateMs": 1782615132000,
+      "dateIso": "2026-06-28T02:52:12.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "320.00",
+        "direction": "debit",
+        "merchantHint": "Swiggy",
+        "source": "phonepe",
+        "upiRef": "417600046247"
+      }
+    },
+    {
+      "id": "fake-00234",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,000.00 to Priya Sharma. UPI transaction ID 417600046254 on 28 Jun 2026, 8:46 am",
+      "dateMs": 1782616584000,
+      "dateIso": "2026-06-28T03:16:24.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "debit",
+        "merchantHint": "Priya",
+        "source": "gpay",
+        "upiRef": "417600046254"
+      }
+    },
+    {
+      "id": "fake-00235",
+      "address": "VK-SBIINB",
+      "body": "SBI: A/c XX1234 credited with Rs.69,724.00 on 28-06-26 by NEFT from ACME CORP SALARY. Ref NEFT566498954. Avl Bal Rs 258,495.90",
+      "dateMs": 1782618180000,
+      "dateIso": "2026-06-28T03:43:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "69,724.00",
+        "direction": "credit",
+        "merchantHint": "ACME",
+        "source": "sms",
+        "availableBalance": "258,495.90",
+        "upiRef": "NEFT566498954"
+      }
+    },
+    {
+      "id": "fake-00236",
+      "address": "VM-CRED",
+      "body": "CRED: Pay your credit card bill and earn rewards. Pay now on CRED app.",
+      "dateMs": 1782618587000,
+      "dateIso": "2026-06-28T03:49:47.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00237",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 1,599.00 on 28-Jun-26; UPI:flipkart@ybl. UPI:417600046258. Call 18001080 if not you. Avl Bal Rs 188,771.90",
+      "dateMs": 1782636025000,
+      "dateIso": "2026-06-28T08:40:25.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,599.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "availableBalance": "188,771.90",
+        "upiRef": "417600046258"
+      }
+    },
+    {
+      "id": "fake-00238",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1782636178000,
+      "dateIso": "2026-06-28T08:42:58.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00239",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 2,100.00 debited from A/c XX9012 on 28-06-26 to nykaa@ybl. UPI Ref No 417600046256. Avl Bal: INR 190,374.10",
+      "dateMs": 1782670740000,
+      "dateIso": "2026-06-28T18:19:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,100.00",
+        "direction": "debit",
+        "merchantHint": "Nykaa",
+        "source": "sms",
+        "availableBalance": "190,374.10",
+        "upiRef": "417600046256"
+      }
+    },
+    {
+      "id": "fake-00240",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1782702409000,
+      "dateIso": "2026-06-29T03:06:49.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00241",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,500.00 to Sneha Reddy. UPI transaction ID 417600046260 on 29 Jun 2026, 11:05 am",
+      "dateMs": 1782711302000,
+      "dateIso": "2026-06-29T05:35:02.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,500.00",
+        "direction": "debit",
+        "merchantHint": "Sneha",
+        "source": "gpay",
+        "upiRef": "417600046260"
+      }
+    },
+    {
+      "id": "fake-00242",
+      "address": "VM-AXISBK",
+      "body": "Your A/c XX9012 is credited for Rs.500.00 on 29-06-26 from VPA rohit.das@okhdfcbank (UPI Ref No 417600046279). Avl Bal Rs 256,559.10",
+      "dateMs": 1782732663000,
+      "dateIso": "2026-06-29T11:31:03.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "credit",
+        "merchantHint": "Rohit",
+        "source": "sms",
+        "availableBalance": "256,559.10",
+        "upiRef": "417600046279"
+      }
+    },
+    {
+      "id": "fake-00243",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.450.00 debited from A/c **1234 on 29-06-26 to VPA nykaa@ybl. UPI Ref 417600046278. Not you? Call 18002586161. Avl Bal Rs.256,059.10",
+      "dateMs": 1782733782000,
+      "dateIso": "2026-06-29T11:49:42.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "450.00",
+        "direction": "debit",
+        "merchantHint": "Nykaa",
+        "source": "sms",
+        "availableBalance": "256,059.10",
+        "upiRef": "417600046278"
+      }
+    },
+    {
+      "id": "fake-00244",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹490.00 to Blinkit. UPI transaction ID 417600046271 on 29 Jun 2026, 10:06 pm",
+      "dateMs": 1782750999000,
+      "dateIso": "2026-06-29T16:36:39.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "490.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "gpay",
+        "upiRef": "417600046271"
+      }
+    },
+    {
+      "id": "fake-00245",
+      "address": "+919876543210",
+      "body": "Hey, are we still on for dinner tonight?",
+      "dateMs": 1782793763000,
+      "dateIso": "2026-06-30T04:29:23.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00246",
+      "address": "VK-SBIINB",
+      "body": "SBI: A/c XX1234 credited with Rs.65,605.00 on 01-07-26 by NEFT from ACME CORP SALARY. Ref NEFT597310228. Avl Bal Rs 322,964.10",
+      "dateMs": 1782879000000,
+      "dateIso": "2026-07-01T04:10:00.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "65,605.00",
+        "direction": "credit",
+        "merchantHint": "ACME",
+        "source": "sms",
+        "availableBalance": "322,964.10",
+        "upiRef": "NEFT597310228"
+      }
+    },
+    {
+      "id": "fake-00247",
+      "address": "VK-SBIINB",
+      "body": "Your A/c XX1234 is credited for Rs.800.00 on 01-07-26 from VPA ananya@ybl (UPI Ref No 417600046292). Avl Bal Rs 257,359.10",
+      "dateMs": 1782910170000,
+      "dateIso": "2026-07-01T12:49:30.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "800.00",
+        "direction": "credit",
+        "merchantHint": "Ananya",
+        "source": "sms",
+        "availableBalance": "257,359.10",
+        "upiRef": "417600046292"
+      }
+    },
+    {
+      "id": "fake-00248",
+      "address": "VM-FLIPKT",
+      "body": "Flipkart: Big Billion Days start soon! Pre-book deals worth Rs.5000. Visit flipkart.com",
+      "dateMs": 1782922435000,
+      "dateIso": "2026-07-01T16:13:55.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00249",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 2,999.00 debited from A/c XX1234 on 02Jul26 for UPI/Flipkart/417600046326. Avl Bal Rs 318,670.60",
+      "dateMs": 1782972951000,
+      "dateIso": "2026-07-02T06:15:51.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,999.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "sms",
+        "availableBalance": "318,670.60",
+        "upiRef": "417600046326"
+      }
+    },
+    {
+      "id": "fake-00250",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.1,200.00 debited from A/c **1234 on 02-07-26 to VPA bescom@sbi. UPI Ref 417600046310. Not you? Call 18002586161. Avl Bal Rs.321,671.00",
+      "dateMs": 1782999022000,
+      "dateIso": "2026-07-02T13:30:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,200.00",
+        "direction": "debit",
+        "merchantHint": "BESCOM",
+        "source": "sms",
+        "availableBalance": "321,671.00",
+        "upiRef": "417600046310"
+      }
+    },
+    {
+      "id": "fake-00251",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 100.00 debited from A/c XX1234 on 02Jul26 for UPI/PhonePe Recharge/417600046305. Avl Bal Rs 322,866.50",
+      "dateMs": 1783000370000,
+      "dateIso": "2026-07-02T13:52:50.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "100.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "availableBalance": "322,866.50",
+        "upiRef": "417600046305"
+      }
+    },
+    {
+      "id": "fake-00252",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs.2,000.00 withdrawn from A/c XX1234 at ATM on 03-07-26. Avl Bal Rs 316,673.20. If not you call customer care.",
+      "dateMs": 1783050936000,
+      "dateIso": "2026-07-03T03:55:36.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,000.00",
+        "direction": "debit",
+        "merchantHint": null,
+        "source": "sms",
+        "availableBalance": "316,673.20"
+      }
+    },
+    {
+      "id": "fake-00253",
+      "address": "VM-ICICIB",
+      "body": "Your OTP for login is 371030. Do not share with anyone. Valid for 5 minutes. - ICICI Bank",
+      "dateMs": 1783063320000,
+      "dateIso": "2026-07-03T07:22:00.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00254",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹50.00 to Vikram Singh. UPI transaction ID 417600046356 on 04 Jul 2026, 9:44 am",
+      "dateMs": 1783138462000,
+      "dateIso": "2026-07-04T04:14:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "50.00",
+        "direction": "debit",
+        "merchantHint": "Vikram",
+        "source": "gpay",
+        "upiRef": "417600046356"
+      }
+    },
+    {
+      "id": "fake-00255",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.2,999.00 to Flipkart. UPI Ref 417600046331. Debited from HDFC Bank **1234",
+      "dateMs": 1783140544000,
+      "dateIso": "2026-07-04T04:49:04.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "2,999.00",
+        "direction": "debit",
+        "merchantHint": "Flipkart",
+        "source": "phonepe",
+        "upiRef": "417600046331"
+      }
+    },
+    {
+      "id": "fake-00256",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 320.00 debited from A/c XX9012 on 04-07-26 to blinkit@ybl. UPI Ref No 417600046371. Avl Bal: INR 312,583.20",
+      "dateMs": 1783144890000,
+      "dateIso": "2026-07-04T06:01:30.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "320.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "sms",
+        "availableBalance": "312,583.20",
+        "upiRef": "417600046371"
+      }
+    },
+    {
+      "id": "fake-00257",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.719.00 to Airtel. UPI Ref 417600046339. Debited from HDFC Bank **1234",
+      "dateMs": 1783185867000,
+      "dateIso": "2026-07-04T17:24:27.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "719.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "phonepe",
+        "upiRef": "417600046339"
+      }
+    },
+    {
+      "id": "fake-00258",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 649.00 debited from A/c XX9012 on 05-07-26 to netflix@axisbank. UPI Ref No 417600046415. Avl Bal: INR 310,534.70",
+      "dateMs": 1783233368000,
+      "dateIso": "2026-07-05T06:36:08.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "649.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "310,534.70",
+        "upiRef": "417600046415"
+      }
+    },
+    {
+      "id": "fake-00259",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 499.00 debited from A/c XX9012 on 05-07-26 to netflix@axisbank. UPI Ref No 417600046385. Avl Bal: INR 312,081.80",
+      "dateMs": 1783242993000,
+      "dateIso": "2026-07-05T09:16:33.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "499.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "312,081.80",
+        "upiRef": "417600046385"
+      }
+    },
+    {
+      "id": "fake-00260",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹220.00 to Zomato. UPI transaction ID 417600046441 on 05 Jul 2026, 6:17 pm",
+      "dateMs": 1783255647000,
+      "dateIso": "2026-07-05T12:47:27.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "220.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "gpay",
+        "upiRef": "417600046441"
+      }
+    },
+    {
+      "id": "fake-00261",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: UPI payment of Rs.20.00 to recharge@ybl on 05-07-26 FAILED. UPI Ref 417600046445. Money will be refunded if debited.",
+      "dateMs": 1783260627000,
+      "dateIso": "2026-07-05T14:10:27.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "20.00",
+        "direction": "debit",
+        "merchantHint": "PhonePe Recharge",
+        "source": "sms",
+        "status": "failed",
+        "upiRef": "417600046445"
+      }
+    },
+    {
+      "id": "fake-00262",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 890.00 on 05-Jul-26; UPI:irctc@sbi. UPI:417600046398. Call 18001080 if not you. Avl Bal Rs 311,188.70",
+      "dateMs": 1783271184000,
+      "dateIso": "2026-07-05T17:06:24.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "890.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "sms",
+        "availableBalance": "311,188.70",
+        "upiRef": "417600046398"
+      }
+    },
+    {
+      "id": "fake-00263",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 1,299.00 debited from A/c XX9012 on 05-07-26 to nykaa@ybl. UPI Ref No 417600046432. Avl Bal: INR 309,233.20",
+      "dateMs": 1783272101000,
+      "dateIso": "2026-07-05T17:21:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,299.00",
+        "direction": "debit",
+        "merchantHint": "Nykaa",
+        "source": "sms",
+        "availableBalance": "309,233.20",
+        "upiRef": "417600046432"
+      }
+    },
+    {
+      "id": "fake-00264",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 799.00 debited from A/c XX9012 on 06-07-26 to amazon@apl. UPI Ref No 417600046449. Avl Bal: INR 308,212.10",
+      "dateMs": 1783307821000,
+      "dateIso": "2026-07-06T03:17:01.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "799.00",
+        "direction": "debit",
+        "merchantHint": "Amazon",
+        "source": "sms",
+        "availableBalance": "308,212.10",
+        "upiRef": "417600046449"
+      }
+    },
+    {
+      "id": "fake-00265",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1783355251000,
+      "dateIso": "2026-07-06T16:27:31.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00266",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.890.00 to IRCTC. UPI Ref 417600046488. Debited from SBI XX1234",
+      "dateMs": 1783399602000,
+      "dateIso": "2026-07-07T04:46:42.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "890.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "phonepe",
+        "upiRef": "417600046488"
+      }
+    },
+    {
+      "id": "fake-00267",
+      "address": "+919123456789",
+      "body": "Call me when free. Need to discuss the project.",
+      "dateMs": 1783434385000,
+      "dateIso": "2026-07-07T14:26:25.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00268",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹220.00 to Zomato. UPI transaction ID 417600046455 on 07 Jul 2026, 9:34 pm",
+      "dateMs": 1783440297000,
+      "dateIso": "2026-07-07T16:04:57.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "220.00",
+        "direction": "debit",
+        "merchantHint": "Zomato",
+        "source": "gpay",
+        "upiRef": "417600046455"
+      }
+    },
+    {
+      "id": "fake-00269",
+      "address": "VM-HDFCBK",
+      "body": "HDFC Bank: Rs.899.00 debited from A/c **1234 on 07-07-26 to VPA dominos@ybl. UPI Ref 417600046471. Not you? Call 18002586161. Avl Bal Rs.307,094.30",
+      "dateMs": 1783445667000,
+      "dateIso": "2026-07-07T17:34:27.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "899.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "sms",
+        "availableBalance": "307,094.30",
+        "upiRef": "417600046471"
+      }
+    },
+    {
+      "id": "fake-00270",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 160.00 debited from A/c XX9012 on 09-07-26 to ola@ybl. UPI Ref No 417600046499. Avl Bal: INR 306,043.60",
+      "dateMs": 1783573171000,
+      "dateIso": "2026-07-09T04:59:31.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "160.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "306,043.60",
+        "upiRef": "417600046499"
+      }
+    },
+    {
+      "id": "fake-00271",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 999.00 debited from A/c XX1234 on 10Jul26 for UPI/Google Play/417600046522. Avl Bal Rs 303,192.90",
+      "dateMs": 1783662123000,
+      "dateIso": "2026-07-10T05:42:03.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "999.00",
+        "direction": "debit",
+        "merchantHint": "Google Play",
+        "source": "sms",
+        "availableBalance": "303,192.90",
+        "upiRef": "417600046522"
+      }
+    },
+    {
+      "id": "fake-00272",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 1,850.00 on 10-Jul-26; UPI:bigbasket@icici. UPI:417600046506. Call 18001080 if not you. Avl Bal Rs 304,189.70",
+      "dateMs": 1783666893000,
+      "dateIso": "2026-07-10T07:01:33.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,850.00",
+        "direction": "debit",
+        "merchantHint": "BigBasket",
+        "source": "sms",
+        "availableBalance": "304,189.70",
+        "upiRef": "417600046506"
+      }
+    },
+    {
+      "id": "fake-00273",
+      "address": "VK-AMAZON",
+      "body": "Amazon: Flat 50% off on fashion. Shop now at amazon.in/deals. T&C apply. Reply STOP to opt out.",
+      "dateMs": 1783703942000,
+      "dateIso": "2026-07-10T17:19:02.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00274",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 1,250.00 debited from A/c XX9012 on 11-07-26 to irctc@sbi. UPI Ref No 417600046558. Avl Bal: INR 300,946.80",
+      "dateMs": 1783743392000,
+      "dateIso": "2026-07-11T04:16:32.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,250.00",
+        "direction": "debit",
+        "merchantHint": "IRCTC",
+        "source": "sms",
+        "availableBalance": "300,946.80",
+        "upiRef": "417600046558"
+      }
+    },
+    {
+      "id": "fake-00275",
+      "address": "+919876543210",
+      "body": "Hey, are we still on for dinner tonight?",
+      "dateMs": 1783747927000,
+      "dateIso": "2026-07-11T05:32:07.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00276",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 670.00 on 11-Jul-26; UPI:blinkit@ybl. UPI:417600046565. Call 18001080 if not you. Avl Bal Rs 300,274.80",
+      "dateMs": 1783758714000,
+      "dateIso": "2026-07-11T08:31:54.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "670.00",
+        "direction": "debit",
+        "merchantHint": "Blinkit",
+        "source": "sms",
+        "availableBalance": "300,274.80",
+        "upiRef": "417600046565"
+      }
+    },
+    {
+      "id": "fake-00277",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 199.00 debited from A/c XX1234 on 11Jul26 for UPI/Netflix/417600046539. Avl Bal Rs 302,989.40",
+      "dateMs": 1783778838000,
+      "dateIso": "2026-07-11T14:07:18.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "sms",
+        "availableBalance": "302,989.40",
+        "upiRef": "417600046539"
+      }
+    },
+    {
+      "id": "fake-00278",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1783786044000,
+      "dateIso": "2026-07-11T16:07:24.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00279",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.799.00 to Myntra. UPI Ref 417600046543. Debited from ICICI Bank XX5678",
+      "dateMs": 1783792618000,
+      "dateIso": "2026-07-11T17:56:58.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "799.00",
+        "direction": "debit",
+        "merchantHint": "Myntra",
+        "source": "phonepe",
+        "upiRef": "417600046543"
+      }
+    },
+    {
+      "id": "fake-00280",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.199.00 to Netflix. UPI Ref 417600046581. Debited from Axis Bank XX9012",
+      "dateMs": 1783826690000,
+      "dateIso": "2026-07-12T03:24:50.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "phonepe",
+        "upiRef": "417600046581"
+      }
+    },
+    {
+      "id": "fake-00281",
+      "address": "VM-HDFCBK",
+      "body": "Your A/c **1234 is credited for Rs.200.00 on 12-07-26 from VPA meera.j@okicici (UPI Ref No 417600046599). Avl Bal Rs 297,819.40",
+      "dateMs": 1783833986000,
+      "dateIso": "2026-07-12T05:26:26.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "200.00",
+        "direction": "credit",
+        "merchantHint": "Meera",
+        "source": "sms",
+        "availableBalance": "297,819.40",
+        "upiRef": "417600046599"
+      }
+    },
+    {
+      "id": "fake-00282",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.280.00 to Starbucks. UPI Ref 417600046597. Debited from HDFC Bank **1234",
+      "dateMs": 1783836800000,
+      "dateIso": "2026-07-12T06:13:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "280.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "phonepe",
+        "upiRef": "417600046597"
+      }
+    },
+    {
+      "id": "fake-00283",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.780.00 to BigBasket. UPI Ref 417600046590. Debited from ICICI Bank XX5678",
+      "dateMs": 1783844241000,
+      "dateIso": "2026-07-12T08:17:21.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "780.00",
+        "direction": "debit",
+        "merchantHint": "BigBasket",
+        "source": "phonepe",
+        "upiRef": "417600046590"
+      }
+    },
+    {
+      "id": "fake-00284",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 500.00 on 12-Jul-26; UPI:iocl@ybl. UPI:417600046576. Call 18001080 if not you. Avl Bal Rs 299,775.80",
+      "dateMs": 1783859846000,
+      "dateIso": "2026-07-12T12:37:26.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "299,775.80",
+        "upiRef": "417600046576"
+      }
+    },
+    {
+      "id": "fake-00285",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 900.00 on 12-Jul-26; UPI:bms@ybl. UPI:417600046596. Call 18001080 if not you. Avl Bal Rs 297,897.20",
+      "dateMs": 1783861656000,
+      "dateIso": "2026-07-12T13:07:36.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "900.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "sms",
+        "availableBalance": "297,897.20",
+        "upiRef": "417600046596"
+      }
+    },
+    {
+      "id": "fake-00286",
+      "address": "+917890123456",
+      "body": "Meeting moved to 4pm. See you there.",
+      "dateMs": 1783914212000,
+      "dateIso": "2026-07-13T03:43:32.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00287",
+      "address": "VM-AXISBK",
+      "body": "Your A/c XX9012 is credited for Rs.1,000.00 on 13-07-26 from VPA rohit.das@okhdfcbank (UPI Ref No 417600046616). Avl Bal Rs 298,819.40",
+      "dateMs": 1783956701000,
+      "dateIso": "2026-07-13T15:31:41.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "credit",
+        "merchantHint": "Rohit",
+        "source": "sms",
+        "availableBalance": "298,819.40",
+        "upiRef": "417600046616"
+      }
+    },
+    {
+      "id": "fake-00288",
+      "address": "VK-SWIGGY",
+      "body": "Swiggy: Hungry? Get free delivery on orders above Rs.199 today. Order now!",
+      "dateMs": 1783962785000,
+      "dateIso": "2026-07-13T17:13:05.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00289",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 840417. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1784042584000,
+      "dateIso": "2026-07-14T15:23:04.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00290",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 250.00 on 15-Jul-26; UPI:bms@ybl. UPI:417600046627. Call 18001080 if not you. Avl Bal Rs 297,574.30",
+      "dateMs": 1784086048000,
+      "dateIso": "2026-07-15T03:27:28.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "sms",
+        "availableBalance": "297,574.30",
+        "upiRef": "417600046627"
+      }
+    },
+    {
+      "id": "fake-00291",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1784091596000,
+      "dateIso": "2026-07-15T04:59:56.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00292",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹1,000.00 to Kavya Nair. UPI transaction ID 417600046625 on 15 Jul 2026, 11:58 am",
+      "dateMs": 1784096890000,
+      "dateIso": "2026-07-15T06:28:10.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "debit",
+        "merchantHint": "Kavya",
+        "source": "gpay",
+        "upiRef": "417600046625"
+      }
+    },
+    {
+      "id": "fake-00293",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 119.00 debited from A/c XX9012 on 15-07-26 to spotify@ybl. UPI Ref No 417600046644. Avl Bal: INR 296,951.50",
+      "dateMs": 1784097459000,
+      "dateIso": "2026-07-15T06:37:39.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "119.00",
+        "direction": "debit",
+        "merchantHint": "Spotify",
+        "source": "sms",
+        "availableBalance": "296,951.50",
+        "upiRef": "417600046644"
+      }
+    },
+    {
+      "id": "fake-00294",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 449.00 debited from A/c XX1234 on 15Jul26 for UPI/Airtel/417600046666. Avl Bal Rs 296,304.30",
+      "dateMs": 1784099840000,
+      "dateIso": "2026-07-15T07:17:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "449.00",
+        "direction": "debit",
+        "merchantHint": "Airtel",
+        "source": "sms",
+        "availableBalance": "296,304.30",
+        "upiRef": "417600046666"
+      }
+    },
+    {
+      "id": "fake-00295",
+      "address": "VK-AMAZON",
+      "body": "Amazon: Flat 50% off on fashion. Shop now at amazon.in/deals. T&C apply. Reply STOP to opt out.",
+      "dateMs": 1784102443000,
+      "dateIso": "2026-07-15T08:00:43.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00296",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 489884. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1784122338000,
+      "dateIso": "2026-07-15T13:32:18.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00297",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹500.00 to Vikram Singh. UPI transaction ID 417600046634 on 15 Jul 2026, 8:39 pm",
+      "dateMs": 1784128156000,
+      "dateIso": "2026-07-15T15:09:16.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "debit",
+        "merchantHint": "Vikram",
+        "source": "gpay",
+        "upiRef": "417600046634"
+      }
+    },
+    {
+      "id": "fake-00298",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹199.00 to Netflix. UPI transaction ID 417600046661 on 15 Jul 2026, 9:10 pm",
+      "dateMs": 1784130020000,
+      "dateIso": "2026-07-15T15:40:20.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "gpay",
+        "upiRef": "417600046661"
+      }
+    },
+    {
+      "id": "fake-00299",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 500.00 on 16-Jul-26; UPI:iocl@ybl. UPI:417600046679. Call 18001080 if not you. Avl Bal Rs 295,802.60",
+      "dateMs": 1784178313000,
+      "dateIso": "2026-07-16T05:05:13.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "500.00",
+        "direction": "debit",
+        "merchantHint": "Petrol Pump",
+        "source": "sms",
+        "availableBalance": "295,802.60",
+        "upiRef": "417600046679"
+      }
+    },
+    {
+      "id": "fake-00300",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 250.00 debited from A/c XX1234 on 16Jul26 for UPI/BookMyShow/417600046694. Avl Bal Rs 295,555.40",
+      "dateMs": 1784202855000,
+      "dateIso": "2026-07-16T11:54:15.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "BookMyShow",
+        "source": "sms",
+        "availableBalance": "295,555.40",
+        "upiRef": "417600046694"
+      }
+    },
+    {
+      "id": "fake-00301",
+      "address": "VK-SBIINB",
+      "body": "Your OTP for login is 918819. Do not share with anyone. Valid for 5 minutes. - SBI",
+      "dateMs": 1784208757000,
+      "dateIso": "2026-07-16T13:32:37.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00302",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1784217237000,
+      "dateIso": "2026-07-16T15:53:57.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00303",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs.10,000.00 withdrawn from A/c XX1234 at ATM on 16-07-26. Avl Bal Rs 284,779.00. If not you call customer care.",
+      "dateMs": 1784217708000,
+      "dateIso": "2026-07-16T16:01:48.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "10,000.00",
+        "direction": "debit",
+        "merchantHint": null,
+        "source": "sms",
+        "availableBalance": "284,779.00"
+      }
+    },
+    {
+      "id": "fake-00304",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹780.00 to BigBasket. UPI transaction ID 417600046704 on 16 Jul 2026, 11:14 pm",
+      "dateMs": 1784223890000,
+      "dateIso": "2026-07-16T17:44:50.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "780.00",
+        "direction": "debit",
+        "merchantHint": "BigBasket",
+        "source": "gpay",
+        "upiRef": "417600046704"
+      }
+    },
+    {
+      "id": "fake-00305",
+      "address": "VK-SBIINB",
+      "body": "Your A/c XX1234 is credited for Rs.1,000.00 on 17-07-26 from VPA rohit.das@okhdfcbank (UPI Ref No 417600046710). Avl Bal Rs 285,779.00",
+      "dateMs": 1784258719000,
+      "dateIso": "2026-07-17T03:25:19.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "1,000.00",
+        "direction": "credit",
+        "merchantHint": "Rohit",
+        "source": "sms",
+        "availableBalance": "285,779.00",
+        "upiRef": "417600046710"
+      }
+    },
+    {
+      "id": "fake-00306",
+      "address": "+919876543210",
+      "body": "Hey, are we still on for dinner tonight?",
+      "dateMs": 1784305154000,
+      "dateIso": "2026-07-17T16:19:14.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00307",
+      "address": "+919988776655",
+      "body": "Can you send me the docs when you get a chance?",
+      "dateMs": 1784347872000,
+      "dateIso": "2026-07-18T04:11:12.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00308",
+      "address": "VM-ICICIB",
+      "body": "ICICI Bank Acct XX5678 debited for Rs 560.00 on 18-Jul-26; UPI:starbucks@icici. UPI:417600046743. Call 18001080 if not you. Avl Bal Rs 284,347.40",
+      "dateMs": 1784351346000,
+      "dateIso": "2026-07-18T05:09:06.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "560.00",
+        "direction": "debit",
+        "merchantHint": "Starbucks",
+        "source": "sms",
+        "availableBalance": "284,347.40",
+        "upiRef": "417600046743"
+      }
+    },
+    {
+      "id": "fake-00309",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 858031. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1784362287000,
+      "dateIso": "2026-07-18T08:11:27.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00310",
+      "address": "VM-AXISBK",
+      "body": "Axis Bank: INR 666.00 debited from A/c XX9012 on 18-07-26 to jio@ybl. UPI Ref No 417600046724. Avl Bal: INR 285,108.30",
+      "dateMs": 1784388276000,
+      "dateIso": "2026-07-18T15:24:36.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "666.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "sms",
+        "availableBalance": "285,108.30",
+        "upiRef": "417600046724"
+      }
+    },
+    {
+      "id": "fake-00311",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.199.00 to Netflix. UPI Ref 417600046727. Debited from ICICI Bank XX5678",
+      "dateMs": 1784389468000,
+      "dateIso": "2026-07-18T15:44:28.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "199.00",
+        "direction": "debit",
+        "merchantHint": "Netflix",
+        "source": "phonepe",
+        "upiRef": "417600046727"
+      }
+    },
+    {
+      "id": "fake-00312",
+      "address": "VK-PhonePe",
+      "body": "PhonePe: Paid Rs.390.00 to Ola Cabs. UPI Ref 417600046759. Debited from Axis Bank XX9012",
+      "dateMs": 1784428358000,
+      "dateIso": "2026-07-19T02:32:38.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "390.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "phonepe",
+        "upiRef": "417600046759"
+      }
+    },
+    {
+      "id": "fake-00313",
+      "address": "+918765432109",
+      "body": "Happy birthday! Hope you have a great day 🎂",
+      "dateMs": 1784437957000,
+      "dateIso": "2026-07-19T05:12:37.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    },
+    {
+      "id": "fake-00314",
+      "address": "VK-SBIINB",
+      "body": "SBI: Rs 250.00 debited from A/c XX1234 on 19Jul26 for UPI/Ola Cabs/417600046768. Avl Bal Rs 283,356.10",
+      "dateMs": 1784439333000,
+      "dateIso": "2026-07-19T05:35:33.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "250.00",
+        "direction": "debit",
+        "merchantHint": "Ola Cabs",
+        "source": "sms",
+        "availableBalance": "283,356.10",
+        "upiRef": "417600046768"
+      }
+    },
+    {
+      "id": "fake-00315",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹349.00 to Dominos. UPI transaction ID 417600046767 on 19 Jul 2026, 12:32 pm",
+      "dateMs": 1784444542000,
+      "dateIso": "2026-07-19T07:02:22.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "349.00",
+        "direction": "debit",
+        "merchantHint": "Dominos",
+        "source": "gpay",
+        "upiRef": "417600046767"
+      }
+    },
+    {
+      "id": "fake-00316",
+      "address": "VK-GOOGLE",
+      "body": "Google Pay: You paid ₹299.00 to Jio. UPI transaction ID 417600046774 on 19 Jul 2026, 11:27 pm",
+      "dateMs": 1784483862000,
+      "dateIso": "2026-07-19T17:57:42.000Z",
+      "expected": {
+        "isPayment": true,
+        "amount": "299.00",
+        "direction": "debit",
+        "merchantHint": "Jio",
+        "source": "gpay",
+        "upiRef": "417600046774"
+      }
+    },
+    {
+      "id": "fake-00317",
+      "address": "VM-HDFCBK",
+      "body": "Your OTP for login is 586357. Do not share with anyone. Valid for 5 minutes. - HDFC Bank",
+      "dateMs": 1784520700000,
+      "dateIso": "2026-07-20T04:11:40.000Z",
+      "expected": {
+        "isPayment": false
+      }
+    }
+  ]
+}

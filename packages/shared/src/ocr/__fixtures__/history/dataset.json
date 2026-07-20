@@ -1,0 +1,413 @@
+{
+  "version": 1,
+  "description": "Labeled PhonePe / GPay history-list OCR fixtures for parser training & regression.",
+  "samples": [
+    {
+      "id": "phonepe-prathis-clean",
+      "source": "phonepe",
+      "notes": "Clean text matching the real Transaction History UI (ground truth layout).",
+      "ocrText": "Transaction History\nMonth Categories Filters\nPaid to ₹1\nprathis\n1 min ago Debited from\nPayment to ₹30,000\nprathis\n02 Jul 2020 Failed\nPaid to ₹49,999\nprathis\n02 Jul 2020 Debited from\nPaid to ₹40,000\nprathis\n01 Jul 2020 Debited from\nPaid to ₹100\nprathis\n01 Jul 2020 Debited from\nShare Edit Lens Delete",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit",
+          "status": "success",
+          "paidAtDate": null,
+          "paidAtRelative": true
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit",
+          "status": "success",
+          "paidAtDate": "2020-07-02",
+          "paidAtRelative": false
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit",
+          "status": "success",
+          "paidAtDate": "2020-07-01",
+          "paidAtRelative": false
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit",
+          "status": "success",
+          "paidAtDate": "2020-07-01",
+          "paidAtRelative": false
+        }
+      ],
+      "skipFailed": true,
+      "expectCount": 4
+    },
+    {
+      "id": "phonepe-prathis-tesseract-psm6",
+      "source": "phonepe",
+      "notes": "Real tesseract --psm 6 dump of user screenshot (noisy amounts, missing dates).",
+      "ocrFile": "phonepe-prathis-real-psm6.txt",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit",
+          "status": "success"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit",
+          "status": "success"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit",
+          "status": "success"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit",
+          "status": "success"
+        }
+      ],
+      "expectCount": 4,
+      "skipFailed": true
+    },
+    {
+      "id": "phonepe-prathis-tesseract-psm11",
+      "source": "phonepe",
+      "notes": "Real tesseract --psm 11 dump; amounts on own lines after Paid to.",
+      "ocrFile": "phonepe-prathis-real-psm11.txt",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit"
+        }
+      ],
+      "expectCount": 4
+    },
+    {
+      "id": "phonepe-prathis-mlkit-like",
+      "source": "phonepe",
+      "notes": "Simulated ML Kit noise: dates present, ₹→2 glued onto amounts (matches bad app output shape).",
+      "ocrText": "Transaction History\nMonth Categories Filters\nPaid to 21\nprathis\n1 min ago Debited from\nPayment to 230,000\nprathis\n02 Jul 2020 Failed\nPaid to 249,999\nprathis\n02 Jul 2020 Debited from\nPaid to 240,000\nprathis\n01 Jul 2020 Debited from\nPaid to 2100\nprathis\n01 Jul 2020 Debited from",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit",
+          "paidAtRelative": true
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-02"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        }
+      ],
+      "expectCount": 4
+    },
+    {
+      "id": "phonepe-mixed-merchants-classic",
+      "source": "phonepe",
+      "notes": "Existing classic fixture with 7/% misreads.",
+      "ocrText": "937 Add Address\nsearch by name, number or UPI ID\nMonth Categories Filters\n2 Paid to 74,000\nMourvi Agencies\n3 mins ago Debited from\n2 Paid to 74,220\nKONAPALA AKASH\n2 days ago Debited from\n2 Paid to %5,000\nKONAPALA AKASH\n2 days ago Debited from\n2 Paid to %5,000\nVENKATA POTANNA GUPTA TUNUGUNTALA\n3 days ago Debited from\nPaid to\nGangadhar\n6 days ago Debited from\nHome Stores Insurance Wealth History",
+      "expected": [
+        {
+          "merchant": "Mourvi Agencies",
+          "amount": "4000.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "KONAPALA AKASH",
+          "amount": "4220.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "KONAPALA AKASH",
+          "amount": "5000.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "VENKATA POTANNA GUPTA TUNUGUNTALA",
+          "amount": "5000.00",
+          "direction": "debit"
+        }
+      ],
+      "expectCountMin": 4
+    },
+    {
+      "id": "phonepe-received-credits",
+      "source": "phonepe",
+      "notes": "Credit rows mixed with debits.",
+      "ocrText": "Transaction History\nReceived from ₹2,500\nRavi Kumar\nYesterday Debited from\nPaid to ₹150\nSwiggy\n3 hours ago Debited from\nReceived from ₹10,000\nSalary Credit\n15 Jul 2026",
+      "expected": [
+        {
+          "merchant": "Ravi Kumar",
+          "amount": "2500.00",
+          "direction": "credit"
+        },
+        {
+          "merchant": "Swiggy",
+          "amount": "150.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Salary Credit",
+          "amount": "10000.00",
+          "direction": "credit",
+          "paidAtDate": "2026-07-15"
+        }
+      ],
+      "expectCount": 3
+    },
+    {
+      "id": "gpay-history-ish",
+      "source": "gpay",
+      "notes": "GPay-style paid rows.",
+      "ocrText": "Google Pay\nYou paid ₹99.00\nRavi Kumar\n17 Jul 2026, 10:00 am\nYou paid ₹450\nSwiggy\n16 Jul 2026, 8:30 pm",
+      "expected": [
+        {
+          "merchant": "Ravi Kumar",
+          "amount": "99.00",
+          "direction": "debit",
+          "paidAtDate": "2026-07-17"
+        },
+        {
+          "merchant": "Swiggy",
+          "amount": "450.00",
+          "direction": "debit",
+          "paidAtDate": "2026-07-16"
+        }
+      ],
+      "expectCount": 2,
+      "optional": true
+    },
+    {
+      "id": "synth-01-psm6",
+      "source": "phonepe",
+      "notes": "Synthetic PhonePe history rendered + tesseract psm6",
+      "ocrFile": "synth-01-psm6.txt",
+      "imageFile": "synth-01.png",
+      "expected": [
+        {
+          "merchant": "Asha Stores",
+          "amount": "250.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Uber India",
+          "amount": "1240.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Swiggy",
+          "amount": "449.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Mom",
+          "amount": "2000.00",
+          "direction": "credit",
+          "paidAtDate": "2026-06-10"
+        }
+      ],
+      "expectCount": 4
+    },
+    {
+      "id": "synth-01-psm4",
+      "source": "phonepe",
+      "notes": "Synthetic PhonePe history rendered + tesseract psm4",
+      "ocrFile": "synth-01-psm4.txt",
+      "imageFile": "synth-01.png",
+      "expected": [
+        {
+          "merchant": "Asha Stores",
+          "amount": "250.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Uber India",
+          "amount": "1240.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Swiggy",
+          "amount": "449.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Mom",
+          "amount": "2000.00",
+          "direction": "credit",
+          "paidAtDate": "2026-06-10"
+        }
+      ],
+      "expectCount": 4
+    },
+    {
+      "id": "synth-01-psm11",
+      "source": "phonepe",
+      "notes": "Synthetic PhonePe history rendered + tesseract psm11",
+      "ocrFile": "synth-01-psm11.txt",
+      "imageFile": "synth-01.png",
+      "expected": [
+        {
+          "merchant": "Asha Stores",
+          "amount": "250.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Uber India",
+          "amount": "1240.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Swiggy",
+          "amount": "449.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "Mom",
+          "amount": "2000.00",
+          "direction": "credit",
+          "paidAtDate": "2026-06-10"
+        }
+      ],
+      "expectCount": 4,
+      "optional": true
+    },
+    {
+      "id": "synth-02-psm6",
+      "source": "phonepe",
+      "notes": "Synthetic PhonePe history rendered + tesseract psm6",
+      "ocrFile": "synth-02-psm6.txt",
+      "imageFile": "synth-02.png",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-02"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        }
+      ],
+      "expectCount": 4
+    },
+    {
+      "id": "synth-02-psm4",
+      "source": "phonepe",
+      "notes": "Synthetic PhonePe history rendered + tesseract psm4",
+      "ocrFile": "synth-02-psm4.txt",
+      "imageFile": "synth-02.png",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-02"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        }
+      ],
+      "expectCount": 4
+    },
+    {
+      "id": "synth-02-psm11",
+      "source": "phonepe",
+      "notes": "Synthetic PhonePe history rendered + tesseract psm11",
+      "ocrFile": "synth-02-psm11.txt",
+      "imageFile": "synth-02.png",
+      "expected": [
+        {
+          "merchant": "prathis",
+          "amount": "1.00",
+          "direction": "debit"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "49999.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-02"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "40000.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        },
+        {
+          "merchant": "prathis",
+          "amount": "100.00",
+          "direction": "debit",
+          "paidAtDate": "2020-07-01"
+        }
+      ],
+      "expectCount": 4
+    }
+  ]
+}

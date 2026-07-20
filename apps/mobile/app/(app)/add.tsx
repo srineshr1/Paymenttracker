@@ -1,6 +1,13 @@
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
+import {
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -8,7 +15,8 @@ import {
   ScrollView,
   StyleSheet,
   View,
-  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, api } from "@/src/api/client";
@@ -53,7 +61,12 @@ export default function AddExpenseScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
-  const fieldOffsets = useRef<Record<string, number>>({});
+  const scrollY = useRef(0);
+  const keyboardH = useRef(0);
+  const notesWrapRef = useRef<View>(null);
+  const amountWrapRef = useRef<View>(null);
+  const merchantWrapRef = useRef<View>(null);
+
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
   const [notes, setNotes] = useState("");
@@ -74,41 +87,53 @@ export default function AddExpenseScreen() {
     const hideEvent =
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
     const onShow = Keyboard.addListener(showEvent, (e) => {
-      // iOS: full keyboard height (KAV + padding).
-      // Android: window already adjustResize — just leave room to scroll Notes up.
-      setKeyboardPad(
-        Platform.OS === "android"
-          ? Math.max(160, Math.round(e.endCoordinates.height * 0.35))
-          : e.endCoordinates.height
-      );
+      const h = e.endCoordinates.height;
+      keyboardH.current = h;
+      // Full keyboard height so bottom fields can scroll fully clear
+      setKeyboardPad(h);
     });
-    const onHide = Keyboard.addListener(hideEvent, () => setKeyboardPad(0));
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      keyboardH.current = 0;
+      setKeyboardPad(0);
+    });
     return () => {
       onShow.remove();
       onHide.remove();
     };
   }, []);
 
-  const rememberFieldY = (key: string) => (e: LayoutChangeEvent) => {
-    fieldOffsets.current[key] = e.nativeEvent.layout.y;
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollY.current = e.nativeEvent.contentOffset.y;
   };
 
-  const scrollFieldIntoView = (key: string) => {
-    const y = fieldOffsets.current[key];
-    if (y == null) {
-      // Notes/save sit near the bottom — ensure they're reachable
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollToEnd({ animated: true });
+  /**
+   * Measure the focused field on screen and scroll until it sits above the keyboard.
+   * Runs twice: once soon after focus, once after the keyboard finishes opening.
+   */
+  const ensureVisible = (wrapRef: RefObject<View | null>) => {
+    const run = () => {
+      const node = wrapRef.current;
+      if (!node) return;
+      node.measureInWindow((_x, y, _w, h) => {
+        const winH = Dimensions.get("window").height;
+        const kb = keyboardH.current;
+        // If keyboard height not known yet, assume ~45% of screen (Gboard-ish)
+        const kbGuess = kb > 0 ? kb : Math.round(winH * 0.42);
+        const visibleBottom = winH - kbGuess - 16;
+        const fieldBottom = y + h;
+        if (fieldBottom <= visibleBottom) return;
+        const delta = fieldBottom - visibleBottom + 8;
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, scrollY.current + delta),
+          animated: true,
+        });
       });
-      return;
-    }
-    // Small delay so keyboard height is applied to content padding first
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({
-        y: Math.max(0, y - spacing.lg),
-        animated: true,
-      });
-    }, Platform.OS === "ios" ? 50 : 120);
+    };
+    // Immediate + delayed passes (keyboard animation / adjustResize lag)
+    requestAnimationFrame(run);
+    setTimeout(run, 80);
+    setTimeout(run, 220);
+    setTimeout(run, 400);
   };
 
   const save = async () => {
@@ -162,24 +187,26 @@ export default function AddExpenseScreen() {
       <AppHeader title="Manual entry" subtitle="Without a UPI screenshot" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 8 : 0}
       >
         <ScrollView
           ref={scrollRef}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           contentContainerStyle={{
             padding: spacing.xl,
-            // Keyboard pad lets Notes / Save scroll fully above the keyboard
             paddingBottom:
-              insets.bottom + spacing.xxl + Math.max(keyboardPad, 0),
+              insets.bottom + spacing.xxl + Math.max(keyboardPad, 0) + 24,
             gap: spacing.xl,
+            flexGrow: 1,
           }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
-          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.field} onLayout={rememberFieldY("merchant")}>
+          <View ref={merchantWrapRef} style={styles.field} collapsable={false}>
             <Text
               style={{
                 fontFamily: typography.fontSansMedium,
@@ -204,11 +231,11 @@ export default function AddExpenseScreen() {
               autoFocus
               returnKeyType="next"
               style={inputStyle(colors.bgMuted)}
-              onFocus={() => scrollFieldIntoView("merchant")}
+              onFocus={() => ensureVisible(merchantWrapRef)}
             />
           </View>
 
-          <View style={styles.field} onLayout={rememberFieldY("amount")}>
+          <View ref={amountWrapRef} style={styles.field} collapsable={false}>
             <Text
               style={{
                 fontFamily: typography.fontSansMedium,
@@ -235,7 +262,7 @@ export default function AddExpenseScreen() {
                   letterSpacing: 0.2,
                 },
               ]}
-              onFocus={() => scrollFieldIntoView("amount")}
+              onFocus={() => ensureVisible(amountWrapRef)}
             />
           </View>
 
@@ -249,6 +276,27 @@ export default function AddExpenseScreen() {
               label="Received"
               active={direction === "credit"}
               onPress={() => setDirection("credit")}
+            />
+          </View>
+
+          {/* Notes sits mid-form so the keyboard is less likely to bury it */}
+          <View ref={notesWrapRef} style={styles.field} collapsable={false}>
+            <Text
+              style={{
+                fontFamily: typography.fontSansMedium,
+                fontSize: 13,
+                color: colors.textSecondary,
+                marginBottom: spacing.sm,
+              }}
+            >
+              Notes
+            </Text>
+            <Input
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Optional"
+              style={inputStyle(colors.bgMuted)}
+              onFocus={() => ensureVisible(notesWrapRef)}
             />
           </View>
 
@@ -266,26 +314,6 @@ export default function AddExpenseScreen() {
               Category
             </Text>
             <CategoryChips value={categoryId} onChange={setCategoryId} />
-          </View>
-
-          <View style={styles.field} onLayout={rememberFieldY("notes")}>
-            <Text
-              style={{
-                fontFamily: typography.fontSansMedium,
-                fontSize: 13,
-                color: colors.textSecondary,
-                marginBottom: spacing.sm,
-              }}
-            >
-              Notes
-            </Text>
-            <Input
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Optional"
-              style={inputStyle(colors.bgMuted)}
-              onFocus={() => scrollFieldIntoView("notes")}
-            />
           </View>
 
           {error ? (

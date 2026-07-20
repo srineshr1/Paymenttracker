@@ -15,7 +15,12 @@
     "db:migrate": "npm run db:migrate -w @paymenttracker/api",
     "db:seed": "npm run db:seed -w @paymenttracker/api",
     "test": "npm run test -w @paymenttracker/api && npm run test -w @paymenttracker/shared",
-    "typecheck": "npm run typecheck -w @paymenttracker/api && npm run typecheck -w @paymenttracker/shared"
+    "typecheck": "npm run typecheck -w @paymenttracker/api && npm run typecheck -w @paymenttracker/shared",
+    "sms:generate": "node scripts/sms-fixtures/generate-sms-fixture.mjs",
+    "sms:verify": "node scripts/sms-fixtures/verify-sms-parse.mjs",
+    "sms:inject": "node scripts/sms-fixtures/inject-sms-emulator.mjs",
+    "sms:inject:clear": "node scripts/sms-fixtures/inject-sms-emulator.mjs --clear",
+    "sms:fixture": "npm run sms:generate && npm run sms:verify"
   },
   "engines": {
     "node": ">=20"

@@ -1,0 +1,194 @@
+[
+  {
+    "id": "synth-01-psm6",
+    "source": "phonepe",
+    "notes": "Synthetic PhonePe history rendered + tesseract psm6",
+    "ocrFile": "synth-01-psm6.txt",
+    "imageFile": "synth-01.png",
+    "expected": [
+      {
+        "merchant": "Asha Stores",
+        "amount": "250.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Uber India",
+        "amount": "1240.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Swiggy",
+        "amount": "449.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Mom",
+        "amount": "2000.00",
+        "direction": "credit",
+        "paidAtDate": "2026-06-10"
+      }
+    ],
+    "expectCount": 4
+  },
+  {
+    "id": "synth-01-psm4",
+    "source": "phonepe",
+    "notes": "Synthetic PhonePe history rendered + tesseract psm4",
+    "ocrFile": "synth-01-psm4.txt",
+    "imageFile": "synth-01.png",
+    "expected": [
+      {
+        "merchant": "Asha Stores",
+        "amount": "250.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Uber India",
+        "amount": "1240.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Swiggy",
+        "amount": "449.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Mom",
+        "amount": "2000.00",
+        "direction": "credit",
+        "paidAtDate": "2026-06-10"
+      }
+    ],
+    "expectCount": 4
+  },
+  {
+    "id": "synth-01-psm11",
+    "source": "phonepe",
+    "notes": "Synthetic PhonePe history rendered + tesseract psm11",
+    "ocrFile": "synth-01-psm11.txt",
+    "imageFile": "synth-01.png",
+    "expected": [
+      {
+        "merchant": "Asha Stores",
+        "amount": "250.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Uber India",
+        "amount": "1240.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Swiggy",
+        "amount": "449.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "Mom",
+        "amount": "2000.00",
+        "direction": "credit",
+        "paidAtDate": "2026-06-10"
+      }
+    ],
+    "expectCount": 4
+  },
+  {
+    "id": "synth-02-psm6",
+    "source": "phonepe",
+    "notes": "Synthetic PhonePe history rendered + tesseract psm6",
+    "ocrFile": "synth-02-psm6.txt",
+    "imageFile": "synth-02.png",
+    "expected": [
+      {
+        "merchant": "prathis",
+        "amount": "1.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "49999.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-02"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "40000.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-01"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "100.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-01"
+      }
+    ],
+    "expectCount": 4
+  },
+  {
+    "id": "synth-02-psm4",
+    "source": "phonepe",
+    "notes": "Synthetic PhonePe history rendered + tesseract psm4",
+    "ocrFile": "synth-02-psm4.txt",
+    "imageFile": "synth-02.png",
+    "expected": [
+      {
+        "merchant": "prathis",
+        "amount": "1.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "49999.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-02"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "40000.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-01"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "100.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-01"
+      }
+    ],
+    "expectCount": 4
+  },
+  {
+    "id": "synth-02-psm11",
+    "source": "phonepe",
+    "notes": "Synthetic PhonePe history rendered + tesseract psm11",
+    "ocrFile": "synth-02-psm11.txt",
+    "imageFile": "synth-02.png",
+    "expected": [
+      {
+        "merchant": "prathis",
+        "amount": "1.00",
+        "direction": "debit"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "49999.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-02"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "40000.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-01"
+      },
+      {
+        "merchant": "prathis",
+        "amount": "100.00",
+        "direction": "debit",
+        "paidAtDate": "2020-07-01"
+      }
+    ],
+    "expectCount": 4
+  }
+]
