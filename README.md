@@ -1,27 +1,62 @@
-# Ledger — Paymenttracker
+# Spentd (Paymenttracker)
 
-Premium Android expense tracker that imports **PhonePe** and **GPay** screenshots, with **username + passcode** auth and **cloud sync**.
+[![CI](https://github.com/srineshr1/Paymenttracker/actions/workflows/ci.yml/badge.svg)](https://github.com/srineshr1/Paymenttracker/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Expo](https://img.shields.io/badge/Expo-57-000020?logo=expo)](https://expo.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-- **Username** is remembered on device  
-- **Passcode** is never stored on device (only Argon2id hash on server) — enter it every login  
-- Screenshots stay on-device; only structured expense fields sync  
+**Premium Android expense tracker** that imports **PhonePe** and **GPay** screenshots + bank SMS, with **username + passcode** auth and optional **cloud sync**.
+
+<p align="center">
+  <a href="https://github.com/srineshr1/Paymenttracker/releases/latest"><img src="https://img.shields.io/github/v/release/srineshr1/Paymenttracker?label=Download%20APK&color=C4A574" alt="Download APK" /></a>
+</p>
+
+---
+
+## Features
+
+- **Screenshot OCR** — import PhonePe / GPay payment screenshots on-device
+- **SMS import** — scan bank/UPI SMS (native Android build)
+- **Privacy-first auth** — username remembered; 6-digit passcode never stored on device (Argon2id on server)
+- **Cloud sync** — structured expense fields only; screenshots stay local
+- **Budgets & cash** — track spending limits and cash wallets
+- **Dark banking UI** — ink background, warm gold accent, mono amounts
 
 ## Stack
 
 | Layer | Tech |
 |-------|------|
-| Mobile | Expo (React Native), Expo Router |
+| Mobile | Expo 57 (React Native), Expo Router |
 | API | Hono + Drizzle + Postgres |
-| Shared | Zod schemas + UPI OCR parsers |
-| Auth | Username + 6-digit passcode → JWT (in-memory only on client) |
+| Shared | Zod schemas + UPI OCR / SMS parsers |
+| Auth | Username + passcode → JWT (in-memory on client) |
+| CI/CD | GitHub Actions + EAS Build |
+
+## Download
+
+| Channel | Link |
+|---------|------|
+| Latest APK | [GitHub Releases](https://github.com/srineshr1/Paymenttracker/releases/latest) |
+| Build yourself | [EAS / local](#build-a-real-apk) |
+
+> APKs are published automatically when a version tag is pushed (`v1.0.0`) or via **Actions → Build APK**.
 
 ## Quick start
+
+### Prerequisites
+
+- Node.js 20+
+- Docker (for Postgres)
+- Android device/emulator (for the app)
 
 ### 1. Database
 
 ```bash
+git clone https://github.com/srineshr1/Paymenttracker.git
+cd Paymenttracker
+cp .env.example apps/api/.env
 docker compose up -d
-cp .env.example apps/api/.env   # if needed
 npm install
 npm run build -w @paymenttracker/shared
 npm run db:migrate
@@ -39,7 +74,7 @@ npm run api
 
 ```bash
 npm run mobile
-# then press `a` for Android emulator, or scan the QR with Expo Go
+# press `a` for Android emulator, or scan the QR with Expo Go
 ```
 
 **API URL** (`apps/mobile/.env`)
@@ -50,12 +85,15 @@ npm run mobile
 | Android emulator | `http://10.0.2.2:3001` |
 | Physical phone | `http://<your-pc-lan-ip>:3001` |
 
-After changing `.env`, restart Expo with cache clear:  
-`cd apps/mobile && npx expo start -c`
+After changing `.env`, restart Expo with cache clear:
+
+```bash
+cd apps/mobile && npx expo start -c
+```
 
 ---
 
-## Test on a real Android phone (easiest)
+## Test on a real Android phone
 
 You need: phone + PC on the **same Wi‑Fi**, API running on the PC.
 
@@ -74,12 +112,10 @@ Edit `apps/mobile/.env`:
 EXPO_PUBLIC_API_URL=http://192.168.1.42:3001
 ```
 
-(use your real IP)
-
 ### 3. Start backend + Expo
 
 ```bash
-# terminal 1 — from repo root
+# terminal 1
 docker compose up -d
 npm run db:migrate   # first time only
 npm run api
@@ -89,30 +125,28 @@ cd apps/mobile
 npx expo start -c
 ```
 
-### 4. Install Expo Go on the phone
+### 4. Install Expo Go
 
 - Play Store → **Expo Go**
-- Open the camera / Expo Go and scan the QR code from the terminal  
-  (same Wi‑Fi; use **tunnel** mode if LAN fails: `npx expo start -c --tunnel`)
+- Scan the QR from the terminal (use tunnel if LAN fails: `npx expo start -c --tunnel`)
 
-### 5. Create account in the app
+### 5. Create account
 
 1. Open **Create account**
-2. Username (3+ chars) + 6-digit passcode twice  
-3. Footer should show `API · http://YOUR_IP:3001`  
-4. If login fails, open `http://YOUR_IP:3001/health` in the **phone’s browser** — it must return `{"ok":true,...}`
+2. Username (3+ chars) + 6-digit passcode twice
+3. Footer should show `API · http://YOUR_IP:3001`
+4. If login fails, open `http://YOUR_IP:3001/health` in the phone’s browser
 
-**Firewall:** allow inbound TCP **3001** on the PC if the phone can’t open that URL.
+**Firewall:** allow inbound TCP **3001** on the PC if needed.
 
 ---
 
 ## Test on Android emulator
 
-1. Install [Android Studio](https://developer.android.com/studio) → SDK + one virtual device (AVD).
-2. Set env for emulator:
+1. Install [Android Studio](https://developer.android.com/studio) → SDK + AVD
+2. Set `apps/mobile/.env`:
 
 ```bash
-# apps/mobile/.env
 EXPO_PUBLIC_API_URL=http://10.0.2.2:3001
 ```
 
@@ -121,58 +155,61 @@ EXPO_PUBLIC_API_URL=http://10.0.2.2:3001
 ```bash
 npm run api
 cd apps/mobile && npx expo start -c
-# press `a` to open on the emulator
+# press `a`
 ```
 
 `10.0.2.2` is the emulator’s alias for your PC’s `localhost`.
 
 ---
 
-## Build a real APK / installable app
+## Build a real APK
 
-Expo Go is fine for UI + paste-import. A **standalone APK** is better for production-like testing.
+### Option A — GitHub Actions (recommended)
 
-### Option A — local debug build (needs Android SDK)
+1. Add repo secret `EXPO_TOKEN` (from [expo.dev](https://expo.dev/settings/access-tokens))
+2. **Actions → Build APK → Run workflow**, or:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+APK appears under [Releases](https://github.com/srineshr1/Paymenttracker/releases).
+
+### Option B — local debug build
 
 ```bash
 cd apps/mobile
-# set EXPO_PUBLIC_API_URL first (LAN IP or production API)
 npx expo prebuild --platform android
 npx expo run:android
 ```
 
-This compiles a native app, installs it on the connected device/emulator, and runs it.
-
-### Option B — EAS cloud build (no local Android Studio)
+### Option C — EAS CLI
 
 ```bash
 npm i -g eas-cli
 cd apps/mobile
 eas login
-eas build:configure
-eas build -p android --profile preview   # APK you can sideload
+eas build -p android --profile preview
 ```
 
-Download the APK from the EAS link and install on the phone  
-(Settings → allow install from unknown sources if prompted).
-
-> Image OCR (ML Kit) only works in a **dev/production build**, not Expo Go.  
+> Image OCR (ML Kit) needs a **dev/production build**, not Expo Go.  
 > Paste-text import works in Expo Go.
 
 ### Import payments (on-device)
 
-1. **SMS inbox (Android native build)** — scans bank/UPI SMS on the phone, parses with regex (no AI, no upload). Needs `READ_SMS` and `expo run:android` (not Expo Go).
-2. **Screenshot OCR** — PhonePe / GPay screenshots via ML Kit (native build) or Tesseract.js WebView (Expo Go). Parsing is on-device in `@paymenttracker/shared`.
-3. **Paste text** — fallback on the Import screen.
+1. **SMS inbox** — bank/UPI SMS parse (native build, `READ_SMS`)
+2. **Screenshot OCR** — PhonePe / GPay via ML Kit or Tesseract
+3. **Paste text** — fallback on Import screen
 
-Parsers in `packages/shared/src/ocr` extract amount, merchant, date, UPI ref (screenshot + SMS).
+Parsers live in `packages/shared/src/ocr`.
 
 ## Auth rules
 
-1. Register with username + 6-digit passcode  
-2. Server stores **Argon2id hash only**  
-3. Client stores **username** in SecureStore  
-4. JWT lives **in memory only** — process death or 5 min background → lock screen  
+1. Register with username + 6-digit passcode
+2. Server stores **Argon2id hash only**
+3. Client stores **username** in SecureStore
+4. JWT lives **in memory only** — process death or 5 min background → lock screen
 
 There is **no passcode recovery** in v1.
 
@@ -192,8 +229,9 @@ There is **no passcode recovery** in v1.
 
 ```
 apps/api          Hono API
-apps/mobile       Expo Android app
-packages/shared   Schemas + OCR parsers
+apps/mobile       Expo Android app (Spentd)
+packages/shared   Schemas + OCR / SMS parsers
+.github/          CI, issue templates, PR template
 docker-compose.yml
 ```
 
@@ -206,8 +244,23 @@ npm run db:up         # Postgres
 npm run db:migrate
 npm run db:seed
 npm test              # shared OCR + API tests
+npm run typecheck
+npm run lint          # Biome
+npm run lint:fix
 ```
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
 ## Design
 
-Dark private-banking UI: ink background, warm gold accent, DM Sans + IBM Plex Mono for amounts. No generic purple “AI slop” chrome.
+Dark private-banking UI: ink background, warm gold accent, DM Sans + IBM Plex Mono for amounts.
+
+## License
+
+[MIT](LICENSE) © 2026 Srinesh R

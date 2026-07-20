@@ -5,8 +5,8 @@ Thanks for your interest! Here's how to get started.
 ## Development setup
 
 ```bash
-git clone https://github.com/<your-org>/paymenttracker.git
-cd paymenttracker
+git clone https://github.com/srineshr1/Paymenttracker.git
+cd Paymenttracker
 cp .env.example apps/api/.env
 docker compose up -d
 npm install
@@ -62,4 +62,4 @@ Use conventional commits:
 
 ## Questions?
 
-Open a [discussion](https://github.com/<your-org>/paymenttracker/discussions) or ask in the PR.
+Open a [discussion](https://github.com/srineshr1/Paymenttracker/discussions) or ask in the PR.
