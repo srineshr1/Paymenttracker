@@ -23,12 +23,21 @@ export type WalletsState = {
   accountBalance: number;
   cashBalance: number;
   movements: WalletMovement[];
+  /**
+   * ISO time of the newest SMS/event that set or adjusted account balance.
+   * Older SMS are ignored so catch-up re-imports don't rewrite a fresher figure.
+   */
+  accountBalanceAt: string | null;
+  /** True once account was set from a bank "Avl Bal" SMS (or manual edit). */
+  accountBalanceKnown: boolean;
 };
 
 const EMPTY: WalletsState = {
   accountBalance: 0,
   cashBalance: 0,
   movements: [],
+  accountBalanceAt: null,
+  accountBalanceKnown: false,
 };
 
 async function getRaw(): Promise<string | null> {
@@ -105,10 +114,20 @@ function normalize(raw: unknown): WalletsState {
         }))
     : [];
 
+  const atRaw = o.accountBalanceAt;
+  const accountBalanceAt =
+    typeof atRaw === "string" && !Number.isNaN(Date.parse(atRaw))
+      ? new Date(atRaw).toISOString()
+      : null;
+
   return {
     accountBalance: clampMoney(Number(o.accountBalance) || 0),
     cashBalance: clampMoney(Number(o.cashBalance) || 0),
     movements,
+    accountBalanceAt,
+    accountBalanceKnown:
+      o.accountBalanceKnown === true ||
+      (clampMoney(Number(o.accountBalance) || 0) > 0 && accountBalanceAt != null),
   };
 }
 
@@ -117,6 +136,8 @@ async function save(state: WalletsState): Promise<WalletsState> {
     accountBalance: clampMoney(state.accountBalance),
     cashBalance: clampMoney(state.cashBalance),
     movements: state.movements.slice(0, MAX_MOVEMENTS),
+    accountBalanceAt: state.accountBalanceAt,
+    accountBalanceKnown: state.accountBalanceKnown,
   };
   await setRaw(JSON.stringify(next));
   return next;
@@ -130,6 +151,79 @@ export async function getWallets(): Promise<WalletsState> {
   } catch {
     return { ...EMPTY, movements: [] };
   }
+}
+
+function isoTime(value?: string | number | null): string | null {
+  if (value == null) return null;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return new Date(value).toISOString();
+  }
+  const t = Date.parse(value);
+  if (Number.isNaN(t)) return null;
+  return new Date(t).toISOString();
+}
+
+function isAtLeastAsNew(candidate: string | null, current: string | null): boolean {
+  if (!candidate) return current == null;
+  if (!current) return true;
+  return Date.parse(candidate) >= Date.parse(current);
+}
+
+/**
+ * Set account balance from a bank SMS "Avl Bal" (absolute).
+ * Ignores older snapshots than the one already stored.
+ */
+export async function setAccountBalanceFromSms(
+  balanceRaw: number | string,
+  at?: string | number | null
+): Promise<WalletsState> {
+  const n =
+    typeof balanceRaw === "string"
+      ? Number(String(balanceRaw).replace(/,/g, ""))
+      : balanceRaw;
+  if (!Number.isFinite(n) || n < 0) return getWallets();
+
+  const atIso = isoTime(at) ?? new Date().toISOString();
+  const state = await getWallets();
+  if (!isAtLeastAsNew(atIso, state.accountBalanceAt)) {
+    return state;
+  }
+
+  return save({
+    ...state,
+    accountBalance: clampMoney(n),
+    accountBalanceAt: atIso,
+    accountBalanceKnown: true,
+  });
+}
+
+export type ApplyPaymentToAccountInput = {
+  amount?: number | string | null;
+  direction?: "debit" | "credit";
+  /** ISO paid-at or SMS dateMs */
+  paidAt?: string | number | null;
+  /**
+   * Absolute available balance from bank SMS ("Avl Bal Rs …").
+   * Only absolute figures are applied — debit/credit deltas are skipped so
+   * PhonePe + bank duplicate alerts do not double-count.
+   */
+  availableBalance?: number | string | null;
+};
+
+/**
+ * Keep account balance in sync with bank/UPI SMS available-balance lines.
+ * Newest absolute "Avl Bal" wins (matches GPay / PhonePe bank balance).
+ */
+export async function applyPaymentToAccount(
+  input: ApplyPaymentToAccountInput
+): Promise<WalletsState> {
+  const paidAt = isoTime(input.paidAt) ?? new Date().toISOString();
+  const avlRaw = input.availableBalance;
+  if (avlRaw == null || String(avlRaw).trim() === "") {
+    return getWallets();
+  }
+  return setAccountBalanceFromSms(avlRaw, paidAt);
 }
 
 export async function clearWallets(): Promise<void> {
@@ -169,6 +263,7 @@ export async function addToWallet(
   const amount = parseAmount(amountRaw);
   const state = await getWallets();
   const nextBal = balanceOf(state, wallet) + amount;
+  const now = new Date().toISOString();
   const move: WalletMovement = {
     id: randomUUID(),
     wallet,
@@ -176,9 +271,17 @@ export async function addToWallet(
     amount,
     note: note?.trim() || null,
     expenseId: null,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
   };
-  return save(pushMove(withBalance(state, wallet, nextBal), move));
+  const next = pushMove(withBalance(state, wallet, nextBal), move);
+  if (wallet === "account") {
+    return save({
+      ...next,
+      accountBalanceAt: now,
+      accountBalanceKnown: true,
+    });
+  }
+  return save(next);
 }
 
 export type DeductOpts = {
@@ -231,6 +334,7 @@ export async function deductFromWallet(
     expenseId = expense.id;
   }
 
+  const now = new Date().toISOString();
   const move: WalletMovement = {
     id: randomUUID(),
     wallet,
@@ -238,12 +342,18 @@ export async function deductFromWallet(
     amount,
     note: opts.note?.trim() || null,
     expenseId,
-    createdAt: new Date().toISOString(),
+    createdAt: now,
   };
 
-  return save(
-    pushMove(withBalance(state, wallet, current - amount), move)
-  );
+  const next = pushMove(withBalance(state, wallet, current - amount), move);
+  if (wallet === "account") {
+    return save({
+      ...next,
+      accountBalanceAt: now,
+      accountBalanceKnown: true,
+    });
+  }
+  return save(next);
 }
 
 export function totalLiquid(state: WalletsState): number {

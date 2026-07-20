@@ -47,6 +47,12 @@ describe("parseSmsMessage", () => {
     assert.equal(r.amount, "1250.50");
     assert.match(r.merchant ?? "", /Uber/i);
     assert.ok(r.upiRef);
+    assert.equal(r.availableBalance, "10000.00");
+  });
+
+  it("extracts available balance from bank SMS", () => {
+    const r = parseSmsMessage({ body: SBI, address: "VK-SBIINB" });
+    assert.equal(r.availableBalance, "10000.00");
   });
 
   it("parses ICICI debit", () => {

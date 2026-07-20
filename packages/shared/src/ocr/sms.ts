@@ -86,6 +86,32 @@ function detectSmsSource(
 const AMT =
   "([0-9]{1,3}(?:,[0-9]{2,3})+(?:\\.[0-9]{1,2})?|[0-9]+(?:\\.[0-9]{1,2})?)";
 
+/**
+ * Extract post-transaction available balance from Indian bank / UPI SMS.
+ * Examples: "Avl Bal Rs 10,000.00", "Available Balance: INR 5,432.10"
+ */
+export function extractAvailableBalance(text: string): string | null {
+  const patterns = [
+    new RegExp(
+      `(?:avl\\.?\\s*bal(?:ance)?|available\\s*bal(?:ance)?|avail\\.?\\s*bal(?:ance)?|a\\/c\\s*bal(?:ance)?|acct?\\.?\\s*bal(?:ance)?|cleared\\s*bal(?:ance)?|total\\s*avail(?:able)?\\.?\\s*bal(?:ance)?)\\s*[:\\-]?\\s*(?:is\\s*)?(?:₹|rs\\.?|inr)?\\s*${AMT}`,
+      "i"
+    ),
+    // "Bal Rs.1,234.56" near end of message (common bank footer)
+    new RegExp(
+      `(?:^|[.\\s])bal(?:ance)?\\s*[:\\-]?\\s*(?:₹|rs\\.?|inr)\\s*${AMT}\\s*$`,
+      "i"
+    ),
+  ];
+  for (const re of patterns) {
+    const m = text.match(re);
+    if (m?.[1]) {
+      const parsed = parseAmountToken(m[1]);
+      if (parsed) return parsed;
+    }
+  }
+  return null;
+}
+
 /** Prefer explicit SMS amount patterns (avoid OTP / balance false positives). */
 function extractSmsAmount(text: string): string | null {
   const patterns = [
@@ -240,6 +266,7 @@ export function parseSmsMessage(input: SmsMessageInput): ParsedExpense {
   const upiRef = extractSmsUpiRef(rawText);
   const direction = extractDirection(rawText);
   const status = extractStatus(rawText);
+  const availableBalance = extractAvailableBalance(rawText);
 
   if (!amount) warnings.push("Could not detect amount");
   if (!merchant) warnings.push("Could not detect merchant");
@@ -283,6 +310,7 @@ export function parseSmsMessage(input: SmsMessageInput): ParsedExpense {
     confidence,
     rawText,
     warnings,
+    availableBalance,
   };
 }
 

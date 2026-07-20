@@ -4,6 +4,7 @@ import {
   type SmsMessageInput,
 } from "@paymenttracker/shared";
 import { AppState, type AppStateStatus, Platform } from "react-native";
+import { applyPaymentToAccount } from "@/src/data/cash";
 import { isUnlocked, LocalDataError } from "@/src/data/crypto";
 import { createExpense } from "@/src/data/expenses";
 import {
@@ -95,13 +96,35 @@ export async function processIncomingSms(
     dateMs: msg.dateMs,
   });
 
+  const paidAtIso = parsed.paidAt
+    ? new Date(parsed.paidAt).toISOString()
+    : new Date(msg.dateMs ?? Date.now()).toISOString();
+
+  // Always try bank "Avl Bal" → account balance (even if we skip the expense)
+  const syncBalance = async () => {
+    if (!parsed.availableBalance) return;
+    try {
+      await applyPaymentToAccount({
+        amount: parsed.amount,
+        direction: parsed.direction ?? "debit",
+        paidAt: paidAtIso,
+        availableBalance: parsed.availableBalance,
+      });
+    } catch {
+      /* balance sync is best-effort */
+    }
+  };
+
   if (parsed.status === "failed") {
+    await syncBalance();
     return { status: "skipped", reason: "failed_tx" };
   }
   if ((parsed.confidence ?? 0) < MIN_CONFIDENCE) {
+    await syncBalance();
     return { status: "skipped", reason: "low_confidence" };
   }
   if (!parsed.amount || !(parsed.merchant ?? "").trim()) {
+    await syncBalance();
     return { status: "skipped", reason: "incomplete" };
   }
 
@@ -117,14 +140,13 @@ export async function processIncomingSms(
       merchant: (parsed.merchant ?? "").trim(),
       amount: String(parsed.amount).replace(/,/g, ""),
       direction: parsed.direction ?? "debit",
-      paidAt: parsed.paidAt
-        ? new Date(parsed.paidAt).toISOString()
-        : new Date(msg.dateMs ?? Date.now()).toISOString(),
+      paidAt: paidAtIso,
       source,
       upiRef: parsed.upiRef ?? null,
       notes: null,
       rawOcrText: body.slice(0, 20000),
     });
+    await syncBalance();
     const result: AutoImportResult = {
       status: "saved",
       merchant: (parsed.merchant ?? "").trim(),
@@ -134,6 +156,7 @@ export async function processIncomingSms(
     return result;
   } catch (e) {
     if (e instanceof LocalDataError && e.status === 409) {
+      await syncBalance();
       const result: AutoImportResult = {
         status: "skipped",
         reason: "already_saved",

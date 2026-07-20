@@ -13,6 +13,11 @@ export interface ParsedExpense {
   confidence: number;
   rawText: string;
   warnings: string[];
+  /**
+   * Bank SMS often include post-txn available balance
+   * (e.g. "Avl Bal Rs 10,000.00"). Used to mirror GPay/PhonePe account balance.
+   */
+  availableBalance?: string | null;
 }
 
 /** Raw SMS row from the device inbox (Android). */

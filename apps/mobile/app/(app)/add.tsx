@@ -68,7 +68,11 @@ export default function AddExpenseScreen() {
     const amt = normalizeAmount(amount);
 
     if (!name) {
-      setError("Enter a merchant name");
+      setError(
+        direction === "credit"
+          ? "Enter who you received from"
+          : "Enter a merchant name"
+      );
       return;
     }
     if (!amt) {
@@ -130,7 +134,7 @@ export default function AddExpenseScreen() {
                 marginBottom: spacing.sm,
               }}
             >
-              Merchant
+              {direction === "credit" ? "From" : "Merchant"}
             </Text>
             <Input
               value={merchant}
@@ -138,7 +142,11 @@ export default function AddExpenseScreen() {
                 setMerchant(v);
                 if (error) setError(null);
               }}
-              placeholder="Who did you pay?"
+              placeholder={
+                direction === "credit"
+                  ? "Who did you receive from?"
+                  : "Who did you pay?"
+              }
               autoFocus
               returnKeyType="next"
               style={inputStyle(colors.bgMuted)}

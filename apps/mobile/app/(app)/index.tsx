@@ -26,7 +26,6 @@ import {
 } from "@/src/data/budget";
 import {
   getWallets,
-  totalLiquid,
   type WalletsState,
 } from "@/src/data/cash";
 import {
@@ -38,6 +37,7 @@ import {
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
+import { syncAccountBalanceFromInbox } from "@/src/features/sms/syncBalance";
 
 type CategorySlice = {
   key: string;
@@ -167,6 +167,8 @@ export default function HomeScreen() {
     accountBalance: 0,
     cashBalance: 0,
     movements: [],
+    accountBalanceAt: null,
+    accountBalanceKnown: false,
   });
   const [showLeftToSpend, setShowLeftToSpend] = useState(false);
 
@@ -187,6 +189,9 @@ export default function HomeScreen() {
         return { year: d.getFullYear(), month: d.getMonth() + 1 };
       });
 
+      // Refresh account balance from newest bank "Avl Bal" SMS (GPay/PhonePe-like)
+      const balanceSync = syncAccountBalanceFromInbox().catch(() => getWallets());
+
       const [s, prevS, monthList, weekList, recentList, prefs, walletState, ...hist] =
         await Promise.all([
           api.monthSummary(cursor.year, cursor.month),
@@ -203,7 +208,7 @@ export default function HomeScreen() {
           }),
           api.listExpenses({ limit: 6 }),
           getBudgetPrefs(),
-          getWallets(),
+          balanceSync,
           ...histMonths.map((m) => api.monthSummary(m.year, m.month)),
         ]);
 
@@ -533,7 +538,7 @@ export default function HomeScreen() {
                         textAlign: "right",
                       }}
                     >
-                      Left to spend
+                      Balance
                     </Text>
                     <Pressable
                       onPress={() => setShowLeftToSpend((v) => !v)}
@@ -541,8 +546,8 @@ export default function HomeScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={
                         showLeftToSpend
-                          ? "Hide left to spend amount"
-                          : "Show left to spend amount"
+                          ? "Hide account balance"
+                          : "Show account balance"
                       }
                       style={({ pressed }) => [
                         styles.eyeBtn,
@@ -565,11 +570,7 @@ export default function HomeScreen() {
                       fontSize: 22,
                       lineHeight: 28,
                       letterSpacing: -0.4,
-                      color: showLeftToSpend
-                        ? plan.remaining < 0
-                          ? colors.danger
-                          : colors.text
-                        : colors.textMuted,
+                      color: showLeftToSpend ? colors.text : colors.textMuted,
                       textAlign: "right",
                       marginTop: 2,
                     }}
@@ -577,24 +578,9 @@ export default function HomeScreen() {
                     adjustsFontSizeToFit
                     minimumFontScale={0.6}
                   >
-                    {showLeftToSpend ? (
-                      <>
-                        {formatINR(plan.remaining)}
-                        <Text
-                          style={{
-                            fontFamily: typography.fontSansMedium,
-                            fontSize: 13,
-                            color: colors.textMuted,
-                            letterSpacing: 0,
-                          }}
-                        >
-                          {" "}
-                          ({formatINR(totalLiquid(wallets))})
-                        </Text>
-                      </>
-                    ) : (
-                      "••••••"
-                    )}
+                    {showLeftToSpend
+                      ? formatINR(wallets.accountBalance)
+                      : "••••••"}
                   </Text>
                 </View>
               </View>
@@ -655,53 +641,22 @@ export default function HomeScreen() {
               </Pressable>
 
               {paceLabel ? (
-                <View
-                  style={[
-                    styles.paceRow,
-                    {
-                      backgroundColor:
-                        paceLabel.tone === "hot"
-                          ? "rgba(217,123,123,0.12)"
-                          : paceLabel.tone === "cool"
-                            ? "rgba(143,203,176,0.12)"
-                            : colors.bgMuted,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={
-                      paceLabel.tone === "hot"
-                        ? "flash-outline"
-                        : paceLabel.tone === "cool"
-                          ? "leaf-outline"
-                          : "checkmark-circle-outline"
-                    }
-                    size={14}
-                    color={
+                <Text
+                  style={{
+                    fontFamily: typography.fontSansMedium,
+                    fontSize: 12,
+                    textAlign: "center",
+                    color:
                       paceLabel.tone === "hot"
                         ? colors.danger
                         : paceLabel.tone === "cool"
                           ? colors.credit
-                          : colors.textSecondary
-                    }
-                  />
-                  <Text
-                    style={{
-                      flex: 1,
-                      fontFamily: typography.fontSansMedium,
-                      fontSize: 12,
-                      color:
-                        paceLabel.tone === "hot"
-                          ? colors.danger
-                          : paceLabel.tone === "cool"
-                            ? colors.credit
-                            : colors.textSecondary,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {paceLabel.text}
-                  </Text>
-                </View>
+                          : colors.textSecondary,
+                  }}
+                  numberOfLines={1}
+                >
+                  {paceLabel.text}
+                </Text>
               ) : null}
 
               <View
@@ -1078,14 +1033,6 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: radius.xs,
     minWidth: 4,
-  },
-  paceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: radius.sm,
   },
   heroStats: {
     flexDirection: "row",

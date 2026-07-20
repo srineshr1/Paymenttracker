@@ -14,6 +14,7 @@ import type { ParsedExpense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
 import { CategoryChips } from "@/src/components/CategoryChips";
 import { Badge, Button, Card, Input, Screen, Text } from "@/src/components/ui";
+import { applyPaymentToAccount } from "@/src/data/cash";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 
@@ -72,17 +73,30 @@ export default function ImportReviewScreen() {
     }
     setLoading(true);
     try {
+      const paidAtIso = new Date(paidAt).toISOString();
       await api.createExpense({
         merchant: merchant.trim(),
         amount: String(amount).replace(/,/g, ""),
         direction,
-        paidAt: new Date(paidAt).toISOString(),
+        paidAt: paidAtIso,
         source: source === "manual" ? "manual" : source,
         upiRef: upiRef.trim() || null,
         notes: notes.trim() || null,
         categoryId,
         rawOcrText: initial?.rawText ?? null,
       });
+      if (initial?.availableBalance) {
+        try {
+          await applyPaymentToAccount({
+            amount,
+            direction,
+            paidAt: paidAtIso,
+            availableBalance: initial.availableBalance,
+          });
+        } catch {
+          /* best-effort balance sync */
+        }
+      }
       router.replace("/(app)");
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {

@@ -16,6 +16,7 @@ import { ApiError, api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { DateField } from "@/src/components/DateField";
 import { Button, Input, Screen, Text } from "@/src/components/ui";
+import { applyPaymentToAccount } from "@/src/data/cash";
 import { formatDateTime, formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
@@ -212,6 +213,27 @@ export default function ImportSelectScreen() {
       }));
 
       const res = await api.createExpensesBatch(payload);
+
+      // Newest absolute bank balance from this batch (if any SMS include Avl Bal)
+      const withBal = unique
+        .filter((r) => r.availableBalance)
+        .sort((a, b) => {
+          const ta = a.paidAt ? Date.parse(a.paidAt) : 0;
+          const tb = b.paidAt ? Date.parse(b.paidAt) : 0;
+          return tb - ta;
+        });
+      if (withBal[0]?.availableBalance) {
+        try {
+          await applyPaymentToAccount({
+            amount: withBal[0].amount,
+            direction: withBal[0].direction ?? "debit",
+            paidAt: withBal[0].paidAt,
+            availableBalance: withBal[0].availableBalance,
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
 
       const parts = [
         res.created > 0 ? `Added ${res.created}` : null,
