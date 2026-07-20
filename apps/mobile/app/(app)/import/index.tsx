@@ -212,7 +212,9 @@ export default function ImportScreen() {
             ? "No SMS found in the last 90 days."
             : result.paymentLike === 0
               ? `Scanned ${result.scanned} messages — none looked like bank/UPI payments.`
-              : `Found ${result.paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`,
+              : result.parsed > 0 && result.junked > 0
+                ? `Found ${result.paymentLike} payment-like messages; ${result.junked} were parsed but none met the quality bar (merchant, confidence, or pending status). Try a screenshot import instead.`
+                : `Found ${result.paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`,
         );
         return;
       }
@@ -232,10 +234,15 @@ export default function ImportScreen() {
           ? `skipped ${result.skipped} duplicate${result.skipped === 1 ? "" : "s"}`
           : null,
         result.failed > 0 ? `${result.failed} failed` : null,
+        result.partial ? "stopped early (partial save)" : null,
       ].filter(Boolean);
 
       Alert.alert(
-        result.created > 0 ? "Import complete" : "Nothing new added",
+        result.partial
+          ? "Import partially complete"
+          : result.created > 0
+            ? "Import complete"
+            : "Nothing new added",
         parts.join(" · ") || "No changes",
         [{ text: "OK", onPress: () => router.replace("/(app)") }],
       );

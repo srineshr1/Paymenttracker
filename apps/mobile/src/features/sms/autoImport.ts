@@ -7,7 +7,9 @@ import { AppState, type AppStateStatus, Platform } from "react-native";
 import { applyPaymentToAccount } from "@/src/data/cash";
 import { isUnlocked, LocalDataError } from "@/src/data/crypto";
 import { createExpense } from "@/src/data/expenses";
+import { resolveCategoryId } from "./categorize";
 import { getSmsAutoImportEnabled, setSmsAutoImportEnabled } from "./prefs";
+import { MIN_AUTO_IMPORT_CONFIDENCE } from "./quality";
 import {
   drainPendingSms,
   isSmsInboxAvailable,
@@ -23,8 +25,6 @@ export type AutoImportResult =
   | { status: "error"; reason: string };
 
 type Listener = (result: AutoImportResult) => void;
-
-const MIN_CONFIDENCE = 0.55;
 /** Catch-up window when app returns to foreground (ms). */
 const CATCHUP_MS = 15 * 60 * 1000;
 
@@ -116,7 +116,11 @@ export async function processIncomingSms(
     await syncBalance();
     return { status: "skipped", reason: "failed_tx" };
   }
-  if ((parsed.confidence ?? 0) < MIN_CONFIDENCE) {
+  if (parsed.status === "pending") {
+    await syncBalance();
+    return { status: "skipped", reason: "pending_tx" };
+  }
+  if ((parsed.confidence ?? 0) < MIN_AUTO_IMPORT_CONFIDENCE) {
     await syncBalance();
     return { status: "skipped", reason: "low_confidence" };
   }
@@ -132,21 +136,31 @@ export async function processIncomingSms(
       ? parsed.source
       : "sms";
 
+  const merchant = (parsed.merchant ?? "").trim();
+  const direction = parsed.direction ?? "debit";
+  let categoryId: string | null = null;
+  try {
+    categoryId = await resolveCategoryId(merchant, direction, body);
+  } catch {
+    /* categories optional */
+  }
+
   try {
     await createExpense({
-      merchant: (parsed.merchant ?? "").trim(),
+      merchant,
       amount: String(parsed.amount).replace(/,/g, ""),
-      direction: parsed.direction ?? "debit",
+      direction,
       paidAt: paidAtIso,
       source,
       upiRef: parsed.upiRef ?? null,
       notes: null,
       rawOcrText: body.slice(0, 20000),
+      categoryId,
     });
     await syncBalance();
     const result: AutoImportResult = {
       status: "saved",
-      merchant: (parsed.merchant ?? "").trim(),
+      merchant,
       amount: String(parsed.amount),
     };
     emit(result);

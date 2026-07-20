@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { Expense, MonthSummary } from "@paymenttracker/shared";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -34,6 +34,7 @@ import {
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
+import { categoryIcon } from "@/src/features/categories/icons";
 import { syncAccountBalanceFromInbox } from "@/src/features/sms/syncBalance";
 
 type CategorySlice = {
@@ -44,23 +45,53 @@ type CategorySlice = {
   pct: number;
 };
 
-const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  food: "restaurant-outline",
-  travel: "car-outline",
-  shopping: "bag-handle-outline",
-  bills: "receipt-outline",
-  transfer: "swap-horizontal-outline",
-  entertainment: "film-outline",
-  health: "heart-outline",
-  other: "pricetag-outline",
-};
-
 function startOfWeekMonday(d = new Date()) {
   const day = d.getDay(); // 0 Sun
   const diff = day === 0 ? -6 : 1 - day;
   const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
   start.setHours(0, 0, 0, 0);
   return start;
+}
+
+function addDays(d: Date, n: number) {
+  const out = new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+function endOfLocalDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+function weekRangeForOffset(offset: number) {
+  const anchor = addDays(new Date(), offset * 7);
+  const start = startOfWeekMonday(anchor);
+  const end = endOfLocalDay(addDays(start, 6));
+  return { start, end };
+}
+
+function formatWeekTitle(offset: number, start: Date, end: Date) {
+  if (offset === 0) return "This week";
+  if (offset === -1) return "Last week";
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const sameMonth = start.getMonth() === end.getMonth();
+  if (sameMonth) {
+    return `${start.getDate()}–${end.getDate()} ${months[start.getMonth()]}`;
+  }
+  return `${start.getDate()} ${months[start.getMonth()]} – ${end.getDate()} ${months[end.getMonth()]}`;
 }
 
 /** MoM spend change. Null when there’s no meaningful baseline. */
@@ -102,40 +133,46 @@ function buildCategorySlices(expenses: Expense[]): CategorySlice[] {
     .sort((a, b) => b.amount - a.amount);
 }
 
-function buildWeekBars(expenses: Expense[], now = new Date()): WeekDayBar[] {
-  const weekStart = startOfWeekMonday(now);
+function buildWeekBars(
+  expenses: Expense[],
+  weekStart: Date,
+  weekOffset: number,
+): WeekDayBar[] {
   const byDay = Array.from({ length: 7 }, () => 0);
+  const startMs = new Date(
+    weekStart.getFullYear(),
+    weekStart.getMonth(),
+    weekStart.getDate(),
+  ).getTime();
 
   for (const e of expenses) {
     if (e.direction !== "debit") continue;
     const d = new Date(e.paidAt);
     if (Number.isNaN(d.getTime())) continue;
-    const idx = Math.floor(
-      (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() -
-        weekStart.getTime()) /
-        86_400_000,
-    );
+    const local = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const idx = Math.round((local.getTime() - startMs) / 86_400_000);
     if (idx < 0 || idx > 6) continue;
     byDay[idx] += Number(e.amount) || 0;
   }
 
-  const todayIdx = Math.floor(
-    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
-      weekStart.getTime()) /
-      86_400_000,
+  const today = new Date();
+  const todayLocal = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
   );
+  const todayIdx = Math.round((todayLocal.getTime() - startMs) / 86_400_000);
+  const isCurrentWeek = weekOffset === 0;
 
-  return byDay.map((amount, dayIndex) => ({
-    dayIndex,
-    amount,
-    active: dayIndex === todayIdx,
-    empty: dayIndex > todayIdx,
-  }));
-}
-
-function categoryIcon(slug?: string | null): keyof typeof Ionicons.glyphMap {
-  if (!slug) return "ellipse-outline";
-  return CATEGORY_ICONS[slug] ?? "ellipse-outline";
+  return byDay.map((amount, dayIndex) => {
+    const isFuture = isCurrentWeek && dayIndex > todayIdx;
+    return {
+      dayIndex,
+      amount: isFuture ? 0 : amount,
+      active: isCurrentWeek && dayIndex === todayIdx,
+      empty: isFuture,
+    };
+  });
 }
 
 export default function HomeScreen() {
@@ -151,6 +188,9 @@ export default function HomeScreen() {
   const [prevSummary, setPrevSummary] = useState<MonthSummary | null>(null);
   const [monthExpenses, setMonthExpenses] = useState<Expense[]>([]);
   const [weekExpenses, setWeekExpenses] = useState<Expense[]>([]);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, -1 = last, …
+  const weekOffsetRef = useRef(0);
+  weekOffsetRef.current = weekOffset;
   const [recent, setRecent] = useState<Expense[]>([]);
   const [budgetPrefs, setBudgetPrefsState] = useState<BudgetPrefs>({
     mode: "auto",
@@ -172,16 +212,29 @@ export default function HomeScreen() {
   });
   const [showLeftToSpend, setShowLeftToSpend] = useState(false);
 
+  const loadWeek = useCallback(async (offset: number) => {
+    const { start, end } = weekRangeForOffset(offset);
+    try {
+      const weekList = await api.listExpenses({
+        limit: 200,
+        from: start.toISOString(),
+        to: end.toISOString(),
+      });
+      setWeekExpenses(weekList.expenses);
+    } catch {
+      /* keep previous week data */
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setError(null);
     try {
       const monthStart = new Date(cursor.year, cursor.month - 1, 1);
       const monthEnd = new Date(cursor.year, cursor.month, 0, 23, 59, 59, 999);
       const prev = new Date(cursor.year, cursor.month - 2, 1);
-      const weekStart = startOfWeekMonday();
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
+      const { start: weekStart, end: weekEnd } = weekRangeForOffset(
+        weekOffsetRef.current,
+      );
 
       // Last 3 complete-ish months before the cursor (for averages)
       const histMonths = [1, 2, 3].map((back) => {
@@ -339,7 +392,9 @@ export default function HomeScreen() {
         ? `Smart · save ${Math.round(plan.savingsRate * 100)}%`
         : plan.source === "spend-avg"
           ? "Smart · from past spend"
-          : "Smart · default";
+          : plan.incomeIncomplete
+            ? "Smart · estimate"
+            : "Smart · default";
 
   const paceLabel = (() => {
     if (plan.paceDeltaPct == null) return null;
@@ -347,17 +402,33 @@ export default function HomeScreen() {
     if (plan.isCurrentMonth) {
       if (Math.abs(p) <= 8)
         return { text: "On track this month", tone: "ok" as const };
-      if (p > 0)
+      if (p > 0) {
+        // Huge % usually means bad budget base — show ₹ over target instead
+        if (p > 200 && plan.overBy > 0) {
+          return {
+            text: `${formatINR(plan.overBy)} over pace · slow down`,
+            tone: "hot" as const,
+          };
+        }
         return {
           text: `${p}% over pace · slow down`,
           tone: "hot" as const,
         };
+      }
       return {
         text: `${Math.abs(p)}% under pace`,
         tone: "cool" as const,
       };
     }
-    if (p > 0) return { text: `Ended ${p}% over budget`, tone: "hot" as const };
+    if (p > 0) {
+      if (p > 200 && plan.overBy > 0) {
+        return {
+          text: `Ended ${formatINR(plan.overBy)} over budget`,
+          tone: "hot" as const,
+        };
+      }
+      return { text: `Ended ${p}% over budget`, tone: "hot" as const };
+    }
     if (p < 0)
       return {
         text: `Ended ${Math.abs(p)}% under budget`,
@@ -370,8 +441,41 @@ export default function HomeScreen() {
     () => buildCategorySlices(monthExpenses),
     [monthExpenses],
   );
-  const weekBars = useMemo(() => buildWeekBars(weekExpenses), [weekExpenses]);
+  const weekRange = useMemo(
+    () => weekRangeForOffset(weekOffset),
+    [weekOffset],
+  );
+  const weekBars = useMemo(
+    () => buildWeekBars(weekExpenses, weekRange.start, weekOffset),
+    [weekExpenses, weekRange.start, weekOffset],
+  );
   const weekSpent = weekBars.reduce((s, d) => s + d.amount, 0);
+  const weekTitle = formatWeekTitle(
+    weekOffset,
+    weekRange.start,
+    weekRange.end,
+  );
+
+  const shiftWeek = useCallback((delta: number) => {
+    setWeekOffset((prev) => {
+      const next = prev + delta;
+      // Don't allow weeks after the current one
+      if (next > 0) return prev;
+      // Cap how far back we go (about a year)
+      if (next < -52) return prev;
+      return next;
+    });
+  }, []);
+
+  // Load week series when the user swipes / taps arrows (not on first paint — load() covers that)
+  const weekBoot = useRef(true);
+  useEffect(() => {
+    if (weekBoot.current) {
+      weekBoot.current = false;
+      return;
+    }
+    void loadWeek(weekOffset);
+  }, [weekOffset, loadWeek]);
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
@@ -786,7 +890,19 @@ export default function HomeScreen() {
                 />
                 <View style={styles.legend}>
                   {categories.slice(0, 6).map((c) => (
-                    <View key={c.key} style={styles.legendRow}>
+                    <Pressable
+                      key={c.key}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(app)/expenses",
+                          params: { slug: c.key },
+                        })
+                      }
+                      style={({ pressed }) => [
+                        styles.legendRow,
+                        pressed && { opacity: 0.7 },
+                      ]}
+                    >
                       <View
                         style={[styles.dot, { backgroundColor: c.color }]}
                       />
@@ -810,7 +926,7 @@ export default function HomeScreen() {
                       >
                         {c.pct}%
                       </Text>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -820,7 +936,7 @@ export default function HomeScreen() {
 
         <View>
           <View style={styles.sectionHead}>
-            <Text variant="title">This week</Text>
+            <Text variant="title">{weekTitle}</Text>
             <Text
               style={{
                 fontFamily: typography.fontSansMedium,
@@ -832,7 +948,13 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Card style={{ padding: spacing.lg }}>
-            <WeekBars days={weekBars} />
+            <WeekBars
+              days={weekBars}
+              onPrevWeek={() => shiftWeek(-1)}
+              onNextWeek={() => shiftWeek(1)}
+              canGoPrev={weekOffset > -52}
+              canGoNext={weekOffset < 0}
+            />
           </Card>
         </View>
 

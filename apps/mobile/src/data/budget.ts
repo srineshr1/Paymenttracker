@@ -6,6 +6,13 @@ const PREFS_KEY = "spentd.budget_prefs";
 const DEFAULT_BUDGET = 60000;
 const DEFAULT_SAVINGS_RATE = 0.25;
 const SPEND_AVG_BUFFER = 1.05;
+/**
+ * If detected income is below this fraction of typical spend (or already-spent),
+ * treat SMS credits as incomplete and do not use them alone.
+ */
+const INCOME_VS_SPEND_MIN = 0.4;
+/** This-month income must be at least this fraction of 3-mo avg to trust it over the avg. */
+const INCOME_VS_AVG_MIN = 0.7;
 
 export type BudgetMode = "auto" | "manual";
 
@@ -25,6 +32,8 @@ export type BudgetPlan = {
   dailyAllowance: number;
   /** Positive = overspending vs linear pace; negative = under pace */
   paceDeltaPct: number | null;
+  /** Absolute ₹ over budget (spent − budget), only when spent > budget */
+  overBy: number;
   /** true when viewing the current calendar month */
   isCurrentMonth: boolean;
   source: BudgetSource;
@@ -34,6 +43,8 @@ export type BudgetPlan = {
   net: number;
   /** Income figure used for auto budget (may be avg fallback) */
   effectiveIncome: number;
+  /** True when this-month credits look too low vs spend / history */
+  incomeIncomplete: boolean;
   daysLeft: number;
   dayOfMonth: number;
   daysInMonth: number;
@@ -158,11 +169,59 @@ export function daysInMonth(year: number, month: number): number {
 }
 
 /**
+ * Choose an income base for smart budget.
+ *
+ * SMS imports often miss salary credits, so a lone small credit (e.g. ₹1,000)
+ * must not collapse the monthly budget to ₹900 when the user already spent ₹20k+.
+ */
+export function pickIncomeBase(input: {
+  incomeThisMonth: number;
+  avgIncomeLast3: number;
+  avgSpendLast3: number;
+  spentThisMonth: number;
+  isCurrentMonth: boolean;
+}): { income: number; incomplete: boolean } {
+  const incomeThis = Math.max(0, Number(input.incomeThisMonth) || 0);
+  const avgIncome = Math.max(0, Number(input.avgIncomeLast3) || 0);
+  const avgSpend = Math.max(0, Number(input.avgSpendLast3) || 0);
+  const spent = Math.max(0, Number(input.spentThisMonth) || 0);
+
+  if (incomeThis <= 0 && avgIncome <= 0) {
+    return { income: 0, incomplete: true };
+  }
+
+  // Stronger of this month vs rolling avg — partial months / late salary
+  let income = Math.max(incomeThis, avgIncome);
+
+  // Mid current month: salary often not credited yet — trust avg when this month is low
+  if (
+    input.isCurrentMonth &&
+    avgIncome > 0 &&
+    incomeThis > 0 &&
+    incomeThis < avgIncome * INCOME_VS_AVG_MIN
+  ) {
+    income = avgIncome;
+  }
+
+  // Credits look incomplete if they can't plausibly fund typical or already-observed spend
+  const spendRef = Math.max(avgSpend, spent);
+  if (income > 0 && spendRef > 0 && income < spendRef * INCOME_VS_SPEND_MIN) {
+    if (avgIncome >= spendRef * INCOME_VS_SPEND_MIN) {
+      return { income: avgIncome, incomplete: false };
+    }
+    // No trustworthy income signal — caller falls back to spend-avg / default
+    return { income: 0, incomplete: true };
+  }
+
+  return { income, incomplete: false };
+}
+
+/**
  * Pure hybrid budget calculator.
  * - manual: fixed manualBudget
- * - auto from income: income * (1 - savingsRate)
- * - auto fallback: avg last-3 spend * buffer
- * - last resort: DEFAULT_BUDGET
+ * - auto from income: effectiveIncome * (1 - savingsRate)
+ * - auto fallback: avg last-3 spend * buffer * (1 - savingsRate)
+ * - last resort: DEFAULT_BUDGET (when credits look incomplete or empty)
  */
 export function computeBudgetPlan(input: {
   incomeThisMonth: number;
@@ -192,38 +251,61 @@ export function computeBudgetPlan(input: {
   let budget: number;
   let source: BudgetSource;
   let effectiveIncome = 0;
+  let incomeIncomplete = false;
 
   if (input.prefs.mode === "manual") {
     budget = clampBudget(input.prefs.manualBudget);
     source = "manual";
-    effectiveIncome = incomeThis || avgIncome;
+    effectiveIncome = Math.max(incomeThis, avgIncome);
   } else {
-    const incomeBase = incomeThis > 0 ? incomeThis : avgIncome;
+    const picked = pickIncomeBase({
+      incomeThisMonth: incomeThis,
+      avgIncomeLast3: avgIncome,
+      avgSpendLast3: avgSpend,
+      spentThisMonth: spent,
+      isCurrentMonth,
+    });
+    incomeIncomplete = picked.incomplete;
+    const incomeBase = picked.income;
+
     if (incomeBase > 0) {
       effectiveIncome = incomeBase;
       budget = Math.max(0, Math.round(incomeBase * (1 - savingsRate)));
       source = "income";
-      if (budget <= 0) {
-        // Extreme savings rate — still show a floor from spend avg or default
-        if (avgSpend > 0) {
-          budget = Math.round(avgSpend * SPEND_AVG_BUFFER);
-          source = "spend-avg";
-        } else {
-          budget = DEFAULT_BUDGET;
-          source = "default";
-        }
+
+      // Floor: income-based budget must not be absurdly below typical spend
+      if (avgSpend > 0 && budget < avgSpend * 0.5) {
+        budget = Math.round(avgSpend * SPEND_AVG_BUFFER * (1 - savingsRate));
+        source = "spend-avg";
+        incomeIncomplete = true;
       }
     } else if (avgSpend > 0) {
-      budget = Math.round(avgSpend * SPEND_AVG_BUFFER);
+      // Apply savings rate to spend-based plan so "save 10%" still means something
+      budget = Math.round(avgSpend * SPEND_AVG_BUFFER * (1 - savingsRate));
       source = "spend-avg";
+      effectiveIncome = avgIncome;
     } else {
+      // No history and untrustworthy credits (e.g. ₹1k income, ₹22k spend)
       budget = DEFAULT_BUDGET;
       source = "default";
+      effectiveIncome = incomeThis;
+      incomeIncomplete = incomeThis > 0 || incomeIncomplete;
+    }
+
+    if (budget <= 0) {
+      if (avgSpend > 0) {
+        budget = Math.round(avgSpend * SPEND_AVG_BUFFER);
+        source = "spend-avg";
+      } else {
+        budget = DEFAULT_BUDGET;
+        source = "default";
+      }
     }
   }
 
   const remaining = budget - spent;
   const dailyAllowance = Math.max(0, remaining / daysLeft);
+  const overBy = Math.max(0, Math.round(spent - budget));
 
   let paceDeltaPct: number | null = null;
   if (budget > 0 && isCurrentMonth) {
@@ -248,12 +330,14 @@ export function computeBudgetPlan(input: {
     remaining,
     dailyAllowance,
     paceDeltaPct,
+    overBy,
     isCurrentMonth,
     source,
     savingsRate,
     mode: input.prefs.mode,
     net,
     effectiveIncome,
+    incomeIncomplete,
     daysLeft,
     dayOfMonth,
     daysInMonth: dim,

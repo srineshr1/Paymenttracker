@@ -17,10 +17,11 @@ import { AppHeader } from "@/src/components/AppHeader";
 import { DateField } from "@/src/components/DateField";
 import { Button, Input, Screen, Text } from "@/src/components/ui";
 import { applyPaymentToAccount } from "@/src/data/cash";
+import { saveExpenseChunks } from "@/src/data/expenseChunks";
 import { formatDateTime, formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
-import { dayKey, isJunk } from "@/src/features/sms/quality";
+import { dayKey, isJunk, safePaidAtIso } from "@/src/features/sms/quality";
 
 type Row = ParsedExpense & { id: string; notes?: string | null };
 
@@ -178,9 +179,7 @@ export default function ImportSelectScreen() {
         merchant: (r.merchant ?? "").trim(),
         amount: String(r.amount).replace(/,/g, ""),
         direction: r.direction ?? "debit",
-        paidAt: r.paidAt
-          ? new Date(r.paidAt).toISOString()
-          : new Date().toISOString(),
+        paidAt: safePaidAtIso(r.paidAt),
         source:
           r.source === "phonepe" || r.source === "gpay" || r.source === "sms"
             ? r.source
@@ -190,22 +189,15 @@ export default function ImportSelectScreen() {
         rawOcrText: r.rawText || params.rawText || null,
       }));
 
-      const CHUNK = 80;
-      let created = 0;
-      let skipped = 0;
-      let failed = 0;
-      for (let i = 0; i < payload.length; i += CHUNK) {
-        const chunk = payload.slice(i, i + CHUNK);
-        if (payload.length > CHUNK) {
-          setStatus(
-            `Saving ${Math.min(i + CHUNK, payload.length)} of ${payload.length}…`,
-          );
-        }
-        const res = await api.createExpensesBatch(chunk);
-        created += res.created;
-        skipped += res.skipped;
-        failed += res.failed;
-      }
+      const batchRes = await saveExpenseChunks(
+        payload,
+        (chunk) => api.createExpensesBatch(chunk),
+        {
+          onProgress: (msg) => setStatus(msg.replace(/^Importing/, "Saving")),
+          yieldBetween: true,
+        },
+      );
+      const { created, skipped, failed, partial, error: chunkError } = batchRes;
 
       // Newest absolute bank balance from this batch (if any SMS include Avl Bal)
       const withBal = unique
@@ -228,16 +220,25 @@ export default function ImportSelectScreen() {
         }
       }
 
+      if (chunkError && !partial && created === 0 && skipped === 0 && failed === 0) {
+        throw chunkError;
+      }
+
       const parts = [
         created > 0 ? `Added ${created}` : null,
         skipped > 0
           ? `skipped ${skipped} duplicate${skipped === 1 ? "" : "s"}`
           : null,
         failed > 0 ? `${failed} failed` : null,
+        partial || chunkError ? "stopped early (partial save)" : null,
       ].filter(Boolean);
 
       Alert.alert(
-        created > 0 ? "Import complete" : "Nothing new added",
+        partial || chunkError
+          ? "Import partially complete"
+          : created > 0
+            ? "Import complete"
+            : "Nothing new added",
         parts.join(" · ") || "No changes",
         [{ text: "OK", onPress: () => router.replace("/(app)") }],
       );

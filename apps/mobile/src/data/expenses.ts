@@ -536,3 +536,46 @@ export async function listCategories(): Promise<{ categories: Category[] }> {
     })),
   };
 }
+
+/**
+ * Assign categories to expenses that still have category_id null,
+ * using merchant (+ raw OCR) heuristics. Safe to call after SMS re-import.
+ */
+export async function backfillMissingCategories(): Promise<number> {
+  const userId = await requireUserId();
+  const db = await getDb();
+  const rows = await db.getAllAsync<ExpenseRow>(
+    `SELECT * FROM expenses
+     WHERE user_id = ? AND category_id IS NULL
+     ORDER BY paid_at DESC
+     LIMIT 2000`,
+    userId,
+  );
+  if (!rows.length) return 0;
+
+  // Lazy import avoids circular deps (categorize → listCategories → here)
+  const { resolveCategoryId } = await import(
+    "@/src/features/sms/categorize"
+  );
+
+  let updated = 0;
+  const now = new Date().toISOString();
+  for (const row of rows) {
+    const merchant = (await openString(row.merchant_enc)) ?? "";
+    const raw = await openString(row.raw_ocr_enc);
+    const direction =
+      row.direction === "credit" ? ("credit" as const) : ("debit" as const);
+    const categoryId = await resolveCategoryId(merchant, direction, raw);
+    if (!categoryId) continue;
+    await db.runAsync(
+      `UPDATE expenses SET category_id = ?, updated_at = ?
+       WHERE id = ? AND user_id = ? AND category_id IS NULL`,
+      categoryId,
+      now,
+      row.id,
+      userId,
+    );
+    updated += 1;
+  }
+  return updated;
+}

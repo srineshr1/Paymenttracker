@@ -292,8 +292,10 @@ export function BudgetSheet({
               }}
             >
               <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-                Smart budget uses income this month (or recent average), then
-                sets spendable money after your savings rate.
+                Smart budget uses the stronger of this month’s credits and your
+                recent average income, then sets spendable money after your
+                savings rate. Sparse SMS credits fall back to past spend or a
+                safe default so one small credit can’t collapse the budget.
               </Text>
 
               <View style={{ gap: spacing.sm }}>
@@ -384,9 +386,9 @@ export function BudgetSheet({
                     })}
                   </View>
                   <Text muted style={{ fontSize: 12, lineHeight: 18 }}>
-                    Spendable ≈ {formatINR(autoBudgetPreview)} (income ×{" "}
-                    {Math.round((1 - savingsRate) * 100)}%)
-                    {savingsRate === DEFAULT_SAVINGS_RATE ? " · default" : ""}
+                    Spendable ≈ {formatINR(autoBudgetPreview)} after saving{" "}
+                    {Math.round(savingsRate * 100)}%
+                    {savingsRate === DEFAULT_SAVINGS_RATE ? " · default rate" : ""}
                   </Text>
                 </View>
               ) : (

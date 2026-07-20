@@ -5,9 +5,18 @@ import {
   type SmsMessageInput,
 } from "@paymenttracker/shared";
 import { applyPaymentToAccount } from "@/src/data/cash";
-import { createExpensesBatch } from "@/src/data/expenses";
+import { saveExpenseChunks } from "@/src/data/expenseChunks";
+import {
+  createExpensesBatch,
+  backfillMissingCategories,
+} from "@/src/data/expenses";
+import { resolveCategoryId } from "./categorize";
 import { listInboxSms, type ListInboxOptions } from "./readInbox";
-import { dayKey, isJunk } from "./quality";
+import {
+  dayKey,
+  isJunkForAutoImport,
+  safePaidAtIso,
+} from "./quality";
 
 export type ImportSmsResult = {
   parsed: ParsedExpense[];
@@ -21,21 +30,26 @@ export type BulkImportSmsResult = {
   failed: number;
   scanned: number;
   paymentLike: number;
+  /** Total parses returned by the SMS parser (pre-filter). */
+  parsed: number;
+  /** Count dropped by quality filter (junk / pending / low confidence). */
+  junked: number;
+  /** Unique good rows after client dedupe (attempted for save). */
   considered: number;
+  /** True if a mid-batch chunk threw after earlier chunks saved. */
+  partial: boolean;
 };
-
-const CHUNK = 80;
 
 /**
  * Read the Android SMS inbox on-device and parse payment-like messages.
  * Nothing is uploaded — only structured expenses are returned.
  */
 export async function importPaymentsFromSms(
-  options: ListInboxOptions = {}
+  options: ListInboxOptions = {},
 ): Promise<ImportSmsResult> {
   const messages: SmsMessageInput[] = await listInboxSms(options);
   const paymentLike = messages.filter((m) =>
-    isPaymentSms(m.body, m.address)
+    isPaymentSms(m.body, m.address),
   ).length;
   const parsed = parseSmsMessages(messages, {
     minConfidence: 0.35,
@@ -49,22 +63,43 @@ export async function importPaymentsFromSms(
   };
 }
 
-function toBatchPayload(rows: ParsedExpense[]) {
-  return rows.map((r) => ({
-    merchant: (r.merchant ?? "").trim(),
-    amount: String(r.amount).replace(/,/g, ""),
-    direction: r.direction ?? "debit",
-    paidAt: r.paidAt
-      ? new Date(r.paidAt).toISOString()
-      : new Date().toISOString(),
-    source:
-      r.source === "phonepe" || r.source === "gpay" || r.source === "sms"
-        ? r.source
-        : ("sms" as const),
-    upiRef: r.upiRef ?? null,
-    notes: null,
-    rawOcrText: r.rawText || null,
-  }));
+async function toBatchPayload(rows: ParsedExpense[]) {
+  const out: Record<string, unknown>[] = [];
+  for (const r of rows) {
+    const merchant = (r.merchant ?? "").trim();
+    const direction = r.direction ?? "debit";
+    const categoryId = await resolveCategoryId(
+      merchant,
+      direction,
+      r.rawText,
+    );
+    out.push({
+      merchant,
+      amount: String(r.amount).replace(/,/g, ""),
+      direction,
+      paidAt: safePaidAtIso(r.paidAt),
+      source:
+        r.source === "phonepe" || r.source === "gpay" || r.source === "sms"
+          ? r.source
+          : ("sms" as const),
+      upiRef: r.upiRef ?? null,
+      notes: null,
+      rawOcrText: r.rawText || null,
+      categoryId,
+    });
+  }
+  return out;
+}
+
+function newestWithBalance(rows: ParsedExpense[]): ParsedExpense | null {
+  const withBal = rows
+    .filter((r) => r.availableBalance)
+    .sort((a, b) => {
+      const ta = a.paidAt ? Date.parse(a.paidAt) : 0;
+      const tb = b.paidAt ? Date.parse(b.paidAt) : 0;
+      return tb - ta;
+    });
+  return withBal[0] ?? null;
 }
 
 /**
@@ -73,7 +108,7 @@ function toBatchPayload(rows: ParsedExpense[]) {
  */
 export async function importAndSavePaymentsFromSms(
   options: ListInboxOptions = {},
-  onProgress?: (status: string) => void
+  onProgress?: (status: string) => void,
 ): Promise<BulkImportSmsResult> {
   onProgress?.("Scanning messages…");
   const { parsed, scanned, paymentLike } = await importPaymentsFromSms({
@@ -82,18 +117,33 @@ export async function importAndSavePaymentsFromSms(
     minDateMs: options.minDateMs,
   });
 
+  const empty = (): BulkImportSmsResult => ({
+    created: 0,
+    skipped: 0,
+    failed: 0,
+    scanned,
+    paymentLike,
+    parsed: parsed.length,
+    junked: 0,
+    considered: 0,
+    partial: false,
+  });
+
   if (!parsed.length) {
-    return {
-      created: 0,
-      skipped: 0,
-      failed: 0,
-      scanned,
-      paymentLike,
-      considered: 0,
-    };
+    try {
+      onProgress?.("Updating categories…");
+      await backfillMissingCategories();
+    } catch {
+      /* best-effort */
+    }
+    return empty();
   }
 
-  const good = parsed.filter((p) => !isJunk(p));
+  // Balance from all payment parses (including junk), matching live auto-import
+  const balanceSource = newestWithBalance(parsed);
+
+  const good = parsed.filter((p) => !isJunkForAutoImport(p));
+  const junked = parsed.length - good.length;
 
   // Client-side dedupe (merchant|amount|day) before hitting the DB
   const keys = new Set<string>();
@@ -104,60 +154,86 @@ export async function importAndSavePaymentsFromSms(
     return true;
   });
 
-  if (!unique.length) {
-    return {
-      created: 0,
-      skipped: 0,
-      failed: 0,
-      scanned,
-      paymentLike,
-      considered: 0,
-    };
-  }
-
-  onProgress?.(
-    unique.length === 1
-      ? "Found 1 payment — importing…"
-      : `Found ${unique.length} payments — importing…`
-  );
-
   let created = 0;
   let skipped = 0;
   let failed = 0;
-  const payload = toBatchPayload(unique);
+  let partial = false;
 
-  for (let i = 0; i < payload.length; i += CHUNK) {
-    const chunk = payload.slice(i, i + CHUNK);
-    if (payload.length > CHUNK) {
-      const from = i + 1;
-      const to = Math.min(i + CHUNK, payload.length);
-      onProgress?.(`Importing ${from}–${to} of ${payload.length}…`);
+  if (unique.length) {
+    onProgress?.(
+      unique.length === 1
+        ? "Found 1 payment — importing…"
+        : `Found ${unique.length} payments — importing…`,
+    );
+
+    onProgress?.("Categorizing payments…");
+    const payload = await toBatchPayload(unique);
+
+    const batchRes = await saveExpenseChunks(payload, createExpensesBatch, {
+      onProgress,
+      yieldBetween: true,
+    });
+    created = batchRes.created;
+    skipped = batchRes.skipped;
+    failed = batchRes.failed;
+    partial = batchRes.partial;
+
+    if (batchRes.error) {
+      // Still try balance + category backfill, then surface partial to caller
+      if (balanceSource?.availableBalance && balanceSource.amount) {
+        try {
+          await applyPaymentToAccount({
+            amount: balanceSource.amount,
+            direction: balanceSource.direction ?? "debit",
+            paidAt: balanceSource.paidAt,
+            availableBalance: balanceSource.availableBalance,
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
+      try {
+        onProgress?.("Updating categories…");
+        await backfillMissingCategories();
+      } catch {
+        /* best-effort */
+      }
+      // Re-throw only when nothing was saved; otherwise return partial totals
+      if (!partial && created === 0 && skipped === 0 && failed === 0) {
+        throw batchRes.error;
+      }
+      return {
+        created,
+        skipped,
+        failed,
+        scanned,
+        paymentLike,
+        parsed: parsed.length,
+        junked,
+        considered: unique.length,
+        partial: true,
+      };
     }
-    const res = await createExpensesBatch(chunk);
-    created += res.created;
-    skipped += res.skipped;
-    failed += res.failed;
   }
 
-  // Newest absolute bank balance from this batch (if any SMS include Avl Bal)
-  const withBal = unique
-    .filter((r) => r.availableBalance)
-    .sort((a, b) => {
-      const ta = a.paidAt ? Date.parse(a.paidAt) : 0;
-      const tb = b.paidAt ? Date.parse(b.paidAt) : 0;
-      return tb - ta;
-    });
-  if (withBal[0]?.availableBalance && withBal[0].amount) {
+  if (balanceSource?.availableBalance && balanceSource.amount) {
     try {
       await applyPaymentToAccount({
-        amount: withBal[0].amount,
-        direction: withBal[0].direction ?? "debit",
-        paidAt: withBal[0].paidAt,
-        availableBalance: withBal[0].availableBalance,
+        amount: balanceSource.amount,
+        direction: balanceSource.direction ?? "debit",
+        paidAt: balanceSource.paidAt,
+        availableBalance: balanceSource.availableBalance,
       });
     } catch {
       /* best-effort */
     }
+  }
+
+  try {
+    onProgress?.("Updating categories…");
+    await backfillMissingCategories();
+  } catch {
+    /* best-effort */
   }
 
   return {
@@ -166,6 +242,9 @@ export async function importAndSavePaymentsFromSms(
     failed,
     scanned,
     paymentLike,
+    parsed: parsed.length,
+    junked,
     considered: unique.length,
+    partial,
   };
 }

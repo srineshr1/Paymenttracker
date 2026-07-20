@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Alert, Platform, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Screen, Text } from "@/src/components/ui";
@@ -28,25 +28,54 @@ export default function SmsConsentScreen() {
     setStatus(null);
     try {
       if (enable && Platform.OS === "android") {
+        // Backfill first (requests SMS permission via inbox read), then enable
+        // live listening — same order as Import → SMS, avoids catch-up races.
+        let backfillError: string | null = null;
+        let liveEnabled = false;
+
+        try {
+          setStatus("Importing past payments…");
+          const result = await importAndSavePaymentsFromSms(
+            { lookbackDays: 90, maxCount: 2000 },
+            (msg) => setStatus(msg),
+          );
+          if (result.partial && result.created > 0) {
+            backfillError = `Imported ${result.created} payments, then hit an error mid-batch.`;
+          }
+        } catch (e) {
+          backfillError =
+            e instanceof Error
+              ? e.message
+              : "Could not import past messages.";
+        }
+
         try {
           setStatus("Turning on SMS import…");
           await enableSmsAutoImport();
+          liveEnabled = true;
         } catch {
           // Permission denied or Expo Go — keep preference off
           await setSmsAutoImportEnabled(false);
         }
-        // Backfill last 90 days so the dashboard is ready immediately
-        try {
-          await importAndSavePaymentsFromSms(
-            { lookbackDays: 90, maxCount: 2000 },
-            (msg) => setStatus(msg)
+
+        await clearSmsConsentPending();
+
+        if (backfillError) {
+          Alert.alert(
+            liveEnabled ? "SMS watching is on" : "Import incomplete",
+            liveEnabled
+              ? `Past messages could not be fully imported — try Import → SMS later.\n\n${backfillError}`
+              : backfillError,
+            [{ text: "OK", onPress: () => router.replace("/(app)") }],
           );
-        } catch {
-          /* bulk fail still lands on home; live auto-import may still work */
+          return;
         }
-      } else {
-        await disableSmsAutoImport();
+
+        router.replace("/(app)");
+        return;
       }
+
+      await disableSmsAutoImport();
       await clearSmsConsentPending();
       router.replace("/(app)");
     } finally {
