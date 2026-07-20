@@ -2,16 +2,6 @@ name: Build APK
 
 on:
   workflow_dispatch:
-    inputs:
-      profile:
-        description: "EAS build profile"
-        required: true
-        default: preview
-        type: choice
-        options:
-          - development
-          - preview
-          - production
   push:
     tags:
       - "v*"
@@ -22,6 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -30,99 +21,79 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
-      - run: npm run build -w @paymenttracker/shared
-
-      - uses: expo/expo-github-action@v8
+      - uses: actions/setup-java@v4
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          distribution: temurin
+          java-version: "17"
 
-      - name: Resolve build profile
-        id: profile
-        run: |
-          PROFILE="${{ github.event.inputs.profile || 'preview' }}"
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            PROFILE="production"
-          fi
-          echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Build APK with EAS
-        id: build
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build -w @paymenttracker/shared
+
+      - name: Prebuild Android project
         working-directory: apps/mobile
         run: |
-          eas build \
-            --platform android \
-            --profile "${{ steps.profile.outputs.profile }}" \
-            --non-interactive \
-            --no-wait \
-            --json > /tmp/eas-build.json
-          cat /tmp/eas-build.json
-          BUILD_ID=$(node -e "const d=require('/tmp/eas-build.json'); console.log(Array.isArray(d)?d[0].id:d.id)")
-          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+          if [ ! -f .env ]; then
+            echo "EXPO_PUBLIC_API_URL=https://api.example.com" > .env
+          fi
+          npx expo prebuild --platform android --non-interactive
 
-      - name: Wait for build and download APK
-        working-directory: apps/mobile
+      - name: Build release APK
+        working-directory: apps/mobile/android
         run: |
-          BUILD_ID="${{ steps.build.outputs.build_id }}"
-          echo "Waiting for build $BUILD_ID..."
-          for i in $(seq 1 90); do
-            eas build:view "$BUILD_ID" --json > /tmp/eas-status.json
-            STATUS=$(node -e "console.log(require('/tmp/eas-status.json').status)")
-            echo "Status: $STATUS (attempt $i)"
-            if [ "$STATUS" = "FINISHED" ]; then
-              break
-            fi
-            if [ "$STATUS" = "ERRORED" ] || [ "$STATUS" = "CANCELED" ]; then
-              echo "Build failed with status: $STATUS"
-              cat /tmp/eas-status.json
-              exit 1
-            fi
-            sleep 60
-          done
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
 
-          STATUS=$(node -e "console.log(require('/tmp/eas-status.json').status)")
-          if [ "$STATUS" != "FINISHED" ]; then
-            echo "Timed out waiting for build"
-            exit 1
-          fi
-
-          APK_URL=$(node -e "console.log(require('/tmp/eas-status.json').artifacts?.buildUrl || '')")
-          if [ -z "$APK_URL" ]; then
-            echo "No APK URL found"
-            cat /tmp/eas-status.json
-            exit 1
-          fi
-
+      - name: Prepare APK
+        id: apk
+        run: |
           mkdir -p /tmp/release
-          curl -L "$APK_URL" -o /tmp/release/spentd.apk
-          ls -lh /tmp/release/spentd.apk
+          SRC=$(find apps/mobile/android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          if [ -z "$SRC" ]; then
+            echo "APK not found"
+            find apps/mobile/android/app/build/outputs -type f
+            exit 1
+          fi
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            NAME="spentd-${GITHUB_REF_NAME}.apk"
+          else
+            NAME="spentd-build-${{ github.run_number }}.apk"
+          fi
+          cp "$SRC" "/tmp/release/$NAME"
+          ls -lh "/tmp/release/$NAME"
+          echo "path=/tmp/release/$NAME" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: spentd-apk
-          path: /tmp/release/spentd.apk
+          path: ${{ steps.apk.outputs.path }}
           retention-days: 30
 
-      - name: Create GitHub Release
+      - name: Publish GitHub Release (tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: /tmp/release/spentd.apk
+          files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create draft release (manual run)
+      - name: Publish GitHub Release (manual)
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
           name: "Spentd APK #${{ github.run_number }}"
-          files: /tmp/release/spentd.apk
+          files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
           draft: false
           prerelease: true
