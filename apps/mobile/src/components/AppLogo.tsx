@@ -1,5 +1,4 @@
 import { Image, StyleSheet, View, type ViewStyle } from "react-native";
-import { radius } from "@/src/design/tokens";
 
 const logo = require("../../assets/images/logo.png");
 
@@ -12,6 +11,7 @@ type Props = {
 };
 
 export function AppLogo({ size = 56, style, rounded = true }: Props) {
+  const r = rounded ? Math.round(size * 0.225) : 0;
   return (
     <View
       style={[
@@ -19,14 +19,14 @@ export function AppLogo({ size = 56, style, rounded = true }: Props) {
         {
           width: size,
           height: size,
-          borderRadius: rounded ? Math.round(size * 0.22) : 0,
+          borderRadius: r,
         },
         style,
       ]}
     >
       <Image
         source={logo}
-        style={{ width: size, height: size }}
+        style={{ width: size, height: size, borderRadius: r }}
         resizeMode="cover"
         accessibilityLabel="Spentd"
       />
@@ -42,6 +42,5 @@ export function AppLogoMark({ size = 28, style }: Omit<Props, "rounded">) {
 const styles = StyleSheet.create({
   wrap: {
     overflow: "hidden",
-    borderRadius: radius.md,
   },
 });

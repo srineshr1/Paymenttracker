@@ -1,8 +1,20 @@
-<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="512" height="512" fill="#0B0C0E"/>
-  <path d="M256,110 A72,72 0 0,0 256,256 A72,72 0 0,1 256,402"
-        fill="none"
-        stroke="#34D399"
-        stroke-width="40"
-        stroke-linecap="round"/>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Transparent canvas — only the mark. Splash bg is set in app.json. -->
+  <defs>
+    <linearGradient id="sGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EF0B8"/>
+      <stop offset="55%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#2BBF88"/>
+    </linearGradient>
+  </defs>
+  <path
+    d="M512 220
+       A 136 136 0 0 0 512 512
+       A 136 136 0 0 1 512 804"
+    fill="none"
+    stroke="url(#sGrad)"
+    stroke-width="88"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>

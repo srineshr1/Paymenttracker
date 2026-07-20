@@ -1,8 +1,22 @@
-<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0" y="0" width="512" height="512" rx="115" fill="#14151A"/>
-  <path d="M256,68 A94,94 0 0,0 256,256 A94,94 0 0,1 256,444"
-        fill="none"
-        stroke="#34D399"
-        stroke-width="48"
-        stroke-linecap="round"/>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Full app mark: soft dark tile + mint S (matches product icon) -->
+  <defs>
+    <linearGradient id="sGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EF0B8"/>
+      <stop offset="55%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#2BBF88"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="#0E1014"/>
+  <!-- Continuous S: two semicircles, round caps, optical center -->
+  <path
+    d="M512 188
+       A 148 148 0 0 0 512 512
+       A 148 148 0 0 1 512 836"
+    fill="none"
+    stroke="url(#sGrad)"
+    stroke-width="92"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>

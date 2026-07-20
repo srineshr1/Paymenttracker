@@ -1,8 +1,21 @@
-<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <!-- Transparent canvas; mark inset for Android adaptive safe zone -->
-  <path d="M256,96 A78,78 0 0,0 256,256 A78,78 0 0,1 256,416"
-        fill="none"
-        stroke="#34D399"
-        stroke-width="44"
-        stroke-linecap="round"/>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Adaptive foreground: transparent, mark stays in 66% safe zone -->
+  <defs>
+    <linearGradient id="sGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5EF0B8"/>
+      <stop offset="55%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#2BBF88"/>
+    </linearGradient>
+  </defs>
+  <!-- Inset so mask doesn't clip the S -->
+  <path
+    d="M512 250
+       A 118 118 0 0 0 512 512
+       A 118 118 0 0 1 512 774"
+    fill="none"
+    stroke="url(#sGrad)"
+    stroke-width="78"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
 </svg>

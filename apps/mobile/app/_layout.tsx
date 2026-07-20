@@ -25,9 +25,10 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
+import { BrandLoading, BRAND_SPLASH_BG } from "@/src/components/BrandLoading";
 import { ThemeProvider, useTheme } from "@/src/design/ThemeContext";
 import { AuthProvider, useAuth } from "@/src/features/auth/AuthContext";
 import { isSmsConsentPending } from "@/src/features/sms/prefs";
@@ -97,15 +98,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // but never leaves the user staring at a cached dashboard.
   if (!ready || (!token && !inAuth)) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <ActivityIndicator color={colors.accent} />
+      <View style={{ flex: 1, backgroundColor: BRAND_SPLASH_BG }}>
+        <BrandLoading caption={!ready ? "Unlocking…" : "Opening…"} />
         {/* Keep children mounted so expo-router can apply replace() */}
         <View
           style={{ width: 0, height: 0, overflow: "hidden" }}

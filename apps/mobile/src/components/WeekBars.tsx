@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useMemo, useState } from "react";
 import { LayoutChangeEvent, Pressable, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { LineChart } from "react-native-gifted-charts";
 import { runOnJS } from "react-native-reanimated";
 import { Text } from "@/src/components/ui";
 import { formatINRCompact } from "@/src/design/format";
@@ -22,51 +23,11 @@ export type WeekDayBar = {
 
 type Props = {
   days: WeekDayBar[];
-  /** Called when user swipes to another week */
   onPrevWeek?: () => void;
   onNextWeek?: () => void;
   canGoPrev?: boolean;
   canGoNext?: boolean;
 };
-
-type Pt = { x: number; y: number; amount: number; empty: boolean; active: boolean };
-
-function LineSegment({
-  x1,
-  y1,
-  x2,
-  y2,
-  color,
-}: {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  color: string;
-}) {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.sqrt(dx * dx + dy * dy);
-  if (length < 0.5) return null;
-  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: "absolute",
-        left: midX - length / 2,
-        top: midY - 1.25,
-        width: length,
-        height: 2.5,
-        borderRadius: 2,
-        backgroundColor: color,
-        transform: [{ rotate: `${angle}deg` }],
-      }}
-    />
-  );
-}
 
 export function WeekBars({
   days,
@@ -75,34 +36,8 @@ export function WeekBars({
   canGoPrev = true,
   canGoNext = false,
 }: Props) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [width, setWidth] = useState(0);
-  const chartH = 132;
-  const padX = 10;
-  const padTop = 22;
-  const padBottom = 10;
-  const plotH = chartH - padTop - padBottom;
-
-  const max = Math.max(1, ...days.map((d) => (d.empty ? 0 : d.amount)));
-
-  const points: Pt[] = useMemo(() => {
-    if (width <= 0 || days.length === 0) return [];
-    const innerW = width - padX * 2;
-    const n = days.length;
-    return days.map((d, i) => {
-      const x = padX + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
-      const ratio = d.empty || d.amount <= 0 ? 0 : d.amount / max;
-      // Zero-spend days sit on the baseline; future days too
-      const y = padTop + plotH * (1 - ratio);
-      return {
-        x,
-        y,
-        amount: d.amount,
-        empty: !!d.empty,
-        active: !!d.active,
-      };
-    });
-  }, [days, width, max, padX, padTop, plotH]);
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     setWidth(e.nativeEvent.layout.width);
@@ -117,25 +52,55 @@ export function WeekBars({
   }, [canGoNext, onNextWeek]);
 
   const pan = Gesture.Pan()
-    .activeOffsetX([-24, 24])
-    .failOffsetY([-16, 16])
+    .activeOffsetX([-28, 28])
+    .failOffsetY([-18, 18])
     .onEnd((e) => {
       "worklet";
-      if (e.translationX > 48) {
-        runOnJS(goPrev)();
-      } else if (e.translationX < -48) {
-        runOnJS(goNext)();
-      }
+      if (e.translationX > 52) runOnJS(goPrev)();
+      else if (e.translationX < -52) runOnJS(goNext)();
     });
 
-  // Only connect consecutive non-future points (include zero days so the line continues)
-  const segments: { a: Pt; b: Pt }[] = [];
-  for (let i = 0; i < points.length - 1; i++) {
-    const a = points[i];
-    const b = points[i + 1];
-    if (a.empty || b.empty) continue;
-    segments.push({ a, b });
-  }
+  const maxVal = Math.max(1, ...days.map((d) => (d.empty ? 0 : d.amount)));
+  // Nice headroom so the peak doesn’t clip
+  const chartMax = Math.ceil(maxVal * 1.18) || 1;
+
+  const chartData = useMemo(
+    () =>
+      days.map((d) => {
+        const value = d.empty ? 0 : d.amount;
+        const isPeak = !d.empty && value > 0 && value === maxVal;
+        const showLabel = d.active || isPeak;
+        return {
+          value,
+          label: DAY_LABELS[d.dayIndex],
+          labelTextStyle: {
+            color: d.active ? colors.accentStrong : colors.textMuted,
+            fontFamily: d.active
+              ? typography.fontSansSemi
+              : typography.fontSans,
+            fontSize: 11,
+          },
+          dataPointColor: d.empty
+            ? "transparent"
+            : d.active
+              ? colors.accentStrong
+              : colors.accent,
+          dataPointRadius: d.empty ? 0 : d.active ? 6 : 4.5,
+          hideDataPoint: !!d.empty,
+          // Peak / today amount bubble
+          dataPointText: showLabel && value > 0 ? formatINRCompact(value) : "",
+          textColor: colors.textSecondary,
+          textFontSize: 10,
+          textShiftY: -10,
+          textShiftX: -6,
+        };
+      }),
+    [days, colors, maxVal],
+  );
+
+  // Chart width: full card minus a little; gifted-charts draws y-axis gutter
+  const chartWidth = Math.max(0, width - 8);
+  const hasSpend = days.some((d) => !d.empty && d.amount > 0);
 
   return (
     <View style={styles.wrap}>
@@ -176,127 +141,199 @@ export function WeekBars({
       </View>
 
       <GestureDetector gesture={pan}>
-        <View style={styles.gestureArea} onLayout={onLayout}>
-          <View style={[styles.chart, { height: chartH }]}>
-            {/* subtle baseline */}
-            {width > 0 ? (
-              <View
-                pointerEvents="none"
-                style={[
-                  styles.baseline,
-                  {
-                    top: padTop + plotH,
-                    left: padX,
-                    right: padX,
-                    backgroundColor: colors.border,
-                  },
-                ]}
-              />
-            ) : null}
-
-            {/* connecting lines */}
-            {segments.map(({ a, b }, i) => (
-              <LineSegment
-                key={`seg-${i}`}
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
+        <View style={styles.chartHost} onLayout={onLayout}>
+          {width > 0 ? (
+            hasSpend ? (
+              <LineChart
+                key={days.map((d) => d.amount).join("-")}
+                data={chartData}
+                areaChart
+                curved
+                curvature={0.18}
+                height={148}
+                width={chartWidth}
+                adjustToWidth
+                initialSpacing={12}
+                endSpacing={12}
+                maxValue={chartMax}
+                noOfSections={3}
+                hideRules={false}
+                rulesType="dashed"
+                rulesColor={
+                  isDark ? "rgba(244,240,232,0.08)" : "rgba(20,22,28,0.08)"
+                }
+                rulesThickness={1}
+                dashWidth={4}
+                dashGap={6}
+                yAxisThickness={0}
+                xAxisThickness={0}
+                yAxisColor="transparent"
+                xAxisColor="transparent"
+                hideYAxisText
+                yAxisLabelWidth={0}
+                disableScroll
+                isAnimated
+                animateOnDataChange
+                onDataChangeAnimationDuration={420}
                 color={colors.accent}
-              />
-            ))}
-
-            {/* dots + amount labels */}
-            {points.map((p, i) => {
-              const d = days[i];
-              const showAmt = !p.empty && p.amount > 0 && (p.active || p.amount === max);
-              const size = p.active ? 12 : 9;
-              return (
-                <View key={d.dayIndex} pointerEvents="none">
-                  {showAmt ? (
-                    <Text
-                      style={{
-                        position: "absolute",
-                        left: p.x - 28,
-                        top: Math.max(0, p.y - 20),
-                        width: 56,
-                        textAlign: "center",
-                        fontFamily: typography.fontSansMedium,
-                        fontSize: 10,
-                        color: colors.textSecondary,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {formatINRCompact(p.amount)}
-                    </Text>
-                  ) : null}
-
-                  {p.empty ? (
-                    <View
-                      style={{
-                        position: "absolute",
-                        left: p.x - 5,
-                        top: p.y - 5,
-                        width: 10,
-                        height: 10,
-                        borderRadius: 5,
-                        borderWidth: 1.5,
-                        borderStyle: "dashed",
-                        borderColor: colors.borderStrong,
-                        backgroundColor: "transparent",
-                      }}
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        position: "absolute",
-                        left: p.x - size / 2,
-                        top: p.y - size / 2,
-                        width: size,
-                        height: size,
-                        borderRadius: size / 2,
-                        backgroundColor:
-                          p.amount > 0
-                            ? p.active
-                              ? colors.accentStrong
-                              : colors.accent
-                            : colors.bgMuted,
-                        borderWidth: p.amount > 0 ? 2 : 1.5,
-                        borderColor:
-                          p.amount > 0 ? colors.bgCard : colors.borderStrong,
-                        shadowColor: colors.accent,
-                        shadowOpacity: p.active ? 0.45 : 0,
-                        shadowRadius: 6,
-                        shadowOffset: { width: 0, height: 0 },
-                        elevation: p.active ? 3 : 0,
-                      }}
-                    />
-                  )}
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={styles.labels}>
-            {days.map((d) => (
-              <Text
-                key={d.dayIndex}
-                style={{
-                  flex: 1,
-                  textAlign: "center",
-                  fontFamily: d.active
-                    ? typography.fontSansSemi
-                    : typography.fontSans,
-                  fontSize: 11,
-                  color: d.active ? colors.accentStrong : colors.textMuted,
+                thickness={2.75}
+                startFillColor={colors.accent}
+                endFillColor={colors.accent}
+                startOpacity={isDark ? 0.38 : 0.28}
+                endOpacity={0.02}
+                dataPointsHeight={12}
+                dataPointsWidth={12}
+                dataPointsRadius={4.5}
+                dataPointsColor={colors.accent}
+                focusedDataPointRadius={7}
+                focusedDataPointColor={colors.accentStrong}
+                textFontSize={10}
+                textColor={colors.textSecondary}
+                backgroundColor="transparent"
+                overflowTop={18}
+                overflowBottom={4}
+                // Soft glow pointer on press
+                pointerConfig={{
+                  pointerStripHeight: 130,
+                  pointerStripColor: isDark
+                    ? "rgba(201,164,108,0.22)"
+                    : "rgba(154,107,47,0.18)",
+                  pointerStripWidth: 2,
+                  pointerColor: colors.accentStrong,
+                  radius: 6,
+                  pointerLabelWidth: 88,
+                  pointerLabelHeight: 36,
+                  activatePointersOnLongPress: false,
+                  autoAdjustPointerLabelPosition: true,
+                  pointerLabelComponent: (items: { value?: number }[]) => {
+                    const v = items?.[0]?.value ?? 0;
+                    return (
+                      <View
+                        style={[
+                          styles.pointerLabel,
+                          {
+                            backgroundColor: colors.bgElevated,
+                            borderColor: colors.borderStrong,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: typography.fontSansSemi,
+                            fontSize: 12,
+                            color: colors.text,
+                          }}
+                        >
+                          {formatINRCompact(v)}
+                        </Text>
+                      </View>
+                    );
+                  },
                 }}
-              >
-                {DAY_LABELS[d.dayIndex]}
-              </Text>
-            ))}
-          </View>
+              />
+            ) : (
+              <EmptyWeekChart
+                days={days}
+                width={chartWidth}
+                colors={colors}
+                isDark={isDark}
+              />
+            )
+          ) : (
+            <View style={{ height: 168 }} />
+          )}
         </View>
       </GestureDetector>
+    </View>
+  );
+}
+
+/** Zero-spend state: soft baseline + day labels, not a flat broken line. */
+function EmptyWeekChart({
+  days,
+  width,
+  colors,
+  isDark,
+}: {
+  days: WeekDayBar[];
+  width: number;
+  colors: ReturnType<typeof useTheme>["colors"];
+  isDark: boolean;
+}) {
+  return (
+    <View style={{ width, height: 168, justifyContent: "flex-end" }}>
+      <View
+        style={[
+          styles.emptyPlot,
+          {
+            borderColor: isDark
+              ? "rgba(244,240,232,0.08)"
+              : "rgba(20,22,28,0.08)",
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.emptyLine,
+            {
+              backgroundColor: isDark
+                ? "rgba(201,164,108,0.25)"
+                : "rgba(154,107,47,0.22)",
+            },
+          ]}
+        />
+        <View style={styles.emptyDots}>
+          {days.map((d) => (
+            <View
+              key={d.dayIndex}
+              style={[
+                styles.emptyDot,
+                {
+                  backgroundColor: d.active
+                    ? colors.accent
+                    : d.empty
+                      ? "transparent"
+                      : colors.bgMuted,
+                  borderColor: d.empty
+                    ? colors.borderStrong
+                    : d.active
+                      ? colors.accentStrong
+                      : colors.borderStrong,
+                  borderStyle: d.empty ? "dashed" : "solid",
+                },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+      <View style={styles.emptyLabels}>
+        {days.map((d) => (
+          <Text
+            key={d.dayIndex}
+            style={{
+              flex: 1,
+              textAlign: "center",
+              fontFamily: d.active
+                ? typography.fontSansSemi
+                : typography.fontSans,
+              fontSize: 11,
+              color: d.active ? colors.accentStrong : colors.textMuted,
+            }}
+          >
+            {DAY_LABELS[d.dayIndex]}
+          </Text>
+        ))}
+      </View>
+      <Text
+        muted
+        style={{
+          textAlign: "center",
+          fontSize: 12,
+          marginTop: spacing.sm,
+        }}
+      >
+        No spend this week — swipe for last week
+      </Text>
     </View>
   );
 }
@@ -309,7 +346,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 2,
   },
   navBtn: {
     width: 32,
@@ -322,19 +358,49 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: typography.fontSans,
   },
-  gestureArea: {
+  chartHost: {
     width: "100%",
+    minHeight: 168,
   },
-  chart: {
-    width: "100%",
-    position: "relative",
+  pointerLabel: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
   },
-  baseline: {
+  emptyPlot: {
+    height: 100,
+    marginHorizontal: 4,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  emptyLine: {
     position: "absolute",
-    height: StyleSheet.hairlineWidth,
+    left: 16,
+    right: 16,
+    height: 2,
+    borderRadius: 1,
+    top: "55%",
   },
-  labels: {
+  emptyDots: {
     flexDirection: "row",
-    marginTop: spacing.sm,
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  emptyDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1.5,
+  },
+  emptyLabels: {
+    flexDirection: "row",
+    marginTop: spacing.md,
+    paddingHorizontal: 4,
   },
 });
