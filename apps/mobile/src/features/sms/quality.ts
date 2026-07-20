@@ -17,10 +17,7 @@ export type IsJunkOptions = {
  * Whether a parsed payment is too weak / incomplete to auto-import.
  * Shared by SMS bulk import and the screenshot multi-select screen.
  */
-export function isJunk(
-  item: ParsedExpense,
-  opts: IsJunkOptions = {},
-): boolean {
+export function isJunk(item: ParsedExpense, opts: IsJunkOptions = {}): boolean {
   const minConf = opts.minConfidence ?? MIN_REVIEW_CONFIDENCE;
   const rejectPending = opts.rejectPending ?? false;
   const m = (item.merchant ?? "").trim();

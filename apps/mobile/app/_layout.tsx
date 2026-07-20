@@ -24,29 +24,39 @@ import {
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { BrandLoading, BRAND_SPLASH_BG } from "@/src/components/BrandLoading";
+import { BRAND_SPLASH_BG } from "@/src/components/BrandLoading";
 import { ThemeProvider, useTheme } from "@/src/design/ThemeContext";
 import { AuthProvider, useAuth } from "@/src/features/auth/AuthContext";
 import { isSmsConsentPending } from "@/src/features/sms/prefs";
 
 export { ErrorBoundary } from "expo-router";
 
-SplashScreen.preventAutoHideAsync();
+// Keep the native splash (logo only) until we are on the real first screen.
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
+/**
+ * Single boot gate:
+ * - Native splash stays up the whole time (logo once).
+ * - Redirects to passcode / register / app under the splash.
+ * - Hides splash only when the destination screen is mounted.
+ * User should only ever see: logo → passcode (or register / home).
+ */
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, ready, hasAccount } = useAuth();
-  const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+  const splashHidden = useRef(false);
 
-  const inAuth = segments[0] === "(auth)";
-  const authScreen = segments[1];
-  const appScreen = segments[1];
+  const group = segments[0];
+  const screen = segments[1];
+  const inAuth = group === "(auth)";
+  const inApp = group === "(app)";
 
+  // Navigate under the splash — user never sees intermediate loaders.
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
@@ -57,13 +67,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         if (needsConsent) {
-          if (appScreen !== "sms-consent") {
+          if (screen !== "sms-consent") {
             router.replace("/(app)/sms-consent");
           }
           return;
         }
 
-        if (appScreen === "sms-consent") {
+        if (screen === "sms-consent") {
           router.replace("/(app)");
           return;
         }
@@ -72,18 +82,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Locked / signed out — always force passcode (or register)
+      // Locked — force passcode or create-account
       if (!inAuth) {
         router.replace(hasAccount ? "/(auth)/login" : "/(auth)/register");
         return;
       }
 
-      // Has account → only passcode login (no re-register)
-      if (hasAccount && authScreen === "register") {
+      if (hasAccount && screen === "register") {
         router.replace("/(auth)/login");
       }
-      // No account → force create account (not recover)
-      if (!hasAccount && (authScreen === "login" || authScreen === "recover")) {
+      if (!hasAccount && (screen === "login" || screen === "recover")) {
         router.replace("/(auth)/register");
       }
     })();
@@ -91,16 +99,38 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [token, ready, hasAccount, inAuth, authScreen, appScreen, router]);
+  }, [token, ready, hasAccount, inAuth, screen, router]);
 
-  // Hold the tree until auth is ready, and while locked off the auth stack
-  // (redirect in flight). Keeps the navigator mounted so replace() works,
-  // but never leaves the user staring at a cached dashboard.
-  if (!ready || (!token && !inAuth)) {
+  // True only when the first real screen the user should see is mounted.
+  const destinationReady = useMemo(() => {
+    if (!ready) return false;
+
+    if (token) {
+      // Unlocked: home (or consent) is fine to reveal
+      if (!inApp) return false;
+      return true;
+    }
+
+    // Locked: only reveal auth once we're on login / register / recover
+    if (!inAuth) return false;
+    return screen === "login" || screen === "register" || screen === "recover";
+  }, [ready, token, inApp, inAuth, screen]);
+
+  useEffect(() => {
+    if (!destinationReady || splashHidden.current) return;
+    splashHidden.current = true;
+    // Wait one frame so passcode UI paints under the splash, then lift it.
+    const id = requestAnimationFrame(() => {
+      SplashScreen.hideAsync().catch(() => undefined);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [destinationReady]);
+
+  // Under the native splash: keep router children alive for replace(),
+  // but paint the same solid brand color (no second animated logo).
+  if (!destinationReady) {
     return (
       <View style={{ flex: 1, backgroundColor: BRAND_SPLASH_BG }}>
-        <BrandLoading caption={!ready ? "Unlocking…" : "Opening…"} />
-        {/* Keep children mounted so expo-router can apply replace() */}
         <View
           style={{ width: 0, height: 0, overflow: "hidden" }}
           pointerEvents="none"
@@ -117,8 +147,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ThemedRoot() {
   const { colors, isDark } = useTheme();
 
-  // Keep React Navigation's canvas color in sync so stack pops don't flash a
-  // blank/default background while the previous scene reattaches.
   const navigationTheme = useMemo(() => {
     const base = isDark ? DarkTheme : DefaultTheme;
     return {
@@ -135,7 +163,9 @@ function ThemedRoot() {
   }, [colors, isDark]);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <GestureHandlerRootView
+      style={{ flex: 1, backgroundColor: BRAND_SPLASH_BG }}
+    >
       <NavigationThemeProvider value={navigationTheme}>
         <AuthProvider>
           <StatusBar style={isDark ? "light" : "dark"} />
@@ -143,8 +173,12 @@ function ThemedRoot() {
             <Stack
               screenOptions={{
                 headerShown: false,
-                contentStyle: { backgroundColor: colors.bg, flex: 1 },
-                animation: "fade",
+                contentStyle: {
+                  backgroundColor: BRAND_SPLASH_BG,
+                  flex: 1,
+                },
+                // No fade on boot — avoid a third “loading” frame
+                animation: "none",
                 freezeOnBlur: false,
               }}
             >
@@ -175,10 +209,7 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
-
+  // Do NOT hide the splash here — AuthGate hides it once passcode is ready.
   if (!loaded) return null;
 
   return (

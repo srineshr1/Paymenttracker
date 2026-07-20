@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { Platform, View } from "react-native";
 import { enableFreeze } from "react-native-screens";
+import { BRAND_SPLASH_BG } from "@/src/components/BrandLoading";
 import { useTheme } from "@/src/design/ThemeContext";
 import { useAuth } from "@/src/features/auth/AuthContext";
 import { SmsAutoImportHost } from "@/src/features/sms/SmsAutoImportHost";
@@ -14,9 +15,9 @@ export default function AppLayout() {
   const { token } = useAuth();
 
   // Hard gate: never mount app screens without an unlocked session.
-  // Root AuthGate redirects to login; this prevents dashboard flash/data loads.
+  // Solid brand color matches native splash so boot never flashes a 2nd UI.
   if (!token) {
-    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+    return <View style={{ flex: 1, backgroundColor: BRAND_SPLASH_BG }} />;
   }
 
   return (

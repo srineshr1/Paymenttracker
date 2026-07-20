@@ -28,9 +28,7 @@ export function ExpenseRow({
         pressed && { opacity: 0.88, backgroundColor: colors.bgMuted },
       ]}
     >
-      <View
-        style={[styles.iconWrap, { backgroundColor: `${chipColor}22` }]}
-      >
+      <View style={[styles.iconWrap, { backgroundColor: `${chipColor}22` }]}>
         <Ionicons name={icon} size={20} color={chipColor} />
       </View>
 
@@ -46,11 +44,7 @@ export function ExpenseRow({
           {expense.merchant}
         </Text>
         <View style={styles.metaRow}>
-          <Text
-            muted
-            style={{ fontSize: 12, flexShrink: 1 }}
-            numberOfLines={1}
-          >
+          <Text muted style={{ fontSize: 12, flexShrink: 1 }} numberOfLines={1}>
             {meta}
           </Text>
           {expense.category ? (

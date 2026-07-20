@@ -388,7 +388,9 @@ export function BudgetSheet({
                   <Text muted style={{ fontSize: 12, lineHeight: 18 }}>
                     Spendable ≈ {formatINR(autoBudgetPreview)} after saving{" "}
                     {Math.round(savingsRate * 100)}%
-                    {savingsRate === DEFAULT_SAVINGS_RATE ? " · default rate" : ""}
+                    {savingsRate === DEFAULT_SAVINGS_RATE
+                      ? " · default rate"
+                      : ""}
                   </Text>
                 </View>
               ) : (

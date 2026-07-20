@@ -65,13 +65,12 @@ async function readPreference(): Promise<ThemePreference | null> {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
-  const [ready, setReady] = useState(false);
+  // Default dark immediately so boot never blanks under the native splash.
+  const [preference, setPreferenceState] = useState<ThemePreference>("dark");
 
   useEffect(() => {
     readPreference().then((p) => {
       if (p) setPreferenceState(p);
-      setReady(true);
     });
   }, []);
 
@@ -114,9 +113,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }),
     [mode, preference, colors, setPreference, toggle],
   );
-
-  // Avoid flash of wrong theme after reading storage
-  if (!ready) return null;
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

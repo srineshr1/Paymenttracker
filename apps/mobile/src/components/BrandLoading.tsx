@@ -29,10 +29,7 @@ type Props = {
  * Full-screen brand loading — same look as the native splash so the
  * handoff after SplashScreen.hideAsync() feels seamless.
  */
-export function BrandLoading({
-  showWordmark = true,
-  caption = null,
-}: Props) {
+export function BrandLoading({ showWordmark = true, caption = null }: Props) {
   const pulse = useSharedValue(1);
   const glow = useSharedValue(0.35);
   const bar = useSharedValue(0.15);
@@ -63,7 +60,10 @@ export function BrandLoading({
     bar.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.cubic) }),
-        withTiming(0.15, { duration: 1100, easing: Easing.inOut(Easing.cubic) }),
+        withTiming(0.15, {
+          duration: 1100,
+          easing: Easing.inOut(Easing.cubic),
+        }),
       ),
       -1,
       false,
@@ -103,9 +103,7 @@ export function BrandLoading({
           </Text>
         ) : null}
 
-        {caption ? (
-          <Text style={styles.caption}>{caption}</Text>
-        ) : null}
+        {caption ? <Text style={styles.caption}>{caption}</Text> : null}
 
         <View style={styles.track}>
           <Animated.View style={[styles.fill, barStyle]} />

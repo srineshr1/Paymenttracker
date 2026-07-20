@@ -1,22 +1,18 @@
 import {
   isPaymentSms,
-  parseSmsMessages,
   type ParsedExpense,
+  parseSmsMessages,
   type SmsMessageInput,
 } from "@paymenttracker/shared";
 import { applyPaymentToAccount } from "@/src/data/cash";
 import { saveExpenseChunks } from "@/src/data/expenseChunks";
 import {
-  createExpensesBatch,
   backfillMissingCategories,
+  createExpensesBatch,
 } from "@/src/data/expenses";
 import { resolveCategoryId } from "./categorize";
-import { listInboxSms, type ListInboxOptions } from "./readInbox";
-import {
-  dayKey,
-  isJunkForAutoImport,
-  safePaidAtIso,
-} from "./quality";
+import { dayKey, isJunkForAutoImport, safePaidAtIso } from "./quality";
+import { type ListInboxOptions, listInboxSms } from "./readInbox";
 
 export type ImportSmsResult = {
   parsed: ParsedExpense[];
@@ -68,11 +64,7 @@ async function toBatchPayload(rows: ParsedExpense[]) {
   for (const r of rows) {
     const merchant = (r.merchant ?? "").trim();
     const direction = r.direction ?? "debit";
-    const categoryId = await resolveCategoryId(
-      merchant,
-      direction,
-      r.rawText,
-    );
+    const categoryId = await resolveCategoryId(merchant, direction, r.rawText);
     out.push({
       merchant,
       amount: String(r.amount).replace(/,/g, ""),

@@ -169,8 +169,8 @@ export default function ExpensesListScreen() {
 
   const activeCat =
     filter !== "all" && filter !== "uncategorized"
-      ? categories.find((c) => c.id === filter) ??
-        catStats.find((c) => c.id === filter)
+      ? (categories.find((c) => c.id === filter) ??
+        catStats.find((c) => c.id === filter))
       : null;
 
   const headerTitle =
@@ -178,7 +178,7 @@ export default function ExpensesListScreen() {
       ? "Activity"
       : filter === "uncategorized"
         ? "Uncategorized"
-        : activeCat?.name ?? "Activity";
+        : (activeCat?.name ?? "Activity");
 
   const headerSubtitle =
     filter === "all"
@@ -230,7 +230,9 @@ export default function ExpensesListScreen() {
             icon={categoryIcon(c.slug)}
             color={c.color}
             count={c.count}
-            amount={c.debitTotal > 0 ? formatINRCompact(c.debitTotal) : undefined}
+            amount={
+              c.debitTotal > 0 ? formatINRCompact(c.debitTotal) : undefined
+            }
             active={filter === c.id}
             onPress={() => setFilter(c.id)}
           />
@@ -414,11 +416,7 @@ function FilterChip({
         >
           {label}
         </Text>
-        <Text
-          muted
-          style={{ fontSize: 11, marginTop: 1 }}
-          numberOfLines={1}
-        >
+        <Text muted style={{ fontSize: 11, marginTop: 1 }} numberOfLines={1}>
           {amount ? `${amount} · ${count}` : `${count}`}
         </Text>
       </View>

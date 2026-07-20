@@ -441,20 +441,13 @@ export default function HomeScreen() {
     () => buildCategorySlices(monthExpenses),
     [monthExpenses],
   );
-  const weekRange = useMemo(
-    () => weekRangeForOffset(weekOffset),
-    [weekOffset],
-  );
+  const weekRange = useMemo(() => weekRangeForOffset(weekOffset), [weekOffset]);
   const weekBars = useMemo(
     () => buildWeekBars(weekExpenses, weekRange.start, weekOffset),
     [weekExpenses, weekRange.start, weekOffset],
   );
   const weekSpent = weekBars.reduce((s, d) => s + d.amount, 0);
-  const weekTitle = formatWeekTitle(
-    weekOffset,
-    weekRange.start,
-    weekRange.end,
-  );
+  const weekTitle = formatWeekTitle(weekOffset, weekRange.start, weekRange.end);
 
   const shiftWeek = useCallback((delta: number) => {
     setWeekOffset((prev) => {

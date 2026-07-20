@@ -220,7 +220,13 @@ export default function ImportSelectScreen() {
         }
       }
 
-      if (chunkError && !partial && created === 0 && skipped === 0 && failed === 0) {
+      if (
+        chunkError &&
+        !partial &&
+        created === 0 &&
+        skipped === 0 &&
+        failed === 0
+      ) {
         throw chunkError;
       }
 

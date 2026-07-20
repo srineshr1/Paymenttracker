@@ -93,7 +93,7 @@ const RULES: { slug: CategorySlug; patterns: RegExp[] }[] = [
 export function inferCategorySlug(
   merchant: string,
   direction: "debit" | "credit" = "debit",
-  rawText?: string | null
+  rawText?: string | null,
 ): CategorySlug {
   const hay = `${merchant ?? ""} ${rawText ?? ""}`.trim();
   if (!hay) return direction === "credit" ? "transfer" : "other";
@@ -106,7 +106,10 @@ export function inferCategorySlug(
 
   // Person-looking names (UPI VPA local part / short names) → transfer
   if (direction === "credit") return "transfer";
-  if (/^[a-z][a-z.\s]{1,28}$/i.test(merchant.trim()) && !/\d{3,}/.test(merchant)) {
+  if (
+    /^[a-z][a-z.\s]{1,28}$/i.test(merchant.trim()) &&
+    !/\d{3,}/.test(merchant)
+  ) {
     // Heuristic: bare personal names often uncategorized; leave as other for debits
     return "other";
   }
@@ -122,7 +125,7 @@ export function clearCategorySlugCache() {
 }
 
 export async function getCategoryIdBySlug(
-  slug: CategorySlug | string
+  slug: CategorySlug | string,
 ): Promise<string | null> {
   if (!slugIdCache) {
     const { categories } = await listCategories();
@@ -135,7 +138,7 @@ export async function getCategoryIdBySlug(
 export async function resolveCategoryId(
   merchant: string,
   direction: "debit" | "credit" = "debit",
-  rawText?: string | null
+  rawText?: string | null,
 ): Promise<string | null> {
   const slug = inferCategorySlug(merchant, direction, rawText);
   return getCategoryIdBySlug(slug);

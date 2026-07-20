@@ -554,9 +554,7 @@ export async function backfillMissingCategories(): Promise<number> {
   if (!rows.length) return 0;
 
   // Lazy import avoids circular deps (categorize → listCategories → here)
-  const { resolveCategoryId } = await import(
-    "@/src/features/sms/categorize"
-  );
+  const { resolveCategoryId } = await import("@/src/features/sms/categorize");
 
   let updated = 0;
   const now = new Date().toISOString();

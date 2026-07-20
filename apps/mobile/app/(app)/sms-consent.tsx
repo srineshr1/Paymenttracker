@@ -1,6 +1,6 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Alert, Platform, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
@@ -44,9 +44,7 @@ export default function SmsConsentScreen() {
           }
         } catch (e) {
           backfillError =
-            e instanceof Error
-              ? e.message
-              : "Could not import past messages.";
+            e instanceof Error ? e.message : "Could not import past messages.";
         }
 
         try {
