@@ -3,22 +3,22 @@ import {
   Fraunces_700Bold,
 } from "@expo-google-fonts/fraunces";
 import {
+  IBMPlexMono_400Regular,
+  IBMPlexMono_500Medium,
+  IBMPlexMono_600SemiBold,
+} from "@expo-google-fonts/ibm-plex-mono";
+import {
   Outfit_400Regular,
   Outfit_500Medium,
   Outfit_600SemiBold,
   Outfit_700Bold,
 } from "@expo-google-fonts/outfit";
-import {
-  IBMPlexMono_400Regular,
-  IBMPlexMono_500Medium,
-  IBMPlexMono_600SemiBold,
-} from "@expo-google-fonts/ibm-plex-mono";
 import { useFonts } from "expo-font";
 import {
   DarkTheme,
   DefaultTheme,
-  Stack,
   ThemeProvider as NavigationThemeProvider,
+  Stack,
   useRouter,
   useSegments,
 } from "expo-router";
@@ -28,8 +28,8 @@ import { useEffect, useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { AuthProvider, useAuth } from "@/src/features/auth/AuthContext";
 import { ThemeProvider, useTheme } from "@/src/design/ThemeContext";
+import { AuthProvider, useAuth } from "@/src/features/auth/AuthContext";
 import { isSmsConsentPending } from "@/src/features/sms/prefs";
 
 export { ErrorBoundary } from "expo-router";
@@ -107,7 +107,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       >
         <ActivityIndicator color={colors.accent} />
         {/* Keep children mounted so expo-router can apply replace() */}
-        <View style={{ width: 0, height: 0, overflow: "hidden" }} pointerEvents="none">
+        <View
+          style={{ width: 0, height: 0, overflow: "hidden" }}
+          pointerEvents="none"
+        >
           {children}
         </View>
       </View>

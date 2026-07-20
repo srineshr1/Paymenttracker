@@ -28,7 +28,8 @@ export function formatINR(amount: string | number, opts?: { sign?: boolean }) {
   const fixed = abs.toFixed(useFraction ? 2 : 0);
   const [intPart, frac] = fixed.split(".");
   const grouped = formatIndianGrouped(intPart);
-  const formatted = frac !== undefined && useFraction ? `${grouped}.${frac}` : grouped;
+  const formatted =
+    frac !== undefined && useFraction ? `${grouped}.${frac}` : grouped;
   const body = `₹${formatted}`;
 
   if (!opts?.sign) return body;
@@ -39,7 +40,7 @@ export function formatINR(amount: string | number, opts?: { sign?: boolean }) {
 
 export function formatExpenseAmount(
   amount: string | number,
-  direction: "debit" | "credit"
+  direction: "debit" | "credit",
 ) {
   const body = formatINR(amount);
   return direction === "credit" ? `+${body}` : `−${body}`;
@@ -134,7 +135,7 @@ export function formatRelativePaidAt(iso: string) {
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const dayDiff = Math.round(
-    (startToday.getTime() - startThat.getTime()) / 86_400_000
+    (startToday.getTime() - startThat.getTime()) / 86_400_000,
   );
 
   let h = d.getHours();

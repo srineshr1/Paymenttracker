@@ -39,9 +39,7 @@ export function SmsAutoImportHost() {
       if (r.status === "saved") {
         // Lightweight console breadcrumb — UI refresh happens via focus/load.
         if (__DEV__) {
-          console.log(
-            `[sms-auto] saved ${r.merchant} · ₹${r.amount}`
-          );
+          console.log(`[sms-auto] saved ${r.merchant} · ₹${r.amount}`);
         }
       }
     });

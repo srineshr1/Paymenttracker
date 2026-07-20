@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { parseUpiScreenshotAll } from "./parse.js";
 
 /** Realistic Tesseract-ish dump from PhonePe history (₹ often → 7 or %) */

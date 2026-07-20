@@ -40,7 +40,10 @@ export async function syncAccountBalanceFromInbox(): Promise<WalletsState> {
     const body = (msg.body ?? "").trim();
     if (!body) continue;
     // Prefer payment-like rows, but still try any bank-ish body with Avl Bal
-    if (!isPaymentSms(body, msg.address) && !/avl\.?\s*bal|available\s*bal/i.test(body)) {
+    if (
+      !isPaymentSms(body, msg.address) &&
+      !/avl\.?\s*bal|available\s*bal/i.test(body)
+    ) {
       continue;
     }
     const bal = extractAvailableBalance(body);
@@ -58,6 +61,6 @@ export async function syncAccountBalanceFromInbox(): Promise<WalletsState> {
 
   return setAccountBalanceFromSms(
     best.balance,
-    best.atMs > 0 ? best.atMs : Date.now()
+    best.atMs > 0 ? best.atMs : Date.now(),
   );
 }

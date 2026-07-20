@@ -2,26 +2,28 @@ import type { ParsedDirection, ParsedSource } from "./types.js";
 
 /** Fix common OCR glitches on Indian UPI screenshots */
 export function normalizeOcrText(text: string): string {
-  return text
-    .replace(/\u00a0/g, " ")
-    .replace(/[|]/g, "I")
-    .replace(/\r\n/g, "\n")
-    // Rupee symbol often misread
-    .replace(/[₹₽]/g, "₹")
-    .replace(/(?:^|[\s])(?:Rs\.?|INR|rs)(?=\s*[\d,])/gi, " ₹")
-    // "%5,000" style (₹ → %)
-    .replace(/%\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)/g, "₹$1")
-    // "Paid to 74,000" where leading 7 is misread ₹ before 4,000
-    .replace(
-      /(paid\s+to|sent\s+to|received\s+from)\s+7([0-9],[0-9]{2,3}(?:\.[0-9]{1,2})?)/gi,
-      "$1 ₹$2"
-    )
-    .replace(
-      /(paid\s+to|sent\s+to)\s+7([0-9]{3,6}(?:\.[0-9]{1,2})?)\b/gi,
-      "$1 ₹$2"
-    )
-    .replace(/[ \t]+/g, " ")
-    .trim();
+  return (
+    text
+      .replace(/\u00a0/g, " ")
+      .replace(/[|]/g, "I")
+      .replace(/\r\n/g, "\n")
+      // Rupee symbol often misread
+      .replace(/[₹₽]/g, "₹")
+      .replace(/(?:^|[\s])(?:Rs\.?|INR|rs)(?=\s*[\d,])/gi, " ₹")
+      // "%5,000" style (₹ → %)
+      .replace(/%\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?)/g, "₹$1")
+      // "Paid to 74,000" where leading 7 is misread ₹ before 4,000
+      .replace(
+        /(paid\s+to|sent\s+to|received\s+from)\s+7([0-9],[0-9]{2,3}(?:\.[0-9]{1,2})?)/gi,
+        "$1 ₹$2",
+      )
+      .replace(
+        /(paid\s+to|sent\s+to)\s+7([0-9]{3,6}(?:\.[0-9]{1,2})?)\b/gi,
+        "$1 ₹$2",
+      )
+      .replace(/[ \t]+/g, " ")
+      .trim()
+  );
 }
 
 export function detectSource(text: string): ParsedSource {
@@ -59,7 +61,10 @@ export function detectSource(text: string): ParsedSource {
  * too aggressive for success-screen IDs / real ₹2,xxx amounts.
  */
 export function parseAmountToken(raw: string): string | null {
-  let s = raw.replace(/[₹%¥₽]/g, "").replace(/[^\d,.]/g, "").trim();
+  let s = raw
+    .replace(/[₹%¥₽]/g, "")
+    .replace(/[^\d,.]/g, "")
+    .trim();
   if (!s) return null;
 
   // Comma-grouped: strip glued leading 7 (₹→7) e.g. 74,000 → 4,000
@@ -100,7 +105,10 @@ export function parseAmountToken(raw: string): string | null {
  */
 export function parseHistoryAmountToken(raw: string): string | null {
   const base = parseAmountToken(raw);
-  let s = raw.replace(/[₹%¥₽]/g, "").replace(/[^\d,.]/g, "").trim();
+  const s = raw
+    .replace(/[₹%¥₽]/g, "")
+    .replace(/[^\d,.]/g, "")
+    .trim();
   if (!s) return base;
 
   const hadComma = s.includes(",");
@@ -153,7 +161,7 @@ export function extractAllAmounts(text: string): string[] {
 
 export function extractUpiRef(text: string): string | null {
   const patterns = [
-    /(?:upi\s*(?:ref(?:erence)?(?:\s*no\.?)?|transaction\s*id|txn\s*id)|transaction\s*id|utr)\s*[:\-]?\s*([A-Z0-9]{8,40})/i,
+    /(?:upi\s*(?:ref(?:erence)?(?:\s*no\.?)?|transaction\s*id|txn\s*id)|transaction\s*id|utr)\s*[:-]?\s*([A-Z0-9]{8,40})/i,
     /\b(T\d{10,}[A-Z0-9]*)\b/,
     /\b([0-9]{12})\b/,
   ];
@@ -169,7 +177,7 @@ export function extractDirection(text: string): ParsedDirection {
   const t = text.toLowerCase();
   if (
     /\b(received|credited|credit|you received|money received|received from)\b/.test(
-      t
+      t,
     ) &&
     !/\b(paid to|sent to|you paid|debited)\b/.test(t)
   ) {
@@ -179,7 +187,7 @@ export function extractDirection(text: string): ParsedDirection {
 }
 
 export function extractStatus(
-  text: string
+  text: string,
 ): "success" | "failed" | "pending" | "unknown" {
   const t = text.toLowerCase();
   if (/\b(failed|declined|unsuccessful|cancelled|canceled)\b/.test(t)) {
@@ -188,7 +196,7 @@ export function extractStatus(
   if (/\b(pending|processing|in progress)\b/.test(t)) return "pending";
   if (
     /\b(success|successful|completed|paid successfully|payment successful|transaction successful|debited from)\b/.test(
-      t
+      t,
     )
   ) {
     return "success";
@@ -225,7 +233,10 @@ const MONTHS: Record<string, number> = {
   december: 11,
 };
 
-export function extractRelativePaidAt(text: string, now = new Date()): string | null {
+export function extractRelativePaidAt(
+  text: string,
+  now = new Date(),
+): string | null {
   const t = text.toLowerCase();
   if (/\bjust\s+now\b/.test(t) || /\ba\s+moment\s+ago\b/.test(t)) {
     return now.toISOString();
@@ -287,7 +298,7 @@ export function extractPaidAt(text: string): string | null {
   }
 
   // 17/07/2026 11:32
-  const re2 = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{2})/;
+  const re2 = /(\d{1,2})[/-](\d{1,2})[/-](\d{4})\s+(\d{1,2}):(\d{2})/;
   const m2 = text.match(re2);
   if (m2) {
     const day = Number(m2[1]);
@@ -316,7 +327,7 @@ export function extractPaidAt(text: string): string | null {
 
 export function extractMerchant(
   text: string,
-  patterns: RegExp[]
+  patterns: RegExp[],
 ): string | null {
   for (const re of patterns) {
     const m = text.match(re);
@@ -336,7 +347,7 @@ export function cleanMerchantName(raw: string): string | null {
     .trim();
   if (name.length < 2 || name.length > 120) return null;
   // Reject pure numbers / amount-like tokens
-  if (/^[\d,\.]+$/.test(name)) return null;
+  if (/^[\d,.]+$/.test(name)) return null;
   if (/^(mins?|hours?|days?|ago|debited|from)$/i.test(name)) return null;
   return name;
 }
@@ -347,7 +358,7 @@ export function isLikelyMerchantLine(line: string): boolean {
   // Whole-line chrome only (don't reject "Asha Stores" because of "Stores")
   if (
     /^(paid\s*to|payment\s*to|sent\s+to|received\s+from|you\s+paid|debited(\s+from)?|search|month|categories|filters|home|stores|insurance|wealth|history|share|edit|lens|delete)$/i.test(
-      t
+      t,
     )
   ) {
     return false;
@@ -359,11 +370,12 @@ export function isLikelyMerchantLine(line: string): boolean {
   if (/^\d+\s*hours?\s*ago/i.test(t)) return false;
   if (/^\d+\s*days?\s*ago/i.test(t)) return false;
   if (/^(₹|rs\.?|%|x)/i.test(t) && /[0-9]/.test(t)) return false; // amount-only "X250"
-  if (/^[\d,\.\s%₹xX]+$/.test(t)) return false;
+  if (/^[\d,.\s%₹xX]+$/.test(t)) return false;
   // Needs at least one letter
   if (!/[A-Za-z]/.test(t)) return false;
   // Reject "X100"-style amount lines with a single letter prefix
-  if (/^[A-Za-z][0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?$/.test(t)) return false;
+  if (/^[A-Za-z][0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?$/.test(t))
+    return false;
   return true;
 }
 

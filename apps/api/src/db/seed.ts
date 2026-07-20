@@ -1,7 +1,7 @@
 import "dotenv/config";
+import { sql } from "drizzle-orm";
 import { db } from "./client.js";
 import { categories } from "./schema.js";
-import { sql } from "drizzle-orm";
 
 const DEFAULT_CATEGORIES = [
   { name: "Food", slug: "food", icon: "utensils", color: "#E8A87C" },

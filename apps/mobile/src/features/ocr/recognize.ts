@@ -1,10 +1,10 @@
-import { NativeModules, Platform } from "react-native";
 import {
+  type ParsedExpense,
   parseUpiScreenshotAll,
   parseUpiScreenshotText,
-  type ParsedExpense,
 } from "@paymenttracker/shared";
 import * as FileSystem from "expo-file-system/legacy";
+import { NativeModules, Platform } from "react-native";
 import { recognizeWithTesseract } from "./TesseractHost";
 
 export type RecognizeInput = {
@@ -40,9 +40,7 @@ export function isFastOcrAvailable(): boolean {
  * ML Kit needs a real filesystem path. Gallery picks often return
  * content:// (Android) or ph:// (iOS) which can fail recognition.
  */
-async function resolveLocalImageFile(
-  input: RecognizeInput
-): Promise<string> {
+async function resolveLocalImageFile(input: RecognizeInput): Promise<string> {
   const mime = input.mimeType ?? "image/jpeg";
   const ext = mime.includes("png")
     ? "png"
@@ -89,7 +87,7 @@ async function resolveLocalImageFile(
     return dest;
   } catch {
     throw new Error(
-      "Could not open this image for reading. Try another screenshot or paste the text."
+      "Could not open this image for reading. Try another screenshot or paste the text.",
     );
   }
 }
@@ -116,7 +114,7 @@ async function ensureBase64(input: RecognizeInput): Promise<{
 }
 
 async function recognizeWithMlKit(
-  input: RecognizeInput
+  input: RecognizeInput,
 ): Promise<{ text: string; engine: string }> {
   const imageUri = await resolveLocalImageFile(input);
 
@@ -142,7 +140,7 @@ async function recognizeWithMlKit(
 
   if (!text.trim()) {
     throw new Error(
-      "No text found in this image. Try a clearer screenshot or paste text."
+      "No text found in this image. Try a clearer screenshot or paste text.",
     );
   }
   return { text, engine: "mlkit" };
@@ -153,7 +151,7 @@ async function recognizeWithMlKit(
  * (works in Expo Go). Parsing stays fully offline via @paymenttracker/shared.
  */
 export async function recognizeTextFromImage(
-  input: RecognizeInput
+  input: RecognizeInput,
 ): Promise<{ text: string; engine: string }> {
   if (isMlKitAvailable()) {
     try {
@@ -172,7 +170,7 @@ export async function recognizeTextFromImage(
     const text = await recognizeWithTesseract(base64, mimeType);
     if (!text.trim()) {
       throw new Error(
-        "No text found in this image. Try a clearer screenshot or paste text."
+        "No text found in this image. Try a clearer screenshot or paste text.",
       );
     }
     return { text, engine: "tesseract" };
@@ -184,7 +182,7 @@ export async function recognizeTextFromImage(
     throw new Error(
       e instanceof Error
         ? e.message
-        : "Could not read this image. Try again or paste the text."
+        : "Could not read this image. Try again or paste the text.",
     );
   }
 }
@@ -192,7 +190,7 @@ export async function recognizeTextFromImage(
 /** @deprecated Prefer recognizeTextFromImage */
 export async function recognizeTextFromBase64(
   imageBase64: string,
-  mimeType = "image/jpeg"
+  mimeType = "image/jpeg",
 ): Promise<{ text: string; engine: string }> {
   return recognizeTextFromImage({ base64: imageBase64, mimeType });
 }

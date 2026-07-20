@@ -43,7 +43,8 @@ export default function ChangePasscodeScreen() {
   }, [next, step, current]);
 
   useEffect(() => {
-    if (step !== "confirm" || confirm.length !== 6 || submitting.current) return;
+    if (step !== "confirm" || confirm.length !== 6 || submitting.current)
+      return;
 
     if (confirm !== next) {
       setError("Passcodes do not match");
@@ -78,14 +79,9 @@ export default function ChangePasscodeScreen() {
     })();
   }, [confirm, next, current, step, changePasscode, router]);
 
-  const value =
-    step === "current" ? current : step === "new" ? next : confirm;
+  const value = step === "current" ? current : step === "new" ? next : confirm;
   const onChange =
-    step === "current"
-      ? setCurrent
-      : step === "new"
-        ? setNext
-        : setConfirm;
+    step === "current" ? setCurrent : step === "new" ? setNext : setConfirm;
 
   const label =
     step === "current"

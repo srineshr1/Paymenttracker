@@ -1,6 +1,6 @@
+import type { Expense } from "@paymenttracker/shared";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import type { Expense } from "@paymenttracker/shared";
 import { listExpenses } from "./expenses";
 
 function csvEscape(v: string): string {
@@ -36,14 +36,14 @@ export async function buildExpensesCsv(expenses: Expense[]): Promise<string> {
       e.notes ?? "",
     ]
       .map((c) => csvEscape(String(c)))
-      .join(",")
+      .join(","),
   );
 
   return [header, ...rows].join("\n");
 }
 
 export async function exportExpensesShare(
-  format: "csv" | "json" = "csv"
+  format: "csv" | "json" = "csv",
 ): Promise<{ count: number }> {
   const { expenses } = await listExpenses({ limit: 200 });
   // Pull more pages if needed (simple second fetch with higher limit already max 200)
@@ -58,7 +58,11 @@ export async function exportExpensesShare(
     path = `${dir}spentd-export-${stamp}.json`;
     await FileSystem.writeAsStringAsync(
       path,
-      JSON.stringify({ exportedAt: new Date().toISOString(), expenses }, null, 2)
+      JSON.stringify(
+        { exportedAt: new Date().toISOString(), expenses },
+        null,
+        2,
+      ),
     );
     mimeType = "application/json";
   } else {
@@ -75,7 +79,8 @@ export async function exportExpensesShare(
   await Sharing.shareAsync(path, {
     mimeType,
     dialogTitle: "Export Spentd data",
-    UTI: format === "json" ? "public.json" : "public.comma-separated-values-text",
+    UTI:
+      format === "json" ? "public.json" : "public.comma-separated-values-text",
   });
 
   return { count: expenses.length };

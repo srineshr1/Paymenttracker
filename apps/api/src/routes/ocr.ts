@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { createWorker } from "tesseract.js";
-import { requireAuth, type AuthVariables } from "../middleware/auth.js";
 import { rateLimit } from "../lib/rate-limit.js";
+import { type AuthVariables, requireAuth } from "../middleware/auth.js";
 
 export const ocrRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -41,17 +41,14 @@ ocrRoutes.post("/", async (c) => {
 
   try {
     if (contentType.includes("application/json")) {
-      const json = await c.req.json().catch(() => null) as {
+      const json = (await c.req.json().catch(() => null)) as {
         imageBase64?: string;
         mimeType?: string;
       } | null;
 
       const raw = json?.imageBase64?.trim();
       if (!raw) {
-        return c.json(
-          { error: "Missing imageBase64 in JSON body." },
-          400
-        );
+        return c.json({ error: "Missing imageBase64 in JSON body." }, 400);
       }
 
       // Strip data-URL prefix if present
@@ -67,10 +64,9 @@ ocrRoutes.post("/", async (c) => {
       if (!file) {
         return c.json(
           {
-            error:
-              "Send JSON { imageBase64 } or multipart field 'image'.",
+            error: "Send JSON { imageBase64 } or multipart field 'image'.",
           },
-          400
+          400,
         );
       }
 
@@ -103,7 +99,7 @@ ocrRoutes.post("/", async (c) => {
           text: "",
           engine: "tesseract",
         },
-        422
+        422,
       );
     }
     return c.json({
@@ -118,7 +114,7 @@ ocrRoutes.post("/", async (c) => {
         error:
           "OCR failed. Try a clearer screenshot, or paste the text manually.",
       },
-      500
+      500,
     );
   }
 });

@@ -1,11 +1,12 @@
-import { randomUUID } from "expo-crypto";
 import {
+  type AuthResponse,
   authBodySchema,
   changePasscodeSchema,
-  updateUsernameSchema,
-  type AuthResponse,
   type UserPublic,
+  updateUsernameSchema,
 } from "@paymenttracker/shared";
+import { randomUUID } from "expo-crypto";
+import { clearLastUsername, saveLastUsername } from "@/src/lib/secure";
 import {
   changeVaultPasscode,
   clearActiveDek,
@@ -18,8 +19,7 @@ import {
   unlockVault,
   wipeVaultSecrets,
 } from "./crypto";
-import { getDb, wipeDatabaseTables, type UserRow } from "./db";
-import { clearLastUsername, saveLastUsername } from "@/src/lib/secure";
+import { getDb, type UserRow, wipeDatabaseTables } from "./db";
 
 function toPublic(row: UserRow): UserPublic {
   return {
@@ -33,7 +33,7 @@ async function getUserByUsername(username: string): Promise<UserRow | null> {
   const db = await getDb();
   return db.getFirstAsync<UserRow>(
     "SELECT id, username, created_at FROM users WHERE username = ?",
-    [username.toLowerCase()]
+    [username.toLowerCase()],
   );
 }
 
@@ -41,13 +41,13 @@ async function getUserById(id: string): Promise<UserRow | null> {
   const db = await getDb();
   return db.getFirstAsync<UserRow>(
     "SELECT id, username, created_at FROM users WHERE id = ?",
-    [id]
+    [id],
   );
 }
 
 export async function registerLocal(
   usernameRaw: string,
-  passcode: string
+  passcode: string,
 ): Promise<AuthResponse> {
   const parsed = authBodySchema.safeParse({
     username: usernameRaw,
@@ -65,7 +65,7 @@ export async function registerLocal(
   if (await hasLocalAccount()) {
     throw new LocalDataError(
       "An account already exists on this device. Unlock with your passcode.",
-      409
+      409,
     );
   }
 
@@ -82,7 +82,7 @@ export async function registerLocal(
   try {
     await db.runAsync(
       "INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)",
-      [id, username, createdAt]
+      [id, username, createdAt],
     );
   } catch (err) {
     // Recover once from Expo Go Android flaky handle
@@ -97,7 +97,7 @@ export async function registerLocal(
       const db2 = await getDb();
       await db2.runAsync(
         "INSERT INTO users (id, username, created_at) VALUES (?, ?, ?)",
-        [id, username, createdAt]
+        [id, username, createdAt],
       );
     } else {
       throw err;
@@ -125,7 +125,7 @@ export async function registerLocal(
 
 export async function loginLocal(
   usernameRaw: string,
-  passcode: string
+  passcode: string,
 ): Promise<AuthResponse> {
   const parsed = authBodySchema.safeParse({
     username: usernameRaw,
@@ -158,7 +158,7 @@ export async function loginLocal(
  * Username was set once at registration and is not re-entered.
  */
 export async function unlockWithPasscodeLocal(
-  passcode: string
+  passcode: string,
 ): Promise<AuthResponse> {
   if (!/^\d{6}$/.test(passcode)) {
     throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
@@ -175,14 +175,14 @@ export async function unlockWithPasscodeLocal(
     // Fallback: single-user install — take the only profile
     const db = await getDb();
     row = await db.getFirstAsync<UserRow>(
-      "SELECT id, username, created_at FROM users ORDER BY created_at ASC LIMIT 1"
+      "SELECT id, username, created_at FROM users ORDER BY created_at ASC LIMIT 1",
     );
   }
 
   if (!row) {
     throw new LocalDataError(
       "No account on this device. Create one first.",
-      404
+      404,
     );
   }
 
@@ -201,7 +201,7 @@ export async function hasLocalAccount(): Promise<boolean> {
   try {
     const db = await getDb();
     const row = await db.getFirstAsync<{ id: string }>(
-      "SELECT id FROM users LIMIT 1"
+      "SELECT id FROM users LIMIT 1",
     );
     if (row) return true;
   } catch {
@@ -227,7 +227,7 @@ export async function meLocal(): Promise<{ user: UserPublic }> {
 
 export async function changePasscodeLocal(
   currentPasscode: string,
-  newPasscode: string
+  newPasscode: string,
 ): Promise<{ ok: true }> {
   const parsed = changePasscodeSchema.safeParse({
     currentPasscode,
@@ -236,19 +236,19 @@ export async function changePasscodeLocal(
   if (!parsed.success) {
     throw new LocalDataError(
       parsed.error.issues[0]?.message ?? "Invalid passcode",
-      400
+      400,
     );
   }
   await changeVaultPasscode(
     parsed.data.currentPasscode,
-    parsed.data.newPasscode
+    parsed.data.newPasscode,
   );
   return { ok: true };
 }
 
 export async function updateUsernameLocal(
   usernameRaw: string,
-  passcode: string
+  passcode: string,
 ): Promise<AuthResponse> {
   const parsed = updateUsernameSchema.safeParse({
     username: usernameRaw,
@@ -257,7 +257,7 @@ export async function updateUsernameLocal(
   if (!parsed.success) {
     throw new LocalDataError(
       parsed.error.issues[0]?.message ?? "Invalid input",
-      400
+      400,
     );
   }
 
@@ -294,7 +294,7 @@ export function lockLocal(): void {
  * History is preserved (uses OS-protected recovery DEK).
  */
 export async function resetPasscodeAfterDeviceAuth(
-  newPasscode: string
+  newPasscode: string,
 ): Promise<AuthResponse> {
   if (!/^\d{6}$/.test(newPasscode)) {
     throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
@@ -307,7 +307,7 @@ export async function resetPasscodeAfterDeviceAuth(
   if (!row) {
     const db = await getDb();
     row = await db.getFirstAsync<UserRow>(
-      "SELECT id, username, created_at FROM users ORDER BY created_at ASC LIMIT 1"
+      "SELECT id, username, created_at FROM users ORDER BY created_at ASC LIMIT 1",
     );
   }
   if (!row) {
@@ -342,7 +342,7 @@ export async function clearAllLocalData(): Promise<void> {
  * Keeps username / account row.
  */
 export async function clearHistoryAndResetPasscode(
-  newPasscode: string
+  newPasscode: string,
 ): Promise<AuthResponse> {
   if (!/^\d{6}$/.test(newPasscode)) {
     throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
@@ -360,7 +360,7 @@ export async function clearHistoryAndResetPasscode(
     let row: UserRow | null = storedId ? await getUserById(storedId) : null;
     if (!row) {
       row = await db.getFirstAsync<UserRow>(
-        "SELECT id, username, created_at FROM users ORDER BY created_at ASC LIMIT 1"
+        "SELECT id, username, created_at FROM users ORDER BY created_at ASC LIMIT 1",
       );
     }
     if (!row) {

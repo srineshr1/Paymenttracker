@@ -1,5 +1,5 @@
-import { Image, Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Image, Platform, StyleSheet, View } from "react-native";
 import { useTheme } from "@/src/design/ThemeContext";
 
 const logos = {

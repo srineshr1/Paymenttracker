@@ -1,14 +1,14 @@
-import { Hono } from "hono";
-import { and, desc, eq, gte, ilike, lt, lte, sql } from "drizzle-orm";
 import {
   createExpenseSchema,
   listExpensesQuerySchema,
   updateExpenseSchema,
 } from "@paymenttracker/shared";
+import { and, desc, eq, gte, ilike, lt, lte, sql } from "drizzle-orm";
+import { Hono } from "hono";
 import { db } from "../db/client.js";
 import { categories, expenses } from "../db/schema.js";
 import { serializeExpense } from "../lib/serialize.js";
-import { requireAuth, type AuthVariables } from "../middleware/auth.js";
+import { type AuthVariables, requireAuth } from "../middleware/auth.js";
 
 export const expenseRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -19,7 +19,7 @@ expenseRoutes.get("/", async (c) => {
   if (!query.success) {
     return c.json(
       { error: "Invalid query", details: query.error.flatten() },
-      400
+      400,
     );
   }
 
@@ -55,7 +55,12 @@ expenseRoutes.get("/summary/month", async (c) => {
   const year = Number(c.req.query("year") ?? now.getUTCFullYear());
   const month = Number(c.req.query("month") ?? now.getUTCMonth() + 1);
 
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12
+  ) {
     return c.json({ error: "Invalid year or month" }, 400);
   }
 
@@ -73,8 +78,8 @@ expenseRoutes.get("/summary/month", async (c) => {
       and(
         eq(expenses.userId, userId),
         gte(expenses.paidAt, start),
-        lt(expenses.paidAt, end)
-      )
+        lt(expenses.paidAt, end),
+      ),
     );
 
   return c.json({
@@ -105,7 +110,7 @@ async function findSoftDuplicate(
   userId: string,
   merchant: string,
   amount: string,
-  paidAt: Date
+  paidAt: Date,
 ) {
   const dayStart = new Date(paidAt);
   dayStart.setHours(0, 0, 0, 0);
@@ -120,15 +125,13 @@ async function findSoftDuplicate(
         eq(expenses.userId, userId),
         eq(expenses.amount, amount),
         gte(expenses.paidAt, dayStart),
-        lte(expenses.paidAt, dayEnd)
-      )
+        lte(expenses.paidAt, dayEnd),
+      ),
     )
     .limit(20);
 
   const norm = merchant.trim().toLowerCase();
-  return (
-    rows.find((r) => r.merchant.trim().toLowerCase() === norm) ?? null
-  );
+  return rows.find((r) => r.merchant.trim().toLowerCase() === norm) ?? null;
 }
 
 expenseRoutes.post("/batch", async (c) => {
@@ -188,7 +191,7 @@ expenseRoutes.post("/batch", async (c) => {
       userId,
       data.merchant,
       data.amount,
-      paidAt
+      paidAt,
     );
     if (soft) {
       skipped.push({
@@ -248,7 +251,7 @@ expenseRoutes.post("/", async (c) => {
   if (!parsed.success) {
     return c.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      400
+      400,
     );
   }
 
@@ -267,7 +270,7 @@ expenseRoutes.post("/", async (c) => {
           message: "An expense with this UPI reference already exists.",
           existingId: dup.id,
         },
-        409
+        409,
       );
     }
   }
@@ -276,7 +279,7 @@ expenseRoutes.post("/", async (c) => {
     userId,
     data.merchant,
     data.amount,
-    paidAt
+    paidAt,
   );
   if (soft) {
     return c.json(
@@ -285,7 +288,7 @@ expenseRoutes.post("/", async (c) => {
         message: "Same merchant and amount already exist on this day.",
         existingId: soft.id,
       },
-      409
+      409,
     );
   }
 
@@ -317,10 +320,7 @@ expenseRoutes.post("/", async (c) => {
         })) ?? null;
     }
 
-    return c.json(
-      { expense: serializeExpense(created, category) },
-      201
-    );
+    return c.json({ expense: serializeExpense(created, category) }, 201);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes("expenses_user_upi_ref_idx")) {
@@ -338,7 +338,7 @@ expenseRoutes.patch("/:id", async (c) => {
   if (!parsed.success) {
     return c.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      400
+      400,
     );
   }
 

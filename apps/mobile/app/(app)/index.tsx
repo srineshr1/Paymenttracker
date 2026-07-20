@@ -1,6 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
+import type { Expense, MonthSummary } from "@paymenttracker/shared";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Ionicons } from "@expo/vector-icons";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,13 +10,12 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Expense, MonthSummary } from "@paymenttracker/shared";
 import { api } from "@/src/api/client";
 import { AddPaymentsMenu } from "@/src/components/AddPaymentsMenu";
-import { DonutChart } from "@/src/components/DonutChart";
-import { WeekBars, type WeekDayBar } from "@/src/components/WeekBars";
 import { BudgetSheet } from "@/src/components/BudgetSheet";
+import { DonutChart } from "@/src/components/DonutChart";
 import { Amount, Card, EmptyState, Screen, Text } from "@/src/components/ui";
+import { WeekBars, type WeekDayBar } from "@/src/components/WeekBars";
 import {
   type BudgetPlan,
   type BudgetPrefs,
@@ -24,10 +24,7 @@ import {
   DEFAULT_SAVINGS_RATE,
   getBudgetPrefs,
 } from "@/src/data/budget";
-import {
-  getWallets,
-  type WalletsState,
-} from "@/src/data/cash";
+import { getWallets, type WalletsState } from "@/src/data/cash";
 import {
   formatINR,
   formatINRCompact,
@@ -74,7 +71,10 @@ function pctChange(current: number, previous: number): number | null {
 
 function buildCategorySlices(expenses: Expense[]): CategorySlice[] {
   const debits = expenses.filter((e) => e.direction === "debit");
-  const map = new Map<string, { name: string; color: string; amount: number }>();
+  const map = new Map<
+    string,
+    { name: string; color: string; amount: number }
+  >();
   let total = 0;
 
   for (const e of debits) {
@@ -113,7 +113,7 @@ function buildWeekBars(expenses: Expense[], now = new Date()): WeekDayBar[] {
     const idx = Math.floor(
       (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() -
         weekStart.getTime()) /
-        86_400_000
+        86_400_000,
     );
     if (idx < 0 || idx > 6) continue;
     byDay[idx] += Number(e.amount) || 0;
@@ -122,7 +122,7 @@ function buildWeekBars(expenses: Expense[], now = new Date()): WeekDayBar[] {
   const todayIdx = Math.floor(
     (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
       weekStart.getTime()) /
-      86_400_000
+      86_400_000,
   );
 
   return byDay.map((amount, dayIndex) => ({
@@ -190,27 +190,37 @@ export default function HomeScreen() {
       });
 
       // Refresh account balance from newest bank "Avl Bal" SMS (GPay/PhonePe-like)
-      const balanceSync = syncAccountBalanceFromInbox().catch(() => getWallets());
+      const balanceSync = syncAccountBalanceFromInbox().catch(() =>
+        getWallets(),
+      );
 
-      const [s, prevS, monthList, weekList, recentList, prefs, walletState, ...hist] =
-        await Promise.all([
-          api.monthSummary(cursor.year, cursor.month),
-          api.monthSummary(prev.getFullYear(), prev.getMonth() + 1),
-          api.listExpenses({
-            limit: 200,
-            from: monthStart.toISOString(),
-            to: monthEnd.toISOString(),
-          }),
-          api.listExpenses({
-            limit: 200,
-            from: weekStart.toISOString(),
-            to: weekEnd.toISOString(),
-          }),
-          api.listExpenses({ limit: 6 }),
-          getBudgetPrefs(),
-          balanceSync,
-          ...histMonths.map((m) => api.monthSummary(m.year, m.month)),
-        ]);
+      const [
+        s,
+        prevS,
+        monthList,
+        weekList,
+        recentList,
+        prefs,
+        walletState,
+        ...hist
+      ] = await Promise.all([
+        api.monthSummary(cursor.year, cursor.month),
+        api.monthSummary(prev.getFullYear(), prev.getMonth() + 1),
+        api.listExpenses({
+          limit: 200,
+          from: monthStart.toISOString(),
+          to: monthEnd.toISOString(),
+        }),
+        api.listExpenses({
+          limit: 200,
+          from: weekStart.toISOString(),
+          to: weekEnd.toISOString(),
+        }),
+        api.listExpenses({ limit: 6 }),
+        getBudgetPrefs(),
+        balanceSync,
+        ...histMonths.map((m) => api.monthSummary(m.year, m.month)),
+      ]);
 
       setWallets(walletState);
 
@@ -253,7 +263,7 @@ export default function HomeScreen() {
         void load();
       });
       return () => cancelAnimationFrame(ready);
-    }, [load])
+    }, [load]),
   );
 
   const shiftMonth = (delta: number) => {
@@ -287,7 +297,7 @@ export default function HomeScreen() {
       cursor.year,
       cursor.month,
       budgetPrefs,
-    ]
+    ],
   );
 
   const budget = plan.budget;
@@ -319,7 +329,7 @@ export default function HomeScreen() {
       cursor.year,
       cursor.month,
       budgetPrefs,
-    ]
+    ],
   );
 
   const budgetSourceLabel =
@@ -335,7 +345,8 @@ export default function HomeScreen() {
     if (plan.paceDeltaPct == null) return null;
     const p = plan.paceDeltaPct;
     if (plan.isCurrentMonth) {
-      if (Math.abs(p) <= 8) return { text: "On track this month", tone: "ok" as const };
+      if (Math.abs(p) <= 8)
+        return { text: "On track this month", tone: "ok" as const };
       if (p > 0)
         return {
           text: `${p}% over pace · slow down`,
@@ -357,7 +368,7 @@ export default function HomeScreen() {
 
   const categories = useMemo(
     () => buildCategorySlices(monthExpenses),
-    [monthExpenses]
+    [monthExpenses],
   );
   const weekBars = useMemo(() => buildWeekBars(weekExpenses), [weekExpenses]);
   const weekSpent = weekBars.reduce((s, d) => s + d.amount, 0);
@@ -558,7 +569,9 @@ export default function HomeScreen() {
                       ]}
                     >
                       <Ionicons
-                        name={showLeftToSpend ? "eye-outline" : "eye-off-outline"}
+                        name={
+                          showLeftToSpend ? "eye-outline" : "eye-off-outline"
+                        }
                         size={14}
                         color={colors.textSecondary}
                       />
@@ -755,7 +768,10 @@ export default function HomeScreen() {
 
           <Card style={{ padding: spacing.lg }}>
             {categories.length === 0 ? (
-              <Text muted style={{ textAlign: "center", paddingVertical: spacing.lg }}>
+              <Text
+                muted
+                style={{ textAlign: "center", paddingVertical: spacing.lg }}
+              >
                 No spending categories yet
               </Text>
             ) : (
@@ -851,7 +867,12 @@ export default function HomeScreen() {
               body="Tap Add payments to import a PhonePe/GPay screenshot or enter one manually."
             />
           ) : (
-            <Card style={{ paddingVertical: spacing.xs, paddingHorizontal: spacing.sm }}>
+            <Card
+              style={{
+                paddingVertical: spacing.xs,
+                paddingHorizontal: spacing.sm,
+              }}
+            >
               {recent.map((e, i) => {
                 const icon = categoryIcon(e.category?.slug);
                 const chipColor = e.category?.color ?? colors.accent;
@@ -933,7 +954,6 @@ export default function HomeScreen() {
           setBudgetPrefsState(next);
         }}
       />
-
     </Screen>
   );
 }

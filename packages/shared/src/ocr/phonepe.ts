@@ -12,18 +12,20 @@ import {
 import type { ParsedExpense } from "./types.js";
 
 const MERCHANT_PATTERNS = [
-  /paid\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})/i,
-  /to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})(?:\n|$)/i,
-  /transfer\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})/i,
+  /paid\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})/i,
+  /to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})(?:\n|$)/i,
+  /transfer\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})/i,
 ];
 
 export function parsePhonePeOcr(raw: string): ParsedExpense {
   const rawText = normalizeOcrText(raw);
   const warnings: string[] = [];
   const source =
-    detectSource(rawText) === "gpay" ? "gpay" : detectSource(rawText) === "phonepe"
-      ? "phonepe"
-      : "phonepe";
+    detectSource(rawText) === "gpay"
+      ? "gpay"
+      : detectSource(rawText) === "phonepe"
+        ? "phonepe"
+        : "phonepe";
 
   const amount = extractAmount(rawText);
   const merchant = extractMerchant(rawText, MERCHANT_PATTERNS);

@@ -1,6 +1,6 @@
-import { Platform } from "react-native";
 import { randomUUID } from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import { createExpense } from "./expenses";
 
 const KEY = "spentd.wallets";
@@ -127,7 +127,8 @@ function normalize(raw: unknown): WalletsState {
     accountBalanceAt,
     accountBalanceKnown:
       o.accountBalanceKnown === true ||
-      (clampMoney(Number(o.accountBalance) || 0) > 0 && accountBalanceAt != null),
+      (clampMoney(Number(o.accountBalance) || 0) > 0 &&
+        accountBalanceAt != null),
   };
 }
 
@@ -164,7 +165,10 @@ function isoTime(value?: string | number | null): string | null {
   return new Date(t).toISOString();
 }
 
-function isAtLeastAsNew(candidate: string | null, current: string | null): boolean {
+function isAtLeastAsNew(
+  candidate: string | null,
+  current: string | null,
+): boolean {
   if (!candidate) return current == null;
   if (!current) return true;
   return Date.parse(candidate) >= Date.parse(current);
@@ -176,7 +180,7 @@ function isAtLeastAsNew(candidate: string | null, current: string | null): boole
  */
 export async function setAccountBalanceFromSms(
   balanceRaw: number | string,
-  at?: string | number | null
+  at?: string | number | null,
 ): Promise<WalletsState> {
   const n =
     typeof balanceRaw === "string"
@@ -216,7 +220,7 @@ export type ApplyPaymentToAccountInput = {
  * Newest absolute "Avl Bal" wins (matches GPay / PhonePe bank balance).
  */
 export async function applyPaymentToAccount(
-  input: ApplyPaymentToAccountInput
+  input: ApplyPaymentToAccountInput,
 ): Promise<WalletsState> {
   const paidAt = isoTime(input.paidAt) ?? new Date().toISOString();
   const avlRaw = input.availableBalance;
@@ -237,7 +241,7 @@ function balanceOf(state: WalletsState, wallet: WalletId): number {
 function withBalance(
   state: WalletsState,
   wallet: WalletId,
-  amount: number
+  amount: number,
 ): WalletsState {
   if (wallet === "account") {
     return { ...state, accountBalance: clampMoney(amount) };
@@ -245,10 +249,7 @@ function withBalance(
   return { ...state, cashBalance: clampMoney(amount) };
 }
 
-function pushMove(
-  state: WalletsState,
-  move: WalletMovement
-): WalletsState {
+function pushMove(state: WalletsState, move: WalletMovement): WalletsState {
   return {
     ...state,
     movements: [move, ...state.movements].slice(0, MAX_MOVEMENTS),
@@ -258,7 +259,7 @@ function pushMove(
 export async function addToWallet(
   wallet: WalletId,
   amountRaw: number,
-  note?: string | null
+  note?: string | null,
 ): Promise<WalletsState> {
   const amount = parseAmount(amountRaw);
   const state = await getWallets();
@@ -299,7 +300,7 @@ export type DeductOpts = {
 export async function deductFromWallet(
   wallet: WalletId,
   amountRaw: number,
-  opts: DeductOpts = {}
+  opts: DeductOpts = {},
 ): Promise<WalletsState> {
   const amount = parseAmount(amountRaw);
   const state = await getWallets();
@@ -308,7 +309,7 @@ export async function deductFromWallet(
     throw new Error(
       wallet === "cash"
         ? "Not enough cash in hand."
-        : "Not enough balance in account."
+        : "Not enough balance in account.",
     );
   }
 
@@ -363,7 +364,7 @@ export function totalLiquid(state: WalletsState): number {
 export function movementsFor(
   state: WalletsState,
   wallet: WalletId,
-  limit = 20
+  limit = 20,
 ): WalletMovement[] {
   return state.movements.filter((m) => m.wallet === wallet).slice(0, limit);
 }

@@ -1,3 +1,4 @@
+import type { ParsedExpense } from "@paymenttracker/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -11,7 +12,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { ParsedExpense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { DateField } from "@/src/components/DateField";
@@ -46,8 +46,7 @@ function sanitizeAmountInput(raw: string): string {
   const firstDot = next.indexOf(".");
   if (firstDot !== -1) {
     next =
-      next.slice(0, firstDot + 1) +
-      next.slice(firstDot + 1).replace(/\./g, "");
+      next.slice(0, firstDot + 1) + next.slice(firstDot + 1).replace(/\./g, "");
     const [whole, frac = ""] = next.split(".");
     next = `${whole}.${frac.slice(0, 2)}`;
   }
@@ -98,7 +97,7 @@ export default function ImportSelectScreen() {
   const [editAmount, setEditAmount] = useState("");
   const [editPaidAt, setEditPaidAt] = useState(() => new Date());
   const [editDirection, setEditDirection] = useState<"debit" | "credit">(
-    "debit"
+    "debit",
   );
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -157,8 +156,8 @@ export default function ImportSelectScreen() {
               warnings: [],
               confidence: Math.max(r.confidence ?? 0, 0.8),
             }
-          : r
-      )
+          : r,
+      ),
     );
     setSelected((s) => ({ ...s, [editing.id]: true }));
     setEditing(null);
@@ -169,7 +168,7 @@ export default function ImportSelectScreen() {
     setStatus(null);
 
     const batch = selectedRows.filter(
-      (r) => r.merchant?.trim() && r.amount && Number(r.amount) > 0
+      (r) => r.merchant?.trim() && r.amount && Number(r.amount) > 0,
     );
 
     if (batch.length === 0) {
@@ -188,9 +187,7 @@ export default function ImportSelectScreen() {
 
     setSaving(true);
     setStatus(
-      clientDupes > 0
-        ? `Saving ${unique.length}…`
-        : `Saving ${unique.length}…`
+      clientDupes > 0 ? `Saving ${unique.length}…` : `Saving ${unique.length}…`,
     );
 
     try {
@@ -202,9 +199,7 @@ export default function ImportSelectScreen() {
           ? new Date(r.paidAt).toISOString()
           : new Date().toISOString(),
         source:
-          r.source === "phonepe" ||
-          r.source === "gpay" ||
-          r.source === "sms"
+          r.source === "phonepe" || r.source === "gpay" || r.source === "sms"
             ? r.source
             : "manual",
         upiRef: r.upiRef ?? null,
@@ -246,7 +241,7 @@ export default function ImportSelectScreen() {
       Alert.alert(
         res.created > 0 ? "Import complete" : "Nothing new added",
         parts.join(" · ") || "No changes",
-        [{ text: "OK", onPress: () => router.replace("/(app)") }]
+        [{ text: "OK", onPress: () => router.replace("/(app)") }],
       );
     } catch (e) {
       setError(
@@ -254,7 +249,7 @@ export default function ImportSelectScreen() {
           ? e.message
           : e instanceof Error
             ? e.message
-            : "Could not save payments"
+            : "Could not save payments",
       );
     } finally {
       setSaving(false);
@@ -305,19 +300,13 @@ export default function ImportSelectScreen() {
               Clear
             </Text>
           </Pressable>
-          <Text
-            muted
-            style={{ marginLeft: "auto", fontSize: 13 }}
-          >
+          <Text muted style={{ marginLeft: "auto", fontSize: 13 }}>
             {selectedCount} of {rows.length}
           </Text>
         </View>
 
         {rows.length === 0 ? (
-          <Text
-            muted
-            style={{ textAlign: "center", marginTop: spacing.xxxl }}
-          >
+          <Text muted style={{ textAlign: "center", marginTop: spacing.xxxl }}>
             No payments left. Go back and try another screenshot.
           </Text>
         ) : (
@@ -336,9 +325,7 @@ export default function ImportSelectScreen() {
               const isLast = index === rows.length - 1;
               return (
                 <View key={row.id}>
-                  <View
-                    style={[styles.row, junk && !on && { opacity: 0.55 }]}
-                  >
+                  <View style={[styles.row, junk && !on && { opacity: 0.55 }]}>
                     <Pressable
                       onPress={() => toggle(row.id)}
                       hitSlop={8}
@@ -350,12 +337,8 @@ export default function ImportSelectScreen() {
                         style={[
                           styles.check,
                           {
-                            borderColor: on
-                              ? colors.text
-                              : colors.borderStrong,
-                            backgroundColor: on
-                              ? colors.text
-                              : "transparent",
+                            borderColor: on ? colors.text : colors.borderStrong,
+                            backgroundColor: on ? colors.text : "transparent",
                           },
                         ]}
                       >
@@ -397,9 +380,7 @@ export default function ImportSelectScreen() {
                           style={{ fontSize: 12, marginTop: 3 }}
                           numberOfLines={1}
                         >
-                          {row.paidAt
-                            ? formatDateTime(row.paidAt)
-                            : "No date"}
+                          {row.paidAt ? formatDateTime(row.paidAt) : "No date"}
                           {junk ? " · needs review" : ""}
                         </Text>
                       </View>
@@ -536,7 +517,10 @@ export default function ImportSelectScreen() {
             <ScrollView
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ gap: spacing.lg, paddingBottom: spacing.md }}
+              contentContainerStyle={{
+                gap: spacing.lg,
+                paddingBottom: spacing.md,
+              }}
             >
               <Field label="Merchant">
                 <Input

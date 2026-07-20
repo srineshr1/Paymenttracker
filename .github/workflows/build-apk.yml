@@ -16,34 +16,115 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/mobile
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
+
       - run: npm ci
       - run: npm run build -w @paymenttracker/shared
+
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Build APK with EAS
+
+      - name: Resolve build profile
+        id: profile
         run: |
           PROFILE="${{ github.event.inputs.profile || 'preview' }}"
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             PROFILE="production"
           fi
-          eas build --platform android --profile "$PROFILE" --non-interactive
-      - uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'
+          echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK with EAS
+        id: build
+        working-directory: apps/mobile
+        run: |
+          eas build \
+            --platform android \
+            --profile "${{ steps.profile.outputs.profile }}" \
+            --non-interactive \
+            --no-wait \
+            --json > /tmp/eas-build.json
+          cat /tmp/eas-build.json
+          BUILD_ID=$(node -e "const d=require('/tmp/eas-build.json'); console.log(Array.isArray(d)?d[0].id:d.id)")
+          echo "build_id=$BUILD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for build and download APK
+        working-directory: apps/mobile
+        run: |
+          BUILD_ID="${{ steps.build.outputs.build_id }}"
+          echo "Waiting for build $BUILD_ID..."
+          for i in $(seq 1 90); do
+            eas build:view "$BUILD_ID" --json > /tmp/eas-status.json
+            STATUS=$(node -e "console.log(require('/tmp/eas-status.json').status)")
+            echo "Status: $STATUS (attempt $i)"
+            if [ "$STATUS" = "FINISHED" ]; then
+              break
+            fi
+            if [ "$STATUS" = "ERRORED" ] || [ "$STATUS" = "CANCELED" ]; then
+              echo "Build failed with status: $STATUS"
+              cat /tmp/eas-status.json
+              exit 1
+            fi
+            sleep 60
+          done
+
+          STATUS=$(node -e "console.log(require('/tmp/eas-status.json').status)")
+          if [ "$STATUS" != "FINISHED" ]; then
+            echo "Timed out waiting for build"
+            exit 1
+          fi
+
+          APK_URL=$(node -e "console.log(require('/tmp/eas-status.json').artifacts?.buildUrl || '')")
+          if [ -z "$APK_URL" ]; then
+            echo "No APK URL found"
+            cat /tmp/eas-status.json
+            exit 1
+          fi
+
+          mkdir -p /tmp/release
+          curl -L "$APK_URL" -o /tmp/release/spentd.apk
+          ls -lh /tmp/release/spentd.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
         with:
           name: spentd-apk
-          path: apps/mobile/*.apk
-          retention-days: 7
+          path: /tmp/release/spentd.apk
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/release/spentd.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create draft release (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: "Spentd APK #${{ github.run_number }}"
+          files: /tmp/release/spentd.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

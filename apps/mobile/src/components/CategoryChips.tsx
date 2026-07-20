@@ -1,6 +1,6 @@
+import type { Category } from "@paymenttracker/shared";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { Category } from "@paymenttracker/shared";
 import { api } from "@/src/api/client";
 import { Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
@@ -17,7 +17,10 @@ export function CategoryChips({
   const [cats, setCats] = useState<Category[]>([]);
 
   useEffect(() => {
-    void api.listCategories().then((r) => setCats(r.categories)).catch(() => {});
+    void api
+      .listCategories()
+      .then((r) => setCats(r.categories))
+      .catch(() => {});
   }, []);
 
   return (

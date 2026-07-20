@@ -1,5 +1,5 @@
-import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const KEY = "spentd.monthly_budget";
 const PREFS_KEY = "spentd.budget_prefs";
@@ -87,10 +87,10 @@ export async function getBudgetPrefs(): Promise<BudgetPrefs> {
       return {
         mode: parsed.mode === "manual" ? "manual" : "auto",
         manualBudget: clampBudget(
-          Number(parsed.manualBudget) || DEFAULT_BUDGET
+          Number(parsed.manualBudget) || DEFAULT_BUDGET,
         ),
         savingsRate: clampSavingsRate(
-          Number(parsed.savingsRate) ?? DEFAULT_SAVINGS_RATE
+          Number(parsed.savingsRate) ?? DEFAULT_SAVINGS_RATE,
         ),
       };
     } catch {
@@ -116,10 +116,15 @@ export async function getBudgetPrefs(): Promise<BudgetPrefs> {
   return { ...DEFAULT_PREFS };
 }
 
-export async function setBudgetPrefs(prefs: Partial<BudgetPrefs>): Promise<BudgetPrefs> {
+export async function setBudgetPrefs(
+  prefs: Partial<BudgetPrefs>,
+): Promise<BudgetPrefs> {
   const current = await getBudgetPrefs();
   const next: BudgetPrefs = {
-    mode: prefs.mode === "manual" || prefs.mode === "auto" ? prefs.mode : current.mode,
+    mode:
+      prefs.mode === "manual" || prefs.mode === "auto"
+        ? prefs.mode
+        : current.mode,
     manualBudget:
       prefs.manualBudget != null
         ? clampBudget(prefs.manualBudget)
@@ -224,7 +229,9 @@ export function computeBudgetPlan(input: {
   if (budget > 0 && isCurrentMonth) {
     const expectedByToday = budget * (dayOfMonth / dim);
     if (expectedByToday > 0) {
-      paceDeltaPct = Math.round(((spent - expectedByToday) / expectedByToday) * 100);
+      paceDeltaPct = Math.round(
+        ((spent - expectedByToday) / expectedByToday) * 100,
+      );
     } else {
       paceDeltaPct = spent > 0 ? 100 : 0;
     }

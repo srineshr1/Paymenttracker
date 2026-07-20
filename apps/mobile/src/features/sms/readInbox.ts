@@ -1,12 +1,12 @@
+import type { SmsMessageInput } from "@paymenttracker/shared";
 import {
   DeviceEventEmitter,
+  type EmitterSubscription,
   NativeEventEmitter,
   NativeModules,
   PermissionsAndroid,
   Platform,
-  type EmitterSubscription,
 } from "react-native";
-import type { SmsMessageInput } from "@paymenttracker/shared";
 
 type NativeSmsRow = {
   id?: string | null;
@@ -72,7 +72,7 @@ export async function requestSmsPermission(): Promise<boolean> {
 
   try {
     const readOk = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.READ_SMS
+      PermissionsAndroid.PERMISSIONS.READ_SMS,
     );
     if (!readOk) {
       const result = await PermissionsAndroid.request(
@@ -83,7 +83,7 @@ export async function requestSmsPermission(): Promise<boolean> {
             "Spentd reads bank and UPI SMS on this device to import payments. Messages never leave your phone.",
           buttonPositive: "Allow",
           buttonNegative: "Not now",
-        }
+        },
       );
       if (result !== PermissionsAndroid.RESULTS.GRANTED) return false;
     }
@@ -122,14 +122,14 @@ export type ListInboxOptions = {
  * Read raw inbox rows from the device. Does not parse or filter payments.
  */
 export async function listInboxSms(
-  options: ListInboxOptions = {}
+  options: ListInboxOptions = {},
 ): Promise<SmsMessageInput[]> {
   const native = getNative();
   if (!native) {
     throw new Error(
       Platform.OS === "android"
         ? "SMS import needs a native Spentd build (not Expo Go). Rebuild with expo run:android."
-        : "SMS import is only available on Android."
+        : "SMS import is only available on Android.",
     );
   }
 
@@ -138,7 +138,7 @@ export async function listInboxSms(
     const ok = await requestSmsPermission();
     if (!ok) {
       throw new Error(
-        "SMS permission was denied. Enable it in Settings to import payments from messages."
+        "SMS permission was denied. Enable it in Settings to import payments from messages.",
       );
     }
   }
@@ -196,7 +196,7 @@ export async function drainPendingSms(): Promise<
  * Returns an unsubscribe function.
  */
 export function subscribeSmsReceived(
-  onMessage: (msg: SmsMessageInput & { id?: string | null }) => void
+  onMessage: (msg: SmsMessageInput & { id?: string | null }) => void,
 ): () => void {
   const native = getNative();
   if (!native) return () => undefined;
@@ -214,13 +214,16 @@ export function subscribeSmsReceived(
         EVENT_RECEIVED,
         (raw: NativeSmsRow) => {
           onMessage(mapRow(raw ?? {}));
-        }
+        },
       );
     }
   } catch {
-    sub = DeviceEventEmitter.addListener(EVENT_RECEIVED, (raw: NativeSmsRow) => {
-      onMessage(mapRow(raw ?? {}));
-    });
+    sub = DeviceEventEmitter.addListener(
+      EVENT_RECEIVED,
+      (raw: NativeSmsRow) => {
+        onMessage(mapRow(raw ?? {}));
+      },
+    );
   }
 
   return () => {

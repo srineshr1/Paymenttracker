@@ -7,10 +7,7 @@ type Pending = {
   reject: (err: Error) => void;
 };
 
-type RecognizeFn = (
-  base64: string,
-  mimeType: string
-) => Promise<string>;
+type RecognizeFn = (base64: string, mimeType: string) => Promise<string>;
 
 let recognizeImpl: RecognizeFn | null = null;
 let readyResolve: (() => void) | null = null;
@@ -33,7 +30,7 @@ function ensureReadyPromise() {
  */
 export async function recognizeWithTesseract(
   base64: string,
-  mimeType = "image/jpeg"
+  mimeType = "image/jpeg",
 ): Promise<string> {
   await Promise.race([
     ensureReadyPromise(),
@@ -42,11 +39,11 @@ export async function recognizeWithTesseract(
         () =>
           reject(
             new Error(
-              "OCR engine is still starting. Check your network and try again."
-            )
+              "OCR engine is still starting. Check your network and try again.",
+            ),
           ),
-        25_000
-      )
+        25_000,
+      ),
     ),
   ]);
   if (!recognizeImpl) {
@@ -99,7 +96,7 @@ export function TesseractHost() {
       return;
     }
     pending.reject(
-      new Error(payload.error || "Could not read text from this image.")
+      new Error(payload.error || "Could not read text from this image."),
     );
   }, []);
 
@@ -113,8 +110,8 @@ export function TesseractHost() {
             pendingRef.current.delete(id);
             reject(
               new Error(
-                "Screenshot reading timed out. Try a clearer image or paste the text."
-              )
+                "Screenshot reading timed out. Try a clearer image or paste the text.",
+              ),
             );
           }
         }, 90_000);

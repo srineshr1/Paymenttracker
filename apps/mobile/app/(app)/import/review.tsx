@@ -1,3 +1,4 @@
+import type { ParsedExpense } from "@paymenttracker/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -10,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { ParsedExpense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
 import { CategoryChips } from "@/src/components/CategoryChips";
 import { Badge, Button, Card, Input, Screen, Text } from "@/src/components/ui";
@@ -22,7 +22,10 @@ export default function ImportReviewScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
-  const params = useLocalSearchParams<{ imageUri?: string; payload?: string }>();
+  const params = useLocalSearchParams<{
+    imageUri?: string;
+    payload?: string;
+  }>();
 
   const initial = useMemo(() => {
     try {
@@ -37,11 +40,11 @@ export default function ImportReviewScreen() {
   const [paidAt, setPaidAt] = useState(
     initial?.paidAt
       ? new Date(initial.paidAt).toISOString()
-      : new Date().toISOString()
+      : new Date().toISOString(),
   );
   const [upiRef, setUpiRef] = useState(initial?.upiRef ?? "");
   const [direction, setDirection] = useState<"debit" | "credit">(
-    initial?.direction ?? "debit"
+    initial?.direction ?? "debit",
   );
   const [notes, setNotes] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -103,7 +106,7 @@ export default function ImportReviewScreen() {
         setError(
           e.message.includes("already")
             ? e.message
-            : "Duplicate — this payment looks already saved."
+            : "Duplicate — this payment looks already saved.",
         );
       } else {
         setError(e instanceof ApiError ? e.message : "Could not save");
@@ -198,7 +201,11 @@ export default function ImportReviewScreen() {
           {initial.warnings?.length ? (
             <Card variant="outline" style={styles.warnBox}>
               {initial.warnings.map((w) => (
-                <Text key={w} color={colors.warning} style={{ marginBottom: 4 }}>
+                <Text
+                  key={w}
+                  color={colors.warning}
+                  style={{ marginBottom: 4 }}
+                >
                   {w}
                 </Text>
               ))}

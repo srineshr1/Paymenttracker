@@ -4,10 +4,10 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect } from "react";
 import {
   BackHandler,
+  type LayoutChangeEvent,
   Pressable,
   StyleSheet,
   View,
-  type LayoutChangeEvent,
 } from "react-native";
 import Animated, {
   Easing,
@@ -60,7 +60,7 @@ export function AddPaymentsMenu({
         labelW.value = w;
       }
     },
-    [labelW]
+    [labelW],
   );
 
   const syncProgress = useCallback(
@@ -71,7 +71,7 @@ export function AddPaymentsMenu({
         progress.value = nextOpen ? 1 : 0;
       }
     },
-    [progress]
+    [progress],
   );
 
   useEffect(() => {
@@ -87,7 +87,7 @@ export function AddPaymentsMenu({
       return () => {
         cancelAnimationFrame(ready);
       };
-    }, [progress, press])
+    }, [progress, press]),
   );
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export function AddPaymentsMenu({
 
   const toggle = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
-      () => undefined
+      () => undefined,
     );
     onOpenChange(!open);
   };
@@ -119,7 +119,7 @@ export function AddPaymentsMenu({
       progress.value,
       [0, 1],
       [0, 1],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     );
     return {
       opacity,
@@ -128,19 +128,14 @@ export function AddPaymentsMenu({
   });
 
   const shotStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(
-      progress.value,
-      [0, 1],
-      [0, 1],
-      Extrapolation.CLAMP
-    ),
+    opacity: interpolate(progress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
     transform: [
       {
         translateY: interpolate(
           progress.value,
           [0, 1],
           [16, 0],
-          Extrapolation.CLAMP
+          Extrapolation.CLAMP,
         ),
       },
       {
@@ -148,7 +143,7 @@ export function AddPaymentsMenu({
           progress.value,
           [0, 1],
           [0.96, 1],
-          Extrapolation.CLAMP
+          Extrapolation.CLAMP,
         ),
       },
     ],
@@ -161,7 +156,7 @@ export function AddPaymentsMenu({
           progress.value,
           [0, 1],
           [0, 45],
-          Extrapolation.CLAMP
+          Extrapolation.CLAMP,
         )}deg`,
       },
     ],
@@ -170,23 +165,18 @@ export function AddPaymentsMenu({
   const labelStyle = useAnimatedStyle(() => {
     const lw = labelW.value > 0 ? labelW.value : LABEL_FALLBACK;
     return {
-      width: interpolate(
-        progress.value,
-        [0, 1],
-        [lw, 0],
-        Extrapolation.CLAMP
-      ),
+      width: interpolate(progress.value, [0, 1], [lw, 0], Extrapolation.CLAMP),
       marginLeft: interpolate(
         progress.value,
         [0, 1],
         [GAP_CLOSED, 0],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       ),
       opacity: interpolate(
         progress.value,
         [0, 0.4, 0.75],
         [1, 0.35, 0],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       ),
     };
   });
@@ -201,13 +191,13 @@ export function AddPaymentsMenu({
         progress.value,
         [0, 1],
         [closedW, BTN_SIZE],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       ),
       paddingHorizontal: interpolate(
         progress.value,
         [0, 1],
         [PAD_CLOSED, 0],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       ),
       transform: [{ scale: pressScale }],
     };

@@ -1,16 +1,22 @@
 import {
-  pgTable,
-  uuid,
-  text,
-  timestamp,
+  index,
   numeric,
   pgEnum,
+  pgTable,
+  text,
+  timestamp,
   uniqueIndex,
-  index,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 export const directionEnum = pgEnum("direction", ["debit", "credit"]);
-export const sourceEnum = pgEnum("source", ["phonepe", "gpay", "manual"]);
+export const sourceEnum = pgEnum("source", [
+  "phonepe",
+  "gpay",
+  "manual",
+  "sms",
+  "cash",
+]);
 
 export const users = pgTable(
   "users",
@@ -22,7 +28,7 @@ export const users = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [uniqueIndex("users_username_idx").on(t.username)]
+  (t) => [uniqueIndex("users_username_idx").on(t.username)],
 );
 
 export const categories = pgTable("categories", {
@@ -62,7 +68,7 @@ export const expenses = pgTable(
   (t) => [
     index("expenses_user_paid_at_idx").on(t.userId, t.paidAt),
     uniqueIndex("expenses_user_upi_ref_idx").on(t.userId, t.upiRef),
-  ]
+  ],
 );
 
 export type UserRow = typeof users.$inferSelect;

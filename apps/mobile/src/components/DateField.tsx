@@ -30,7 +30,7 @@ export function DateField({
         next.setFullYear(
           selected.getFullYear(),
           selected.getMonth(),
-          selected.getDate()
+          selected.getDate(),
         );
         onChange(next);
         // Open time after date on Android
@@ -90,7 +90,10 @@ export function DateField({
         />
       ) : null}
       {Platform.OS === "ios" && open ? (
-        <Pressable onPress={() => setOpen(false)} style={{ padding: spacing.sm }}>
+        <Pressable
+          onPress={() => setOpen(false)}
+          style={{ padding: spacing.sm }}
+        >
           <Text style={{ color: colors.accentStrong, textAlign: "center" }}>
             Done
           </Text>

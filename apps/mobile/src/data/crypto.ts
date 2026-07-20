@@ -5,8 +5,8 @@ import {
   aesDecryptAsync,
   aesEncryptAsync,
 } from "expo-crypto";
-import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 /** Iterated SHA-512 rounds for passcode → key derivation (offline PIN). */
 const KDF_ITERS = 8_000;
@@ -53,7 +53,7 @@ export function clearActiveDek(): void {
 async function setSecure(
   key: string,
   value: string,
-  options?: SecureStore.SecureStoreOptions
+  options?: SecureStore.SecureStoreOptions,
 ) {
   if (Platform.OS === "web") {
     try {
@@ -68,7 +68,7 @@ async function setSecure(
 
 async function getSecure(
   key: string,
-  options?: SecureStore.SecureStoreOptions
+  options?: SecureStore.SecureStoreOptions,
 ): Promise<string | null> {
   if (Platform.OS === "web") {
     try {
@@ -115,7 +115,7 @@ function copyBytes(src: Uint8Array): Uint8Array {
 
 async function deriveKek(
   passcode: string,
-  salt: Uint8Array
+  salt: Uint8Array,
 ): Promise<Uint8Array> {
   const pin = String(passcode ?? "").trim();
   const saltBytes = copyBytes(salt);
@@ -128,18 +128,18 @@ async function deriveKek(
     new Uint8Array(
       await Crypto.digest(
         Crypto.CryptoDigestAlgorithm.SHA512,
-        material as BufferSource
-      )
-    )
+        material as BufferSource,
+      ),
+    ),
   );
   for (let i = 1; i < KDF_ITERS; i++) {
     hash = copyBytes(
       new Uint8Array(
         await Crypto.digest(
           Crypto.CryptoDigestAlgorithm.SHA512,
-          hash as BufferSource
-        )
-      )
+          hash as BufferSource,
+        ),
+      ),
     );
   }
   return copyBytes(hash.subarray(0, 32));
@@ -148,13 +148,13 @@ async function deriveKek(
 async function makeVerifier(kek: Uint8Array): Promise<string> {
   return Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA512,
-    `${bytesToHex(kek)}:pt-verify-v1`
+    `${bytesToHex(kek)}:pt-verify-v1`,
   );
 }
 
 async function wrapDek(
   dek: AESEncryptionKey,
-  kek: Uint8Array
+  kek: Uint8Array,
 ): Promise<string> {
   const wrapKey = await AESEncryptionKey.import(copyBytes(kek));
   const dekBytes = copyBytes(await dek.bytes());
@@ -166,7 +166,7 @@ async function wrapDek(
 
 async function unwrapDek(
   wrapped: string,
-  kek: Uint8Array
+  kek: Uint8Array,
 ): Promise<AESEncryptionKey> {
   const wrapKey = await AESEncryptionKey.import(copyBytes(kek));
   let combined: Uint8Array | string = wrapped;
@@ -202,7 +202,7 @@ export async function loadRecoveryDek(): Promise<AESEncryptionKey> {
   if (Platform.OS === "web") {
     throw new LocalDataError(
       "Passcode recovery that keeps your data needs a phone. You can still clear all data.",
-      501
+      501,
     );
   }
 
@@ -211,7 +211,7 @@ export async function loadRecoveryDek(): Promise<AESEncryptionKey> {
     if (!hex) {
       throw new LocalDataError(
         "No recovery key found. Unlock once with your passcode to enable recovery, or clear all data.",
-        404
+        404,
       );
     }
     return AESEncryptionKey.import(hex, "hex");
@@ -219,7 +219,7 @@ export async function loadRecoveryDek(): Promise<AESEncryptionKey> {
     if (e instanceof LocalDataError) throw e;
     throw new LocalDataError(
       "Could not load recovery key. Try again, or clear all data.",
-      401
+      401,
     );
   }
 }
@@ -241,10 +241,7 @@ export async function assertNotRateLimited(): Promise<void> {
   const ts = Number(until);
   if (Number.isFinite(ts) && Date.now() < ts) {
     const secs = Math.ceil((ts - Date.now()) / 1000);
-    throw new LocalDataError(
-      `Too many attempts. Try again in ${secs}s.`,
-      429
-    );
+    throw new LocalDataError(`Too many attempts. Try again in ${secs}s.`, 429);
   }
 }
 
@@ -253,7 +250,7 @@ async function recordFailedAttempt(): Promise<void> {
   const count = (Number(raw) || 0) + 1;
   await setSecure(KEYS.failCount, String(count));
   if (count >= 5) {
-    const backoffMs = Math.min(60_000, 5_000 * Math.pow(2, count - 5));
+    const backoffMs = Math.min(60_000, 5_000 * 2 ** (count - 5));
     await setSecure(KEYS.failUntil, String(Date.now() + backoffMs));
   }
 }
@@ -279,7 +276,7 @@ export async function setStoredUserId(id: string): Promise<void> {
 
 async function rewrapDekWithPasscode(
   dek: AESEncryptionKey,
-  passcode: string
+  passcode: string,
 ): Promise<void> {
   const pin = String(passcode ?? "").trim();
   if (!/^\d{6}$/.test(pin)) {
@@ -305,7 +302,7 @@ async function rewrapDekWithPasscode(
  */
 export async function setupVault(
   passcode: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const pin = String(passcode ?? "").trim();
   if (!/^\d{6}$/.test(pin)) {
@@ -339,7 +336,7 @@ export async function setupVault(
     await wipeVaultSecrets();
     throw new LocalDataError(
       "Passcode setup failed verification. Try again.",
-      500
+      500,
     );
   }
   try {
@@ -348,7 +345,7 @@ export async function setupVault(
     await wipeVaultSecrets();
     throw new LocalDataError(
       "Passcode setup failed to seal the vault. Try again.",
-      500
+      500,
     );
   }
 }
@@ -371,7 +368,7 @@ export async function unlockVault(passcode: string): Promise<void> {
   if (!saltHex || !verifier || !wrapped) {
     throw new LocalDataError(
       "No local account on this device. Create one first.",
-      404
+      404,
     );
   }
 
@@ -390,7 +387,7 @@ export async function unlockVault(passcode: string): Promise<void> {
     await recordFailedAttempt();
     throw new LocalDataError(
       "Vault data is unreadable. Use Forgot passcode to reset.",
-      500
+      500,
     );
   }
   await clearFailedAttempts();
@@ -418,7 +415,7 @@ export async function unlockVault(passcode: string): Promise<void> {
  */
 export async function changeVaultPasscode(
   currentPasscode: string,
-  newPasscode: string
+  newPasscode: string,
 ): Promise<void> {
   await assertNotRateLimited();
 
@@ -450,7 +447,7 @@ export async function changeVaultPasscode(
  * Keeps all encrypted history.
  */
 export async function resetPasscodeWithRecovery(
-  newPasscode: string
+  newPasscode: string,
 ): Promise<void> {
   if (!/^\d{6}$/.test(newPasscode)) {
     throw new LocalDataError("Passcode must be exactly 6 digits.", 400);
@@ -500,7 +497,7 @@ export async function sealString(plaintext: string): Promise<string> {
 
 /** Decrypt a sealed string; null-safe for optional fields. */
 export async function openString(
-  sealedBlob: string | null | undefined
+  sealedBlob: string | null | undefined,
 ): Promise<string | null> {
   if (sealedBlob == null || sealedBlob === "") return null;
   const dek = getActiveDek();
@@ -514,7 +511,7 @@ export async function openString(
 }
 
 export async function sealNullable(
-  value: string | null | undefined
+  value: string | null | undefined,
 ): Promise<string | null> {
   if (value == null || value === "") return null;
   return sealString(value);
@@ -523,11 +520,11 @@ export async function sealNullable(
 /** Stable hash for UPI ref dedupe without storing plaintext ref. */
 export async function hashUpiRef(
   userId: string,
-  upiRef: string
+  upiRef: string,
 ): Promise<string> {
   return Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    `${userId}|upi|${upiRef.trim()}`
+    `${userId}|upi|${upiRef.trim()}`,
   );
 }
 

@@ -1,9 +1,9 @@
+import * as Haptics from "expo-haptics";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import * as Haptics from "expo-haptics";
-import { Text } from "./ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { spacing, typography } from "@/src/design/tokens";
+import { Text } from "./ui";
 
 const KEYS = [
   ["1", "2", "3"],
@@ -48,9 +48,7 @@ export function PinPad({
               style={[
                 styles.dot,
                 {
-                  backgroundColor: filled
-                    ? colors.text
-                    : "transparent",
+                  backgroundColor: filled ? colors.text : "transparent",
                   borderColor: filled ? colors.text : colors.textMuted,
                 },
               ]}
@@ -88,7 +86,7 @@ export function PinPad({
                     {key}
                   </Text>
                 </Pressable>
-              )
+              ),
             )}
           </View>
         ))}

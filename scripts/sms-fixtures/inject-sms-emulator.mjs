@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Inject fake SMS into an Android emulator inbox with historical dates.
  *
@@ -16,17 +17,17 @@
  *   node scripts/sms-fixtures/inject-sms-emulator.mjs --serial emulator-5554
  */
 
-import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  unlinkSync,
-  mkdtempSync,
-} from "node:fs";
-import { resolve, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,7 +51,7 @@ function hasFlag(name) {
 }
 
 const FIXTURE = resolve(
-  flag("fixture", resolve(__dirname, "sms-3months.json"))
+  flag("fixture", resolve(__dirname, "sms-3months.json")),
 );
 const LIMIT = flag("limit", null) != null ? Number(flag("limit", "0")) : null;
 const SERIAL = flag("serial", null);
@@ -76,7 +77,7 @@ function findAdb() {
     }
   }
   throw new Error(
-    "adb not found. Install Android platform-tools or set ANDROID_HOME."
+    "adb not found. Install Android platform-tools or set ANDROID_HOME.",
   );
 }
 
@@ -139,19 +140,19 @@ function buildSql(messages, { clear }) {
   if (clear) {
     // Reset sequences so _id starts at 1
     lines.push(
-      "DELETE FROM sqlite_sequence WHERE name IN ('canonical_addresses','threads','sms');"
+      "DELETE FROM sqlite_sequence WHERE name IN ('canonical_addresses','threads','sms');",
     );
     for (let i = 0; i < addresses.length; i++) {
       const id = i + 1;
       lines.push(
-        `INSERT INTO canonical_addresses (_id, address) VALUES (${id}, ${sqlString(addresses[i])});`
+        `INSERT INTO canonical_addresses (_id, address) VALUES (${id}, ${sqlString(addresses[i])});`,
       );
     }
   } else {
     // Append mode: insert addresses only if missing; thread/sms get new ids
     for (const a of addresses) {
       lines.push(
-        `INSERT INTO canonical_addresses (address) SELECT ${sqlString(a)} WHERE NOT EXISTS (SELECT 1 FROM canonical_addresses WHERE address=${sqlString(a)});`
+        `INSERT INTO canonical_addresses (address) SELECT ${sqlString(a)} WHERE NOT EXISTS (SELECT 1 FROM canonical_addresses WHERE address=${sqlString(a)});`,
       );
     }
   }
@@ -175,11 +176,11 @@ function buildSql(messages, { clear }) {
           .filter((m) => (m.address || "UNKNOWN") === addr)
           .sort((a, b) => b.dateMs - a.dateMs)[0]?.body ?? "";
       const count = messages.filter(
-        (m) => (m.address || "UNKNOWN") === addr
+        (m) => (m.address || "UNKNOWN") === addr,
       ).length;
       // sub_id=1 matches emulator default SIM (Google Messages filters on this)
       lines.push(
-        `INSERT INTO threads (_id, date, message_count, recipient_ids, snippet, snippet_cs, read, type, error, has_attachment, sub_id) VALUES (${threadId}, ${newest}, ${count}, '${canonId}', ${sqlString(snippet.slice(0, 100))}, 0, 1, 0, 0, 0, 1);`
+        `INSERT INTO threads (_id, date, message_count, recipient_ids, snippet, snippet_cs, read, type, error, has_attachment, sub_id) VALUES (${threadId}, ${newest}, ${count}, '${canonId}', ${sqlString(snippet.slice(0, 100))}, 0, 1, 0, 0, 0, 1);`,
       );
     }
   } else {
@@ -192,13 +193,13 @@ function buildSql(messages, { clear }) {
           .filter((m) => (m.address || "UNKNOWN") === addr)
           .sort((a, b) => b.dateMs - a.dateMs)[0]?.body ?? "";
       const count = messages.filter(
-        (m) => (m.address || "UNKNOWN") === addr
+        (m) => (m.address || "UNKNOWN") === addr,
       ).length;
       // Create thread if none exists for this recipient
       lines.push(
         `INSERT INTO threads (date, message_count, recipient_ids, snippet, snippet_cs, read, type) ` +
           `SELECT ${newest}, ${count}, CAST((SELECT _id FROM canonical_addresses WHERE address=${sqlString(addr)} LIMIT 1) AS TEXT), ${sqlString(snippet.slice(0, 100))}, 0, 1, 0 ` +
-          `WHERE NOT EXISTS (SELECT 1 FROM threads WHERE recipient_ids = CAST((SELECT _id FROM canonical_addresses WHERE address=${sqlString(addr)} LIMIT 1) AS TEXT));`
+          `WHERE NOT EXISTS (SELECT 1 FROM threads WHERE recipient_ids = CAST((SELECT _id FROM canonical_addresses WHERE address=${sqlString(addr)} LIMIT 1) AS TEXT));`,
       );
     }
   }
@@ -211,13 +212,13 @@ function buildSql(messages, { clear }) {
     if (clear) {
       const threadId = threadIdByAddr.get(addr);
       lines.push(
-        `INSERT INTO sms (thread_id, address, date, date_sent, protocol, read, status, type, body, locked, sub_id, error_code, seen) VALUES (${threadId}, ${sqlString(addr)}, ${date}, ${date}, 0, 1, -1, 1, ${sqlString(body)}, 0, 1, -1, 1);`
+        `INSERT INTO sms (thread_id, address, date, date_sent, protocol, read, status, type, body, locked, sub_id, error_code, seen) VALUES (${threadId}, ${sqlString(addr)}, ${date}, ${date}, 0, 1, -1, 1, ${sqlString(body)}, 0, 1, -1, 1);`,
       );
     } else {
       lines.push(
         `INSERT INTO sms (thread_id, address, date, date_sent, protocol, read, status, type, body, locked, sub_id, error_code, seen) VALUES (` +
           `(SELECT _id FROM threads WHERE recipient_ids = CAST((SELECT _id FROM canonical_addresses WHERE address=${sqlString(addr)} LIMIT 1) AS TEXT) LIMIT 1), ` +
-          `${sqlString(addr)}, ${date}, ${date}, 0, 1, -1, 1, ${sqlString(body)}, 0, 1, -1, 1);`
+          `${sqlString(addr)}, ${date}, ${date}, 0, 1, -1, 1, ${sqlString(body)}, 0, 1, -1, 1);`,
       );
     }
   }
@@ -227,7 +228,7 @@ function buildSql(messages, { clear }) {
     for (let i = 0; i < addresses.length; i++) {
       const threadId = i + 1;
       lines.push(
-        `UPDATE threads SET message_count=(SELECT COUNT(*) FROM sms WHERE thread_id=${threadId}), date=(SELECT MAX(date) FROM sms WHERE thread_id=${threadId}), snippet=(SELECT body FROM sms WHERE thread_id=${threadId} ORDER BY date DESC LIMIT 1) WHERE _id=${threadId};`
+        `UPDATE threads SET message_count=(SELECT COUNT(*) FROM sms WHERE thread_id=${threadId}), date=(SELECT MAX(date) FROM sms WHERE thread_id=${threadId}), snippet=(SELECT body FROM sms WHERE thread_id=${threadId} ORDER BY date DESC LIMIT 1) WHERE _id=${threadId};`,
       );
     }
   }
@@ -270,7 +271,7 @@ function main() {
     `Fixture: ${FIXTURE}\n  injecting: ${messages.length}` +
       (fixture.meta?.counts
         ? ` (file has ${fixture.meta.counts.total} total, ${fixture.meta.counts.paymentLike} payment-like)`
-        : "")
+        : ""),
   );
 
   if (messages.length === 0) {
@@ -301,7 +302,7 @@ function main() {
   });
   if (hasSqlite.status !== 0 || !hasSqlite.stdout.includes("sqlite3")) {
     console.error(
-      "Device has no sqlite3 binary. This script needs an AOSP emulator with sqlite3."
+      "Device has no sqlite3 binary. This script needs an AOSP emulator with sqlite3.",
     );
     process.exit(1);
   }
@@ -313,7 +314,7 @@ function main() {
   writeFileSync(localSql, sql, "utf8");
 
   console.log(
-    `Pushing SQL (${(sql.length / 1024).toFixed(1)} KB) and applying to mmssms.db...`
+    `Pushing SQL (${(sql.length / 1024).toFixed(1)} KB) and applying to mmssms.db...`,
   );
   adb(adbPath, ["push", localSql, remoteSql]);
 
@@ -324,14 +325,11 @@ function main() {
       "shell",
       "kill $(pidof com.android.providers.telephony) 2>/dev/null; true",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   spawnSync("sleep", ["0.3"]);
 
-  const result = adb(adbPath, [
-    "shell",
-    `sqlite3 ${MMSSMS_DB} < ${remoteSql}`,
-  ]);
+  const result = adb(adbPath, ["shell", `sqlite3 ${MMSSMS_DB} < ${remoteSql}`]);
   console.log(result.stdout || "(no stdout)");
   if (result.stderr) console.warn(result.stderr);
 
@@ -350,7 +348,7 @@ function main() {
       "shell",
       "kill $(pidof com.android.providers.telephony) 2>/dev/null; true",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   spawnSync("sleep", ["0.5"]);
 
@@ -370,7 +368,7 @@ function main() {
       "android.app.role.SMS",
       "com.google.android.apps.messaging",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   adb(
     adbPath,
@@ -382,7 +380,7 @@ function main() {
       "sms_default_application",
       "com.google.android.apps.messaging",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   adb(
     adbPath,
@@ -395,7 +393,7 @@ function main() {
       "android.intent.category.LAUNCHER",
       "1",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   spawnSync("sleep", ["2"]);
 
@@ -414,7 +412,7 @@ function main() {
       "--projection",
       "_id",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   const contentRows = (content.stdout || "")
     .split("\n")
@@ -429,7 +427,7 @@ function main() {
       "/data/data/com.google.android.apps.messaging/databases/bugle_db",
       "SELECT COUNT(*) FROM messages;",
     ],
-    { allowFail: true }
+    { allowFail: true },
   );
   if (bugleCount.status === 0) bugle = bugleCount.stdout;
 
@@ -438,9 +436,7 @@ function main() {
   console.log(`Google Messages (bugle) messages: ${bugle}`);
 
   if (Number(count.stdout) < messages.length && doClear) {
-    console.error(
-      "✗ Fewer SMS in DB than injected — check SQL errors above."
-    );
+    console.error("✗ Fewer SMS in DB than injected — check SQL errors above.");
     process.exit(2);
   }
 

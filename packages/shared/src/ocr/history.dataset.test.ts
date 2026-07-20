@@ -1,7 +1,7 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { parseUpiScreenshotAll } from "./parse.js";
 
@@ -38,7 +38,10 @@ function loadOcr(sample: Sample): string {
   throw new Error(`Sample ${sample.id} has no ocrText/ocrFile`);
 }
 
-function merchantLooseMatch(got: string | null | undefined, exp: string): boolean {
+function merchantLooseMatch(
+  got: string | null | undefined,
+  exp: string,
+): boolean {
   if (!got) return false;
   const g = got.toLowerCase().replace(/\s+/g, " ").trim();
   const e = exp.toLowerCase().replace(/\s+/g, " ").trim();
@@ -57,7 +60,7 @@ function datePrefix(iso: string | null | undefined): string | null {
 }
 
 const dataset = JSON.parse(
-  readFileSync(join(FIXTURE_DIR, "dataset.json"), "utf8")
+  readFileSync(join(FIXTURE_DIR, "dataset.json"), "utf8"),
 ) as Dataset;
 
 describe("history OCR dataset", () => {
@@ -81,13 +84,13 @@ describe("history OCR dataset", () => {
         check(
           rows.length === sample.expectCount,
           `${sample.id}: expected ${sample.expectCount} rows, got ${rows.length}: ${JSON.stringify(
-            rows.map((r) => ({ m: r.merchant, a: r.amount, d: r.paidAt }))
-          )}`
+            rows.map((r) => ({ m: r.merchant, a: r.amount, d: r.paidAt })),
+          )}`,
         );
       } else if (sample.expectCountMin != null) {
         check(
           rows.length >= sample.expectCountMin,
-          `${sample.id}: expected >=${sample.expectCountMin} rows, got ${rows.length}`
+          `${sample.id}: expected >=${sample.expectCountMin} rows, got ${rows.length}`,
         );
       }
 
@@ -97,41 +100,39 @@ describe("history OCR dataset", () => {
           rows.find(
             (r) =>
               r.amount === exp.amount &&
-              merchantLooseMatch(r.merchant, exp.merchant)
+              merchantLooseMatch(r.merchant, exp.merchant),
           ) ?? rows[i];
 
         check(
           Boolean(got),
-          `${sample.id}[${i}]: missing row for ${exp.merchant} ${exp.amount}`
+          `${sample.id}[${i}]: missing row for ${exp.merchant} ${exp.amount}`,
         );
         if (!got) continue;
         check(
           got.amount === exp.amount,
-          `${sample.id}[${i}]: amount want ${exp.amount} got ${got.amount} (merchant=${got.merchant})`
+          `${sample.id}[${i}]: amount want ${exp.amount} got ${got.amount} (merchant=${got.merchant})`,
         );
         check(
           merchantLooseMatch(got.merchant, exp.merchant),
-          `${sample.id}[${i}]: merchant want ~${exp.merchant} got ${got.merchant}`
+          `${sample.id}[${i}]: merchant want ~${exp.merchant} got ${got.merchant}`,
         );
         if (exp.direction) {
           check(
             got.direction === exp.direction,
-            `${sample.id}[${i}]: direction`
+            `${sample.id}[${i}]: direction`,
           );
         }
         if (exp.paidAtDate) {
           check(
             datePrefix(got.paidAt) === exp.paidAtDate,
-            `${sample.id}[${i}]: date want ${exp.paidAtDate} got ${got.paidAt}`
+            `${sample.id}[${i}]: date want ${exp.paidAtDate} got ${got.paidAt}`,
           );
         }
         if (exp.paidAtRelative) {
-          const ageMs = got.paidAt
-            ? Date.now() - Date.parse(got.paidAt)
-            : -1;
+          const ageMs = got.paidAt ? Date.now() - Date.parse(got.paidAt) : -1;
           check(
             ageMs >= 0 && ageMs < 2 * 60 * 60 * 1000,
-            `${sample.id}[${i}]: relative paidAt should be recent, got ${got.paidAt}`
+            `${sample.id}[${i}]: relative paidAt should be recent, got ${got.paidAt}`,
           );
         }
       }

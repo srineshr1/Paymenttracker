@@ -1,5 +1,5 @@
-import { Platform } from "react-native";
 import * as LocalAuthentication from "expo-local-authentication";
+import { Platform } from "react-native";
 import { LocalDataError } from "./crypto";
 
 /**
@@ -7,7 +7,7 @@ import { LocalDataError } from "./crypto";
  * Returns true only when the user successfully authenticates.
  */
 export async function verifyDeviceOwner(
-  reason = "Verify it’s you to recover Spentd"
+  reason = "Verify it’s you to recover Spentd",
 ): Promise<void> {
   if (Platform.OS === "web") {
     // No real device lock on web — recovery that keeps data is unavailable.
@@ -33,10 +33,13 @@ export async function verifyDeviceOwner(
     if (result.error === "user_cancel" || result.error === "system_cancel") {
       throw new LocalDataError("Cancelled.", 401);
     }
-    if (result.error === "passcode_not_set" || result.error === "not_enrolled") {
+    if (
+      result.error === "passcode_not_set" ||
+      result.error === "not_enrolled"
+    ) {
       throw new LocalDataError(
         "Set a screen lock (PIN, pattern, or biometrics) on this phone to recover Spentd.",
-        400
+        400,
       );
     }
     throw new LocalDataError("Phone lock verification failed. Try again.", 401);

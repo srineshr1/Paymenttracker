@@ -1,4 +1,7 @@
-import React, {
+import * as SecureStore from "expo-secure-store";
+import * as SystemUI from "expo-system-ui";
+import type React from "react";
+import {
   createContext,
   useCallback,
   useContext,
@@ -7,13 +10,11 @@ import React, {
   useState,
 } from "react";
 import { useColorScheme } from "react-native";
-import * as SecureStore from "expo-secure-store";
-import * as SystemUI from "expo-system-ui";
 import {
   type ColorTokens,
-  type ThemeMode,
   darkColors,
   lightColors,
+  type ThemeMode,
 } from "./tokens";
 
 const STORAGE_KEY = "paymenttracker.theme";
@@ -37,7 +38,8 @@ async function persistPreference(p: ThemePreference) {
   } catch {
     /* web / unavailable */
     try {
-      if (typeof localStorage !== "undefined") localStorage.setItem(STORAGE_KEY, p);
+      if (typeof localStorage !== "undefined")
+        localStorage.setItem(STORAGE_KEY, p);
     } catch {
       /* ignore */
     }
@@ -94,11 +96,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggle = useCallback(() => {
     setPreferenceState((prev) => {
       const current =
-        prev === "system"
-          ? system === "light"
-            ? "light"
-            : "dark"
-          : prev;
+        prev === "system" ? (system === "light" ? "light" : "dark") : prev;
       const next: ThemeMode = current === "dark" ? "light" : "dark";
       void persistPreference(next);
       return next;
@@ -114,7 +112,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setPreference,
       toggle,
     }),
-    [mode, preference, colors, setPreference, toggle]
+    [mode, preference, colors, setPreference, toggle],
   );
 
   // Avoid flash of wrong theme after reading storage

@@ -1,5 +1,5 @@
 import * as argon2 from "argon2";
-import { SignJWT, jwtVerify } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { config } from "./config.js";
 
 const encoder = new TextEncoder();
@@ -15,7 +15,7 @@ export async function hashPasscode(passcode: string): Promise<string> {
 
 export async function verifyPasscode(
   hash: string,
-  passcode: string
+  passcode: string,
 ): Promise<boolean> {
   try {
     return await argon2.verify(hash, passcode);
@@ -42,7 +42,7 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
   try {
     const { payload } = await jwtVerify(
       token,
-      encoder.encode(config.jwtSecret)
+      encoder.encode(config.jwtSecret),
     );
     if (!payload.sub || typeof payload.username !== "string") return null;
     return { sub: payload.sub, username: payload.username };

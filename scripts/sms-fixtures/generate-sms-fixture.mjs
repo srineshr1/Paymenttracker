@@ -8,7 +8,7 @@
  *   node scripts/sms-fixtures/generate-sms-fixture.mjs --days 90 --out path.json
  */
 
-import { writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,14 +22,12 @@ function flag(name, fallback) {
   return args[i + 1] ?? fallback;
 }
 const DAYS = Number(flag("days", "90"));
-const OUT = resolve(
-  flag("out", resolve(__dirname, "sms-3months.json"))
-);
+const OUT = resolve(flag("out", resolve(__dirname, "sms-3months.json")));
 const SEED = Number(flag("seed", "42"));
 
 // ─── Deterministic PRNG (mulberry32) ─────────────────────────────────────────
 function mulberry32(a) {
-  return function () {
+  return () => {
     let t = (a += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -43,13 +41,33 @@ const chance = (p) => rand() < p;
 
 // ─── Domain data ─────────────────────────────────────────────────────────────
 const MERCHANTS = [
-  { name: "Swiggy", vpa: "swiggy@ybl", amounts: [120, 180, 249, 320, 450, 580, 699] },
+  {
+    name: "Swiggy",
+    vpa: "swiggy@ybl",
+    amounts: [120, 180, 249, 320, 450, 580, 699],
+  },
   { name: "Zomato", vpa: "zomato@paytm", amounts: [150, 220, 310, 420, 550] },
-  { name: "Uber India", vpa: "uber@axisbank", amounts: [89, 145, 210, 340, 520, 780] },
+  {
+    name: "Uber India",
+    vpa: "uber@axisbank",
+    amounts: [89, 145, 210, 340, 520, 780],
+  },
   { name: "Ola Cabs", vpa: "ola@ybl", amounts: [95, 160, 250, 390] },
-  { name: "Amazon", vpa: "amazon@apl", amounts: [299, 499, 799, 1299, 2499, 4999] },
-  { name: "Flipkart", vpa: "flipkart@ybl", amounts: [399, 699, 999, 1599, 2999] },
-  { name: "BigBasket", vpa: "bigbasket@icici", amounts: [450, 780, 1200, 1850, 2400] },
+  {
+    name: "Amazon",
+    vpa: "amazon@apl",
+    amounts: [299, 499, 799, 1299, 2499, 4999],
+  },
+  {
+    name: "Flipkart",
+    vpa: "flipkart@ybl",
+    amounts: [399, 699, 999, 1599, 2999],
+  },
+  {
+    name: "BigBasket",
+    vpa: "bigbasket@icici",
+    amounts: [450, 780, 1200, 1850, 2400],
+  },
   { name: "Blinkit", vpa: "blinkit@ybl", amounts: [180, 320, 490, 670] },
   { name: "IRCTC", vpa: "irctc@sbi", amounts: [540, 890, 1250, 2100, 3500] },
   { name: "BookMyShow", vpa: "bms@ybl", amounts: [250, 400, 600, 900] },
@@ -58,13 +76,25 @@ const MERCHANTS = [
   { name: "Jio", vpa: "jio@ybl", amounts: [239, 299, 399, 666] },
   { name: "Airtel", vpa: "airtel@airtel", amounts: [199, 299, 449, 719] },
   { name: "BESCOM", vpa: "bescom@sbi", amounts: [800, 1200, 1850, 2400, 3100] },
-  { name: "Petrol Pump", vpa: "iocl@ybl", amounts: [500, 1000, 1500, 2000, 2500] },
+  {
+    name: "Petrol Pump",
+    vpa: "iocl@ybl",
+    amounts: [500, 1000, 1500, 2000, 2500],
+  },
   { name: "Dominos", vpa: "dominos@ybl", amounts: [349, 499, 699, 899] },
   { name: "Starbucks", vpa: "starbucks@icici", amounts: [280, 420, 560] },
   { name: "Nykaa", vpa: "nykaa@ybl", amounts: [450, 899, 1299, 2100] },
   { name: "Myntra", vpa: "myntra@ybl", amounts: [799, 1299, 1999, 3499] },
-  { name: "PhonePe Recharge", vpa: "recharge@ybl", amounts: [10, 20, 50, 100, 200] },
-  { name: "Google Play", vpa: "googleplay@okaxis", amounts: [99, 199, 499, 999] },
+  {
+    name: "PhonePe Recharge",
+    vpa: "recharge@ybl",
+    amounts: [10, 20, 50, 100, 200],
+  },
+  {
+    name: "Google Play",
+    vpa: "googleplay@okaxis",
+    amounts: [99, 199, 499, 999],
+  },
 ];
 
 const PEOPLE = [
@@ -128,20 +158,59 @@ function fmtDateDDMMYY(d) {
 }
 
 function fmtDateDDMonYY(d) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const dd = String(d.getDate()).padStart(2, "0");
   const yy = String(d.getFullYear()).slice(-2);
   return `${dd}${months[d.getMonth()]}${yy}`;
 }
 
 function fmtDateDDMonYYYY(d) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const dd = String(d.getDate()).padStart(2, "0");
   return `${dd} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function fmtDateDDMonDash(d) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   const dd = String(d.getDate()).padStart(2, "0");
   const yy = String(d.getFullYear()).slice(-2);
   return `${dd}-${months[d.getMonth()]}-${yy}`;
@@ -380,11 +449,23 @@ function makePromo(d) {
 
 function makePersonal(d) {
   const texts = [
-    { address: "+919876543210", body: "Hey, are we still on for dinner tonight?" },
-    { address: "+919123456789", body: "Call me when free. Need to discuss the project." },
-    { address: "+918765432109", body: "Happy birthday! Hope you have a great day 🎂" },
+    {
+      address: "+919876543210",
+      body: "Hey, are we still on for dinner tonight?",
+    },
+    {
+      address: "+919123456789",
+      body: "Call me when free. Need to discuss the project.",
+    },
+    {
+      address: "+918765432109",
+      body: "Happy birthday! Hope you have a great day 🎂",
+    },
     { address: "+917890123456", body: "Meeting moved to 4pm. See you there." },
-    { address: "+919988776655", body: "Can you send me the docs when you get a chance?" },
+    {
+      address: "+919988776655",
+      body: "Can you send me the docs when you get a chance?",
+    },
   ];
   const t = pick(texts);
   return { ...t, expected: { isPayment: false } };
@@ -438,7 +519,7 @@ function randomTimeOnDay(dayStart) {
     dayStart.getDate(),
     hour,
     min,
-    sec
+    sec,
   );
 }
 
@@ -496,7 +577,7 @@ function generateDay(dayStart, dayIndex) {
       dayStart.getDate(),
       9,
       randInt(0, 40),
-      0
+      0,
     );
     const salary = 65000 + randInt(-2000, 5000);
     const m = makeSalaryCredit(when, salary);
@@ -593,8 +674,7 @@ function main() {
         paymentLike: paymentCount,
         noise: noiseCount,
       },
-      note:
-        "Fake SMS for testing Spentd read/parse. Inject with inject-sms-emulator.mjs. Verify with verify-sms-parse.mjs.",
+      note: "Fake SMS for testing Spentd read/parse. Inject with inject-sms-emulator.mjs. Verify with verify-sms-parse.mjs.",
     },
     messages: withIds,
   };
@@ -604,10 +684,10 @@ function main() {
 
   console.log(`Wrote ${withIds.length} messages → ${OUT}`);
   console.log(
-    `  payment-like: ${paymentCount}, noise: ${noiseCount}, days: ${DAYS}`
+    `  payment-like: ${paymentCount}, noise: ${noiseCount}, days: ${DAYS}`,
   );
   console.log(
-    `  range: ${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`
+    `  range: ${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`,
   );
 }
 

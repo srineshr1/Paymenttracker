@@ -38,7 +38,8 @@ export default function RegisterScreen() {
   }, [passcode, step]);
 
   useEffect(() => {
-    if (step !== "confirm" || confirm.length !== 6 || submitting.current) return;
+    if (step !== "confirm" || confirm.length !== 6 || submitting.current)
+      return;
 
     const pin = createdPin.current;
     const confirmed = confirm;

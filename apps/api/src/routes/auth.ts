@@ -1,20 +1,16 @@
-import { Hono } from "hono";
-import { and, eq, ne } from "drizzle-orm";
 import {
   authBodySchema,
   changePasscodeSchema,
   updateUsernameSchema,
 } from "@paymenttracker/shared";
+import { and, eq, ne } from "drizzle-orm";
+import { Hono } from "hono";
 import { db } from "../db/client.js";
 import { users } from "../db/schema.js";
-import {
-  hashPasscode,
-  signToken,
-  verifyPasscode,
-} from "../lib/auth.js";
+import { hashPasscode, signToken, verifyPasscode } from "../lib/auth.js";
 import { rateLimit } from "../lib/rate-limit.js";
 import { serializeUser } from "../lib/serialize.js";
-import { requireAuth, type AuthVariables } from "../middleware/auth.js";
+import { type AuthVariables, requireAuth } from "../middleware/auth.js";
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>();
 
@@ -24,7 +20,7 @@ authRoutes.post("/register", async (c) => {
   if (!parsed.success) {
     return c.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      400
+      400,
     );
   }
 
@@ -62,7 +58,7 @@ authRoutes.post("/login", async (c) => {
   if (!parsed.success) {
     return c.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      400
+      400,
     );
   }
 
@@ -75,7 +71,7 @@ authRoutes.post("/login", async (c) => {
         error: "Too many attempts. Try again later.",
         retryAfterMs: limited.retryAfterMs,
       },
-      429
+      429,
     );
   }
 
@@ -114,7 +110,7 @@ authRoutes.post("/change-passcode", requireAuth, async (c) => {
   if (!parsed.success) {
     return c.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      400
+      400,
     );
   }
 
@@ -127,7 +123,7 @@ authRoutes.post("/change-passcode", requireAuth, async (c) => {
         error: "Too many attempts. Try again later.",
         retryAfterMs: limited.retryAfterMs,
       },
-      429
+      429,
     );
   }
 
@@ -138,16 +134,16 @@ authRoutes.post("/change-passcode", requireAuth, async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const ok = await verifyPasscode(user.passcodeHash, parsed.data.currentPasscode);
+  const ok = await verifyPasscode(
+    user.passcodeHash,
+    parsed.data.currentPasscode,
+  );
   if (!ok) {
     return c.json({ error: "Current passcode is incorrect" }, 401);
   }
 
   const passcodeHash = await hashPasscode(parsed.data.newPasscode);
-  await db
-    .update(users)
-    .set({ passcodeHash })
-    .where(eq(users.id, userId));
+  await db.update(users).set({ passcodeHash }).where(eq(users.id, userId));
 
   return c.json({ ok: true });
 });
@@ -158,7 +154,7 @@ authRoutes.patch("/username", requireAuth, async (c) => {
   if (!parsed.success) {
     return c.json(
       { error: "Invalid input", details: parsed.error.flatten() },
-      400
+      400,
     );
   }
 
@@ -171,7 +167,7 @@ authRoutes.patch("/username", requireAuth, async (c) => {
         error: "Too many attempts. Try again later.",
         retryAfterMs: limited.retryAfterMs,
       },
-      429
+      429,
     );
   }
 

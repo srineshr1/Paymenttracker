@@ -1,4 +1,6 @@
-import React, {
+import type { UserPublic } from "@paymenttracker/shared";
+import type React from "react";
+import {
   createContext,
   useCallback,
   useContext,
@@ -8,13 +10,12 @@ import React, {
   useState,
 } from "react";
 import { AppState, type AppStateStatus } from "react-native";
-import type { UserPublic } from "@paymenttracker/shared";
 import { api, configureApi } from "@/src/api/client";
-import { lockLocal } from "@/src/data/localAuth";
 import { clearActiveDek, isUnlocked } from "@/src/data/crypto";
 import { getDb } from "@/src/data/db";
-import { getLastUsername, saveLastUsername } from "@/src/lib/secure";
+import { lockLocal } from "@/src/data/localAuth";
 import { markSmsConsentPending } from "@/src/features/sms/prefs";
+import { getLastUsername, saveLastUsername } from "@/src/lib/secure";
 
 type AuthState = {
   user: UserPublic | null;
@@ -29,7 +30,7 @@ type AuthState = {
   register: (username: string, passcode: string) => Promise<void>;
   changePasscode: (
     currentPasscode: string,
-    newPasscode: string
+    newPasscode: string,
   ) => Promise<void>;
   updateUsername: (username: string, passcode: string) => Promise<void>;
   /** Device auth, then new passcode — keeps spending history. */
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [hasAccount, setHasAccount] = useState(false);
   const [rememberedUsername, setRememberedUsername] = useState<string | null>(
-    null
+    null,
   );
   const tokenRef = useRef<string | null>(null);
   /** >0 while gallery / share / system UI holds the app in background. */
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRememberedUsername(nextUser.username);
       await saveLastUsername(nextUser.username);
     },
-    []
+    [],
   );
 
   const clearSession = useCallback(() => {
@@ -121,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.unlock(passcode);
       await applySession(res.token, res.user);
     },
-    [applySession]
+    [applySession],
   );
 
   const login = useCallback(
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.login(username, passcode);
       await applySession(res.token, res.user);
     },
-    [applySession]
+    [applySession],
   );
 
   const register = useCallback(
@@ -138,14 +139,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await markSmsConsentPending();
       await applySession(res.token, res.user);
     },
-    [applySession]
+    [applySession],
   );
 
   const changePasscode = useCallback(
     async (currentPasscode: string, newPasscode: string) => {
       await api.changePasscode(currentPasscode, newPasscode);
     },
-    []
+    [],
   );
 
   const updateUsername = useCallback(
@@ -153,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.updateUsername(username, passcode);
       await applySession(res.token, res.user);
     },
-    [applySession]
+    [applySession],
   );
 
   const recoverResetPasscode = useCallback(
@@ -162,7 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.resetPasscodeRecovery(newPasscode);
       await applySession(res.token, res.user);
     },
-    [applySession]
+    [applySession],
   );
 
   const recoverClearHistory = useCallback(
@@ -171,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await api.clearHistoryRecovery(newPasscode);
       await applySession(res.token, res.user);
     },
-    [applySession]
+    [applySession],
   );
 
   /** Full wipe after phone lock / biometrics verification. */
@@ -201,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         suppressLockCount.current = Math.max(0, suppressLockCount.current - 1);
       }
     },
-    []
+    [],
   );
 
   // Require passcode whenever the app leaves the foreground (home, recents,
@@ -261,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       lock,
       runWithoutAppLock,
       refreshAccountState,
-    ]
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,6 +1,6 @@
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";

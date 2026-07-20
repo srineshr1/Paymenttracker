@@ -9,7 +9,11 @@ import {
   Switch,
   View,
 } from "react-native";
-import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -18,11 +22,12 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  type WithSpringConfig,
   withSpring,
   withTiming,
-  type WithSpringConfig,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button, Input, Text } from "@/src/components/ui";
 import {
   addToWallet,
   deductFromWallet,
@@ -35,7 +40,6 @@ import {
 import { formatINR, formatRelativePaidAt } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
-import { Button, Input, Text } from "@/src/components/ui";
 
 const OPEN_MS = 280;
 const CLOSED_Y = Dimensions.get("window").height;
@@ -44,7 +48,7 @@ const DISMISS_VELOCITY = 700;
 
 function dismissWithVelocity(
   currentY: number,
-  velocityY: number
+  velocityY: number,
 ): { toValue: number; duration: number } {
   "worklet";
   const remaining = Math.max(CLOSED_Y - currentY, 1);
@@ -69,8 +73,7 @@ function sanitizeAmountInput(raw: string): string {
   const firstDot = next.indexOf(".");
   if (firstDot !== -1) {
     next =
-      next.slice(0, firstDot + 1) +
-      next.slice(firstDot + 1).replace(/\./g, "");
+      next.slice(0, firstDot + 1) + next.slice(firstDot + 1).replace(/\./g, "");
     const [whole, frac = ""] = next.split(".");
     next = `${whole}.${frac.slice(0, 2)}`;
   }
@@ -158,7 +161,7 @@ export function CashSheet({
       { duration: 280, easing: Easing.in(Easing.cubic) },
       (finished) => {
         if (finished) runOnJS(finishUnmount)();
-      }
+      },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [open]);
@@ -180,14 +183,14 @@ export function CashSheet({
         gestureDismissing.value = true;
         const { toValue, duration } = dismissWithVelocity(
           translateY.value,
-          e.velocityY
+          e.velocityY,
         );
         translateY.value = withTiming(
           toValue,
           { duration, easing: Easing.linear },
           (finished) => {
             if (finished) runOnJS(finishGestureDismiss)();
-          }
+          },
         );
         return;
       }
@@ -199,7 +202,7 @@ export function CashSheet({
       translateY.value,
       [0, CLOSED_Y],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
@@ -211,7 +214,7 @@ export function CashSheet({
     wallet === "account" ? wallets.accountBalance : wallets.cashBalance;
   const recent = useMemo(
     () => movementsFor(wallets, wallet, 12),
-    [wallets, wallet]
+    [wallets, wallet],
   );
   const liquid = totalLiquid(wallets);
   const parsed = parseAmount(amount);
@@ -271,7 +274,10 @@ export function CashSheet({
           >
             <View style={styles.handleRow}>
               <View
-                style={[styles.handle, { backgroundColor: colors.borderStrong }]}
+                style={[
+                  styles.handle,
+                  { backgroundColor: colors.borderStrong },
+                ]}
               />
             </View>
 
@@ -332,9 +338,14 @@ export function CashSheet({
             <ScrollView
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.md }}
+              contentContainerStyle={{
+                gap: spacing.md,
+                paddingBottom: spacing.md,
+              }}
             >
-              <View style={{ alignItems: "center", paddingVertical: spacing.sm }}>
+              <View
+                style={{ alignItems: "center", paddingVertical: spacing.sm }}
+              >
                 <Text
                   style={{
                     fontFamily: typography.fontSans,

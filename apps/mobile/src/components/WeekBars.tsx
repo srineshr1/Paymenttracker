@@ -1,4 +1,4 @@
-import { View, StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text } from "@/src/components/ui";
 import { formatINRCompact } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";

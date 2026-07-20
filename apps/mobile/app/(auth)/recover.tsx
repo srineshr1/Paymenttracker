@@ -55,7 +55,7 @@ export default function RecoverScreen() {
                 ? e.message
                 : e instanceof Error
                   ? e.message
-                  : "Could not erase data."
+                  : "Could not erase data.",
             );
           } finally {
             setLoading(false);
@@ -104,7 +104,7 @@ export default function RecoverScreen() {
             ? e.message
             : e instanceof Error
               ? e.message
-              : "Recovery failed."
+              : "Recovery failed.",
         );
       } finally {
         setLoading(false);

@@ -1,5 +1,5 @@
-import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const KEY = "spentd.sms.auto_import";
 /** Set after account create; cleared when user answers Agree / Disagree. */

@@ -4,8 +4,8 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { config } from "./lib/config.js";
 import { authRoutes } from "./routes/auth.js";
-import { expenseRoutes } from "./routes/expenses.js";
 import { categoryRoutes } from "./routes/categories.js";
+import { expenseRoutes } from "./routes/expenses.js";
 import { ocrRoutes } from "./routes/ocr.js";
 
 const app = new Hono();
@@ -17,7 +17,7 @@ app.use(
     origin: config.corsOrigin === "*" ? "*" : config.corsOrigin.split(","),
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-  })
+  }),
 );
 
 app.get("/health", (c) => c.json({ ok: true, service: "paymenttracker-api" }));

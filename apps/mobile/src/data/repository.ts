@@ -10,6 +10,18 @@ import type {
   UserPublic,
 } from "@paymenttracker/shared";
 import { LocalDataError } from "./crypto";
+import { getDb } from "./db";
+import { verifyDeviceOwner } from "./deviceAuth";
+import {
+  createExpense,
+  createExpensesBatch,
+  deleteExpense,
+  getExpense,
+  listCategories,
+  listExpenses,
+  monthSummary,
+  updateExpense,
+} from "./expenses";
 import {
   changePasscodeLocal,
   clearAllLocalData,
@@ -22,18 +34,6 @@ import {
   unlockWithPasscodeLocal,
   updateUsernameLocal,
 } from "./localAuth";
-import { verifyDeviceOwner } from "./deviceAuth";
-import {
-  createExpense,
-  createExpensesBatch,
-  deleteExpense,
-  getExpense,
-  listCategories,
-  listExpenses,
-  monthSummary,
-  updateExpense,
-} from "./expenses";
-import { getDb } from "./db";
 
 export { LocalDataError };
 
@@ -139,7 +139,7 @@ export const api = {
 
   async changePasscode(
     currentPasscode: string,
-    newPasscode: string
+    newPasscode: string,
   ): Promise<{ ok: true }> {
     try {
       return await changePasscodeLocal(currentPasscode, newPasscode);
@@ -150,7 +150,7 @@ export const api = {
 
   async updateUsername(
     username: string,
-    passcode: string
+    passcode: string,
   ): Promise<AuthResponse> {
     try {
       return await updateUsernameLocal(username, passcode);
@@ -189,7 +189,7 @@ export const api = {
   },
 
   async createExpense(
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
   ): Promise<{ expense: Expense }> {
     try {
       return await createExpense(body);
@@ -215,7 +215,7 @@ export const api = {
 
   async updateExpense(
     id: string,
-    body: Record<string, unknown>
+    body: Record<string, unknown>,
   ): Promise<{ expense: Expense }> {
     try {
       return await updateExpense(id, body);
@@ -252,7 +252,7 @@ export const api = {
    */
   async ocrImageBase64(
     _imageBase64: string,
-    _mimeType = "image/jpeg"
+    _mimeType = "image/jpeg",
   ): Promise<{
     text: string;
     engine: string;
@@ -260,7 +260,7 @@ export const api = {
   }> {
     throw new ApiError(
       "On-device OCR is not available in this build. Use manual entry, or add a native OCR module later.",
-      501
+      501,
     );
   },
 };

@@ -21,7 +21,7 @@ export function serializeCategory(c: CategoryRow): Category {
 
 export function serializeExpense(
   e: ExpenseRow,
-  category?: CategoryRow | null
+  category?: CategoryRow | null,
 ): Expense {
   return {
     id: e.id,

@@ -11,11 +11,11 @@ import {
 import type { ParsedExpense } from "./types.js";
 
 const MERCHANT_PATTERNS = [
-  /paid\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})/i,
-  /to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})(?:\n|$)/i,
-  /payment\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})/i,
-  /sent\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})/i,
-  /received\s+from\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,80})/i,
+  /paid\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})/i,
+  /to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})(?:\n|$)/i,
+  /payment\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})/i,
+  /sent\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})/i,
+  /received\s+from\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,80})/i,
 ];
 
 export function parseGPayOcr(raw: string): ParsedExpense {

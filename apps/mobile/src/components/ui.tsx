@@ -1,25 +1,25 @@
-import React from "react";
+import type React from "react";
 import {
   ActivityIndicator,
   Pressable,
-  StyleSheet,
-  Text as RNText,
-  TextInput,
-  View,
   type PressableProps,
+  Text as RNText,
+  StyleSheet,
+  TextInput,
   type TextInputProps,
   type TextProps,
+  View,
   type ViewProps,
 } from "react-native";
+import { formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import {
+  type ColorTokens,
   cardShadow,
   radius,
   spacing,
   typography,
-  type ColorTokens,
 } from "@/src/design/tokens";
-import { formatExpenseAmount } from "@/src/design/format";
 
 export function Screen({
   children,

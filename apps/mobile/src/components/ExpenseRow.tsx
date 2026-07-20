@@ -1,10 +1,10 @@
+import type { Expense } from "@paymenttracker/shared";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import type { Expense } from "@paymenttracker/shared";
-import { Amount, Text } from "./ui";
 import { formatDateTime } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing } from "@/src/design/tokens";
+import { Amount, Text } from "./ui";
 
 export function ExpenseRow({
   expense,

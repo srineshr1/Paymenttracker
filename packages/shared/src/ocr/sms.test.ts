@@ -1,10 +1,6 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  isPaymentSms,
-  parseSmsMessage,
-  parseSmsMessages,
-} from "./sms";
+import { describe, it } from "node:test";
+import { isPaymentSms, parseSmsMessage, parseSmsMessages } from "./sms";
 
 const HDFC = `HDFC Bank: Rs.450.00 debited from A/c **1234 on 17-07-26 to VPA swiggy@ybl. UPI Ref 417612345678. Not you? Call 18002586161`;
 

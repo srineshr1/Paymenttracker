@@ -8,7 +8,11 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import Animated, {
   cancelAnimation,
   Easing,
@@ -17,11 +21,12 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  type WithSpringConfig,
   withSpring,
   withTiming,
-  type WithSpringConfig,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Button, Input, Text } from "@/src/components/ui";
 import {
   type BudgetMode,
   type BudgetPrefs,
@@ -31,7 +36,6 @@ import {
 import { formatINR } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
-import { Button, Input, Text } from "@/src/components/ui";
 
 const SAVINGS_CHIPS = [0.1, 0.2, 0.25, 0.3, 0.4] as const;
 const OPEN_MS = 280;
@@ -46,7 +50,7 @@ const DISMISS_VELOCITY = 700;
  */
 function dismissWithVelocity(
   currentY: number,
-  velocityY: number
+  velocityY: number,
 ): { toValue: number; duration: number } {
   "worklet";
   const remaining = Math.max(CLOSED_Y - currentY, 1);
@@ -138,7 +142,7 @@ export function BudgetSheet({
       },
       (finished) => {
         if (finished) runOnJS(finishUnmount)();
-      }
+      },
     );
     // Only react to `open`; shared values managed inside.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
@@ -163,7 +167,7 @@ export function BudgetSheet({
         gestureDismissing.value = true;
         const { toValue, duration } = dismissWithVelocity(
           translateY.value,
-          e.velocityY
+          e.velocityY,
         );
         translateY.value = withTiming(
           toValue,
@@ -174,7 +178,7 @@ export function BudgetSheet({
           },
           (finished) => {
             if (finished) runOnJS(finishGestureDismiss)();
-          }
+          },
         );
         return;
       }
@@ -186,7 +190,7 @@ export function BudgetSheet({
       translateY.value,
       [0, CLOSED_Y],
       [1, 0],
-      Extrapolation.CLAMP
+      Extrapolation.CLAMP,
     ),
   }));
 
@@ -216,7 +220,7 @@ export function BudgetSheet({
             ? manualBudget
             : Math.max(
                 prefs.manualBudget,
-                Math.round(autoBudgetPreview) || prefs.manualBudget
+                Math.round(autoBudgetPreview) || prefs.manualBudget,
               ),
       });
       onSaved(next);
@@ -256,7 +260,10 @@ export function BudgetSheet({
           >
             <View style={styles.handleRow}>
               <View
-                style={[styles.handle, { backgroundColor: colors.borderStrong }]}
+                style={[
+                  styles.handle,
+                  { backgroundColor: colors.borderStrong },
+                ]}
               />
             </View>
 
@@ -285,8 +292,8 @@ export function BudgetSheet({
               }}
             >
               <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-                Smart budget uses income this month (or recent average), then sets
-                spendable money after your savings rate.
+                Smart budget uses income this month (or recent average), then
+                sets spendable money after your savings rate.
               </Text>
 
               <View style={{ gap: spacing.sm }}>

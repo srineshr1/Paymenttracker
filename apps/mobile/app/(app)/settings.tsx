@@ -55,8 +55,7 @@ export default function SettingsScreen() {
   const [autoPreview, setAutoPreview] = useState(DEFAULT_BUDGET);
   const [smsAuto, setSmsAuto] = useState(false);
   const [smsBusy, setSmsBusy] = useState(false);
-  const smsSupported =
-    Platform.OS === "android" && isSmsInboxAvailable();
+  const smsSupported = Platform.OS === "android" && isSmsInboxAvailable();
 
   useEffect(() => {
     if (!smsSupported) return;
@@ -80,7 +79,7 @@ export default function SettingsScreen() {
         "SMS auto-import",
         e instanceof Error
           ? e.message
-          : "Could not enable SMS listening. Check permissions in system Settings."
+          : "Could not enable SMS listening. Check permissions in system Settings.",
       );
     } finally {
       setSmsBusy(false);
@@ -127,7 +126,7 @@ export default function SettingsScreen() {
           year: y,
           month: m,
           prefs: { ...prefs, mode: "auto" },
-        }).budget
+        }).budget,
       );
     } catch {
       /* ignore — sheet still usable with defaults */
@@ -152,25 +151,25 @@ export default function SettingsScreen() {
             setExporting(true);
             try {
               const { count } = await runWithoutAppLock(() =>
-                exportExpensesShare(format)
+                exportExpensesShare(format),
               );
               Alert.alert(
                 "Export ready",
                 count === 0
                   ? "No expenses to export yet."
-                  : `Shared ${count} expense${count === 1 ? "" : "s"}.`
+                  : `Shared ${count} expense${count === 1 ? "" : "s"}.`,
               );
             } catch (e) {
               Alert.alert(
                 "Export failed",
-                e instanceof Error ? e.message : "Could not export"
+                e instanceof Error ? e.message : "Could not export",
               );
             } finally {
               setExporting(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -241,9 +240,7 @@ export default function SettingsScreen() {
   const topBarBg = isDark
     ? "rgba(10, 11, 13, 0.52)"
     : "rgba(246, 242, 235, 0.52)";
-  const chipBg = isDark
-    ? "rgba(28, 33, 43, 0.4)"
-    : "rgba(255, 255, 255, 0.4)";
+  const chipBg = isDark ? "rgba(28, 33, 43, 0.4)" : "rgba(255, 255, 255, 0.4)";
   /** Back + title row under the status bar. */
   const topBarBody = 52;
   const topBarHeight = insets.top + spacing.sm + topBarBody + spacing.md;
@@ -259,12 +256,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Account identity — system-settings style profile row */}
-        <View
-          style={[
-            styles.group,
-            { backgroundColor: colors.bgElevated },
-          ]}
-        >
+        <View style={[styles.group, { backgroundColor: colors.bgElevated }]}>
           <Pressable
             onPress={() => router.push("/(app)/edit-username")}
             accessibilityRole="button"
@@ -273,15 +265,16 @@ export default function SettingsScreen() {
               pressed && { backgroundColor: colors.bgMuted },
             ]}
           >
-            <View
-              style={[styles.avatar, { backgroundColor: colors.bgMuted }]}
-            >
+            <View style={[styles.avatar, { backgroundColor: colors.bgMuted }]}>
               <Text style={[styles.avatarLetter, { color: colors.text }]}>
                 {initial}
               </Text>
             </View>
             <View style={styles.rowBody}>
-              <Text style={[styles.rowTitle, { color: colors.text }]} numberOfLines={1}>
+              <Text
+                style={[styles.rowTitle, { color: colors.text }]}
+                numberOfLines={1}
+              >
                 {user?.username ?? "Account"}
               </Text>
               <Text style={[styles.rowSub, { color: colors.textSecondary }]}>
@@ -371,10 +364,7 @@ export default function SettingsScreen() {
             ]}
           >
             <View
-              style={[
-                styles.iconBadge,
-                { backgroundColor: colors.dangerSoft },
-              ]}
+              style={[styles.iconBadge, { backgroundColor: colors.dangerSoft }]}
             >
               <Ionicons
                 name="lock-closed-outline"
@@ -388,12 +378,7 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        <Text
-          style={[
-            styles.footer,
-            { color: colors.textMuted },
-          ]}
-        >
+        <Text style={[styles.footer, { color: colors.textMuted }]}>
           Spentd 1.0
         </Text>
       </ScrollView>
@@ -450,12 +435,7 @@ export default function SettingsScreen() {
 function SectionLabel({ children }: { children: string }) {
   const { colors } = useTheme();
   return (
-    <Text
-      style={[
-        styles.sectionLabel,
-        { color: colors.textSecondary },
-      ]}
-    >
+    <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
       {children}
     </Text>
   );
@@ -527,12 +507,7 @@ function SettingsRow({
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
       </Pressable>
       {showDivider ? (
-        <View
-          style={[
-            styles.divider,
-            { backgroundColor: colors.border },
-          ]}
-        />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
       ) : null}
     </>
   );

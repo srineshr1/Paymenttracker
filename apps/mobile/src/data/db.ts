@@ -1,5 +1,5 @@
-import * as SQLite from "expo-sqlite";
 import { randomUUID } from "expo-crypto";
+import * as SQLite from "expo-sqlite";
 
 const DB_NAME = "spentd_local.db";
 const DATABASE_VERSION = 1;
@@ -73,7 +73,7 @@ async function migrate(db: SQLite.SQLiteDatabase) {
   await db.execAsync("PRAGMA foreign_keys = ON;");
 
   const row = await db.getFirstAsync<{ user_version: number }>(
-    "PRAGMA user_version"
+    "PRAGMA user_version",
   );
   let version = row?.user_version ?? 0;
 
@@ -115,11 +115,11 @@ CREATE TABLE IF NOT EXISTS expenses (
 );
 `);
     await db.execAsync(
-      "CREATE INDEX IF NOT EXISTS expenses_user_paid_at_idx ON expenses(user_id, paid_at);"
+      "CREATE INDEX IF NOT EXISTS expenses_user_paid_at_idx ON expenses(user_id, paid_at);",
     );
     // Non-partial unique index — nulls allowed multiple times in SQLite UNIQUE
     await db.execAsync(
-      "CREATE UNIQUE INDEX IF NOT EXISTS expenses_user_upi_ref_hash_idx ON expenses(user_id, upi_ref_hash);"
+      "CREATE UNIQUE INDEX IF NOT EXISTS expenses_user_upi_ref_hash_idx ON expenses(user_id, upi_ref_hash);",
     );
     await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
     version = DATABASE_VERSION;
@@ -132,17 +132,17 @@ async function seedCategories(db: SQLite.SQLiteDatabase) {
   for (const cat of DEFAULT_CATEGORIES) {
     const existing = await db.getFirstAsync<{ id: string }>(
       "SELECT id FROM categories WHERE slug = ?",
-      [cat.slug]
+      [cat.slug],
     );
     if (existing) {
       await db.runAsync(
         "UPDATE categories SET name = ?, icon = ?, color = ? WHERE slug = ?",
-        [cat.name, cat.icon, cat.color, cat.slug]
+        [cat.name, cat.icon, cat.color, cat.slug],
       );
     } else {
       await db.runAsync(
         "INSERT INTO categories (id, name, slug, icon, color) VALUES (?, ?, ?, ?, ?)",
-        [randomUUID(), cat.name, cat.slug, cat.icon, cat.color]
+        [randomUUID(), cat.name, cat.slug, cat.icon, cat.color],
       );
     }
   }

@@ -1,3 +1,4 @@
+import type { Expense } from "@paymenttracker/shared";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -8,7 +9,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Expense } from "@paymenttracker/shared";
 import { api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { ExpenseRow } from "@/src/components/ExpenseRow";
@@ -48,7 +48,7 @@ export default function ExpensesListScreen() {
         void load(q);
       });
       return () => cancelAnimationFrame(ready);
-    }, [load, q])
+    }, [load, q]),
   );
 
   const onRefresh = () => {

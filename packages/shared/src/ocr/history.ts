@@ -29,7 +29,7 @@ function isRowStart(line: string): boolean {
 
 function isNoiseLine(line: string): boolean {
   return /^(month|categories|filters|search|home|stores|insurance|wealth|history|share|edit|lens|delete|transaction\s+history|add\s+address)/i.test(
-    line.trim()
+    line.trim(),
   );
 }
 
@@ -43,7 +43,7 @@ function extractHistoryAmount(...chunks: string[]): string | null {
     // Prefer explicit currency-marked amounts first (₹ % ¥ X — OCR sometimes uses X for ₹)
     const marked = [
       ...chunk.matchAll(
-        /(?:₹|rs\.?|inr|%|¥|₽|x)\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/gi
+        /(?:₹|rs\.?|inr|%|¥|₽|x)\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)/gi,
       ),
     ];
     for (const m of marked) {
@@ -61,7 +61,7 @@ function extractHistoryAmount(...chunks: string[]): string | null {
       const asAmt = parseHistoryAmountToken(tail);
       if (asAmt) return asAmt;
       const tok = tail.match(
-        /([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]{1,7}(?:\.[0-9]{1,2})?)/
+        /([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]{1,7}(?:\.[0-9]{1,2})?)/,
       );
       if (tok) {
         const parsed = parseHistoryAmountToken(tok[1]);
@@ -71,8 +71,12 @@ function extractHistoryAmount(...chunks: string[]): string | null {
 
     // Whole line is just an amount (common when OCR splits "Paid to" / "₹1")
     const whole = chunk.trim();
-    if (/^(?:₹|rs\.?|inr|%|¥|x)?\s*[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?$/i.test(whole)
-      || /^(?:₹|rs\.?|inr|%|¥|x)?\s*[0-9]{1,7}(?:\.[0-9]{1,2})?$/i.test(whole)) {
+    if (
+      /^(?:₹|rs\.?|inr|%|¥|x)?\s*[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?$/i.test(
+        whole,
+      ) ||
+      /^(?:₹|rs\.?|inr|%|¥|x)?\s*[0-9]{1,7}(?:\.[0-9]{1,2})?$/i.test(whole)
+    ) {
       const parsed = parseHistoryAmountToken(whole);
       if (parsed) return parsed;
     }
@@ -80,7 +84,7 @@ function extractHistoryAmount(...chunks: string[]): string | null {
     // Generic last money-like token on the line (right-aligned amount)
     const all = [
       ...chunk.matchAll(
-        /([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]{1,7}(?:\.[0-9]{1,2})?)/g
+        /([0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?|[0-9]{1,7}(?:\.[0-9]{1,2})?)/g,
       ),
     ];
     if (all.length > 0) {
@@ -103,7 +107,7 @@ function scrubMerchantCandidate(raw: string): string {
 
 function extractHistoryMerchant(
   labelLine: string,
-  block: string[]
+  block: string[],
 ): string | null {
   // Merchant rarely sits on the label line for PhonePe history (amount is there)
   const after = scrubMerchantCandidate(
@@ -111,7 +115,7 @@ function extractHistoryMerchant(
       .replace(ROW_LABEL_RE, "")
       .replace(AMOUNT_ON_LINE_RE, "")
       .replace(/[₹%¥₽]/g, "")
-      .replace(/[0-9,.\s]+/g, " ")
+      .replace(/[0-9,.\s]+/g, " "),
   );
   if (after && isLikelyMerchantLine(after)) {
     return cleanMerchantName(after);
@@ -139,7 +143,10 @@ function extractHistoryMerchant(
   return null;
 }
 
-function extractHistoryPaidAt(block: string[], labelLine: string): string | null {
+function extractHistoryPaidAt(
+  block: string[],
+  labelLine: string,
+): string | null {
   const chunks = [labelLine, ...block];
   for (const line of chunks) {
     const rel = extractRelativePaidAt(line);
@@ -152,7 +159,10 @@ function extractHistoryPaidAt(block: string[], labelLine: string): string | null
   return null;
 }
 
-function blockStatus(labelLine: string, block: string[]): ParsedExpense["status"] {
+function blockStatus(
+  labelLine: string,
+  block: string[],
+): ParsedExpense["status"] {
   return extractStatus([labelLine, ...block].join(" "));
 }
 
@@ -182,7 +192,8 @@ export function parseHistoryListOcr(raw: string): ParsedExpense[] {
 
   for (let s = 0; s < starts.length; s++) {
     const i = starts[s];
-    const end = s + 1 < starts.length ? starts[s + 1] : Math.min(lines.length, i + 6);
+    const end =
+      s + 1 < starts.length ? starts[s + 1] : Math.min(lines.length, i + 6);
     const labelLine = lines[i];
     const block = lines.slice(i + 1, end);
 
@@ -199,7 +210,8 @@ export function parseHistoryListOcr(raw: string): ParsedExpense[] {
     const paidAt = extractHistoryPaidAt(block, labelLine);
 
     if (!amount && !merchant) continue;
-    if (merchant && /search|address|filter|categories/i.test(merchant)) continue;
+    if (merchant && /search|address|filter|categories/i.test(merchant))
+      continue;
 
     const confidence = scoreConfidence({
       amount,
@@ -243,8 +255,9 @@ export function looksLikeHistoryList(text: string): boolean {
     (t.match(/\byou\s+paid\b/g) || []).length +
     (t.match(/\breceived\s+from\b/g) || []).length;
   const relative = (
-    t.match(/\d+\s*min(?:ute)?s?\s*ago|\d+\s*hours?\s*ago|\d+\s*days?\s*ago/g) ||
-    []
+    t.match(
+      /\d+\s*min(?:ute)?s?\s*ago|\d+\s*hours?\s*ago|\d+\s*days?\s*ago/g,
+    ) || []
   ).length;
   // Need 2+ payment rows, or one row + relative time (history UI). Do NOT treat a
   // single success screen ("Paid to X" + absolute date) as a history list.

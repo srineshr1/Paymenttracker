@@ -7,6 +7,7 @@ import { AppState, type AppStateStatus, Platform } from "react-native";
 import { applyPaymentToAccount } from "@/src/data/cash";
 import { isUnlocked, LocalDataError } from "@/src/data/crypto";
 import { createExpense } from "@/src/data/expenses";
+import { getSmsAutoImportEnabled, setSmsAutoImportEnabled } from "./prefs";
 import {
   drainPendingSms,
   isSmsInboxAvailable,
@@ -15,10 +16,6 @@ import {
   stopSmsListening,
   subscribeSmsReceived,
 } from "./readInbox";
-import {
-  getSmsAutoImportEnabled,
-  setSmsAutoImportEnabled,
-} from "./prefs";
 
 export type AutoImportResult =
   | { status: "saved"; merchant: string; amount: string }
@@ -68,7 +65,7 @@ function rememberKey(key: string) {
  * Only works while the app is unlocked (encrypted local DB).
  */
 export async function processIncomingSms(
-  msg: SmsMessageInput & { id?: string | null }
+  msg: SmsMessageInput & { id?: string | null },
 ): Promise<AutoImportResult> {
   if (Platform.OS !== "android") {
     return { status: "skipped", reason: "not_android" };
@@ -244,15 +241,12 @@ export async function startSmsAutoImport(): Promise<void> {
     // Listener failed (permission); still try catch-up if we can list
   }
 
-  appStateSub = AppState.addEventListener(
-    "change",
-    (state: AppStateStatus) => {
-      if (state === "active") {
-        void catchUpRecent();
-        void flushQueue();
-      }
+  appStateSub = AppState.addEventListener("change", (state: AppStateStatus) => {
+    if (state === "active") {
+      void catchUpRecent();
+      void flushQueue();
     }
-  );
+  });
 
   void catchUpRecent();
 }

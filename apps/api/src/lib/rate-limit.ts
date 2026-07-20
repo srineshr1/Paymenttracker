@@ -6,7 +6,7 @@ const store = new Map<string, Entry>();
 export function rateLimit(
   key: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
 ): { ok: true } | { ok: false; retryAfterMs: number } {
   const now = Date.now();
   const entry = store.get(key);

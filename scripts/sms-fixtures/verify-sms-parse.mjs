@@ -10,8 +10,8 @@
  *   node scripts/sms-fixtures/verify-sms-parse.mjs --verbose
  */
 
-import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -24,7 +24,7 @@ function flag(name, fallback) {
 }
 const VERBOSE = args.includes("--verbose");
 const FIXTURE = resolve(
-  flag("fixture", resolve(__dirname, "sms-3months.json"))
+  flag("fixture", resolve(__dirname, "sms-3months.json")),
 );
 
 async function loadParser() {
@@ -38,7 +38,7 @@ async function loadParser() {
     }
   }
   throw new Error(
-    "Shared package not built. Run: npm run build -w @paymenttracker/shared"
+    "Shared package not built. Run: npm run build -w @paymenttracker/shared",
   );
 }
 
@@ -56,12 +56,15 @@ async function main() {
     process.exit(1);
   }
 
-  const { isPaymentSms, parseSmsMessage, parseSmsMessages } = await loadParser();
+  const { isPaymentSms, parseSmsMessage, parseSmsMessages } =
+    await loadParser();
   const fixture = JSON.parse(readFileSync(FIXTURE, "utf8"));
   const messages = fixture.messages ?? [];
 
   const expectedPayment = messages.filter((m) => m.expected?.isPayment);
-  const expectedNoise = messages.filter((m) => m.expected && !m.expected.isPayment);
+  const expectedNoise = messages.filter(
+    (m) => m.expected && !m.expected.isPayment,
+  );
 
   // Filter accuracy
   let truePos = 0;
@@ -154,7 +157,10 @@ async function main() {
     if (exp.merchantHint) {
       const mer = (r.merchant ?? "").toLowerCase();
       const hint = String(exp.merchantHint).toLowerCase();
-      if (mer.includes(hint.slice(0, Math.min(6, hint.length))) || hint.includes(mer.slice(0, 4))) {
+      if (
+        mer.includes(hint.slice(0, Math.min(6, hint.length))) ||
+        hint.includes(mer.slice(0, 4))
+      ) {
         merchantOk++;
       } else if (!r.merchant) {
         merchantMiss++;
@@ -186,7 +192,8 @@ async function main() {
   const byMonth = {};
   for (const p of parsed) {
     const key = (p.paidAt ?? "unknown").slice(0, 7);
-    if (!byMonth[key]) byMonth[key] = { count: 0, debit: 0, credit: 0, sumDebit: 0 };
+    if (!byMonth[key])
+      byMonth[key] = { count: 0, debit: 0, credit: 0, sumDebit: 0 };
     byMonth[key].count++;
     if (p.direction === "debit") {
       byMonth[key].debit++;
@@ -200,10 +207,10 @@ async function main() {
   console.log(`Fixture: ${FIXTURE}`);
   if (fixture.meta) {
     console.log(
-      `Range: ${fixture.meta.range?.from?.slice(0, 10)} → ${fixture.meta.range?.to?.slice(0, 10)} (${fixture.meta.days} days)`
+      `Range: ${fixture.meta.range?.from?.slice(0, 10)} → ${fixture.meta.range?.to?.slice(0, 10)} (${fixture.meta.days} days)`,
     );
     console.log(
-      `Messages: ${messages.length} (expected payment-like ${expectedPayment.length}, noise ${expectedNoise.length})`
+      `Messages: ${messages.length} (expected payment-like ${expectedPayment.length}, noise ${expectedNoise.length})`,
     );
   }
 
@@ -215,13 +222,13 @@ async function main() {
   const precision = truePos + falsePos > 0 ? truePos / (truePos + falsePos) : 0;
   const recall = truePos + falseNeg > 0 ? truePos / (truePos + falseNeg) : 0;
   console.log(
-    `  precision: ${(precision * 100).toFixed(1)}%  recall: ${(recall * 100).toFixed(1)}%`
+    `  precision: ${(precision * 100).toFixed(1)}%  recall: ${(recall * 100).toFixed(1)}%`,
   );
 
   console.log("\n── parseSmsMessages pipeline ──");
   console.log(`  returned expenses: ${parsed.length}`);
   console.log(
-    `  (app import caps at 120 newest; full lookback is available via maxCount)`
+    `  (app import caps at 120 newest; full lookback is available via maxCount)`,
   );
 
   console.log("\n── field accuracy (on expected payments that pass filter) ──");
@@ -229,28 +236,28 @@ async function main() {
     `  amount:    ${amountOk} ok / ${amountFail} fail` +
       (amountOk + amountFail
         ? ` (${((amountOk / (amountOk + amountFail)) * 100).toFixed(1)}%)`
-        : "")
+        : ""),
   );
-  console.log(
-    `  direction: ${directionOk} ok / ${directionFail} fail`
-  );
+  console.log(`  direction: ${directionOk} ok / ${directionFail} fail`);
   console.log(`  source:    ${sourceOk} ok / ${sourceFail} fail`);
   console.log(
-    `  merchant:  ${merchantOk} matched hint / ${merchantMiss} miss-or-null`
+    `  merchant:  ${merchantOk} matched hint / ${merchantMiss} miss-or-null`,
   );
 
   console.log("\n── parsed by month ──");
   for (const [month, s] of Object.entries(byMonth).sort()) {
     console.log(
-      `  ${month}: ${s.count} txns (${s.debit} debit / ${s.credit} credit), debit sum ₹${s.sumDebit.toFixed(0)}`
+      `  ${month}: ${s.count} txns (${s.debit} debit / ${s.credit} credit), debit sum ₹${s.sumDebit.toFixed(0)}`,
     );
   }
 
   if (failures.length) {
-    console.log(`\n── sample failures (showing ${Math.min(15, failures.length)}) ──`);
+    console.log(
+      `\n── sample failures (showing ${Math.min(15, failures.length)}) ──`,
+    );
     for (const f of failures.slice(0, 15)) {
       console.log(
-        `  ${f.id} ${f.field}: expected=${f.expected} got=${f.got}\n    ${f.body}`
+        `  ${f.id} ${f.field}: expected=${f.expected} got=${f.got}\n    ${f.body}`,
       );
     }
   }

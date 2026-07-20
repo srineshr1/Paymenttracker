@@ -1,5 +1,5 @@
-import { Platform, View } from "react-native";
 import { Stack } from "expo-router";
+import { Platform, View } from "react-native";
 import { enableFreeze } from "react-native-screens";
 import { useTheme } from "@/src/design/ThemeContext";
 import { useAuth } from "@/src/features/auth/AuthContext";

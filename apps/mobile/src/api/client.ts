@@ -4,11 +4,11 @@
  * Backend HTTP client is intentionally unused (apps/api untouched for future sync).
  */
 export {
-  api,
   ApiError,
+  api,
   configureApi,
   ensureApiReachable,
   getApiBase,
-  setApiBase,
   LocalDataError,
+  setApiBase,
 } from "@/src/data/repository";

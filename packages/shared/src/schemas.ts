@@ -7,7 +7,7 @@ export const usernameSchema = z
   .max(32, "Username must be at most 32 characters")
   .regex(
     /^[a-zA-Z0-9_]+$/,
-    "Username may only contain letters, numbers, and underscores"
+    "Username may only contain letters, numbers, and underscores",
   )
   .transform((v) => v.toLowerCase());
 
@@ -53,7 +53,7 @@ export const createExpenseSchema = z.object({
       z
         .string()
         .regex(/^\d+(\.\d{1,2})?$/, "Invalid amount")
-        .refine((v) => Number(v) > 0, "Amount must be greater than zero")
+        .refine((v) => Number(v) > 0, "Amount must be greater than zero"),
     ),
   currency: z.string().default("INR"),
   direction: directionSchema.default("debit"),

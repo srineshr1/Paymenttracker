@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import type { Expense } from "@paymenttracker/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -12,7 +13,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Expense } from "@paymenttracker/shared";
 import { ApiError, api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { CategoryChips } from "@/src/components/CategoryChips";
@@ -178,8 +178,7 @@ export default function ExpenseDetailScreen() {
                     <Text
                       style={{
                         fontFamily: typography.fontSansSemi,
-                        color:
-                          direction === d ? colors.accentOn : colors.text,
+                        color: direction === d ? colors.accentOn : colors.text,
                       }}
                     >
                       {d === "debit" ? "Paid" : "Received"}
@@ -200,9 +199,7 @@ export default function ExpenseDetailScreen() {
                   style={{ backgroundColor: colors.bgMuted, borderWidth: 0 }}
                 />
               </View>
-              {error ? (
-                <Text color={colors.danger}>{error}</Text>
-              ) : null}
+              {error ? <Text color={colors.danger}>{error}</Text> : null}
               <Button
                 title={saving ? "Saving…" : "Save changes"}
                 loading={saving}
@@ -385,9 +382,7 @@ export default function ExpenseDetailScreen() {
 
 function Divider() {
   const { colors } = useTheme();
-  return (
-    <View style={[styles.divider, { backgroundColor: colors.border }]} />
-  );
+  return <View style={[styles.divider, { backgroundColor: colors.border }]} />;
 }
 
 function DetailRow({

@@ -1,6 +1,11 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { hashPasscode, verifyPasscode, signToken, verifyToken } from "./lib/auth.js";
+import { describe, it } from "node:test";
+import {
+  hashPasscode,
+  signToken,
+  verifyPasscode,
+  verifyToken,
+} from "./lib/auth.js";
 
 describe("passcode hashing", () => {
   it("verifies a matching passcode and rejects a wrong one", async () => {

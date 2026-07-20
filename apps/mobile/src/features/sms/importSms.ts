@@ -1,10 +1,10 @@
 import {
   isPaymentSms,
-  parseSmsMessages,
   type ParsedExpense,
+  parseSmsMessages,
   type SmsMessageInput,
 } from "@paymenttracker/shared";
-import { listInboxSms, type ListInboxOptions } from "./readInbox";
+import { type ListInboxOptions, listInboxSms } from "./readInbox";
 
 export type ImportSmsResult = {
   parsed: ParsedExpense[];
@@ -17,11 +17,11 @@ export type ImportSmsResult = {
  * Nothing is uploaded — only structured expenses are returned for review.
  */
 export async function importPaymentsFromSms(
-  options: ListInboxOptions = {}
+  options: ListInboxOptions = {},
 ): Promise<ImportSmsResult> {
   const messages: SmsMessageInput[] = await listInboxSms(options);
   const paymentLike = messages.filter((m) =>
-    isPaymentSms(m.body, m.address)
+    isPaymentSms(m.body, m.address),
   ).length;
   const parsed = parseSmsMessages(messages, {
     minConfidence: 0.35,

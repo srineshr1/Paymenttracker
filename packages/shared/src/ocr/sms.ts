@@ -9,11 +9,7 @@ import {
   parseAmountToken,
   scoreConfidence,
 } from "./shared.js";
-import type {
-  ParsedExpense,
-  ParsedSource,
-  SmsMessageInput,
-} from "./types.js";
+import type { ParsedExpense, ParsedSource, SmsMessageInput } from "./types.js";
 
 /** Amount-like token in SMS bodies (with or without ₹/Rs). */
 const AMOUNT_TOKEN_RE =
@@ -34,10 +30,7 @@ const BANKISH_ADDRESS_RE =
  * Cheap filter: is this SMS worth running the payment parser on?
  * Prefers body signals; address is a soft boost for bank short codes.
  */
-export function isPaymentSms(
-  body: string,
-  address?: string | null
-): boolean {
+export function isPaymentSms(body: string, address?: string | null): boolean {
   const text = (body ?? "").trim();
   if (text.length < 12 || text.length > 2000) return false;
   // OTP / auth codes are never expenses
@@ -57,17 +50,10 @@ export function isPaymentSms(
   return false;
 }
 
-function detectSmsSource(
-  text: string,
-  address?: string | null
-): ParsedSource {
+function detectSmsSource(text: string, address?: string | null): ParsedSource {
   const t = text.toLowerCase();
   const a = (address ?? "").toLowerCase();
-  if (
-    t.includes("phonepe") ||
-    a.includes("phonepe") ||
-    a.includes("phnpe")
-  ) {
+  if (t.includes("phonepe") || a.includes("phonepe") || a.includes("phnpe")) {
     return "phonepe";
   }
   if (
@@ -94,12 +80,12 @@ export function extractAvailableBalance(text: string): string | null {
   const patterns = [
     new RegExp(
       `(?:avl\\.?\\s*bal(?:ance)?|available\\s*bal(?:ance)?|avail\\.?\\s*bal(?:ance)?|a\\/c\\s*bal(?:ance)?|acct?\\.?\\s*bal(?:ance)?|cleared\\s*bal(?:ance)?|total\\s*avail(?:able)?\\.?\\s*bal(?:ance)?)\\s*[:\\-]?\\s*(?:is\\s*)?(?:₹|rs\\.?|inr)?\\s*${AMT}`,
-      "i"
+      "i",
     ),
     // "Bal Rs.1,234.56" near end of message (common bank footer)
     new RegExp(
       `(?:^|[.\\s])bal(?:ance)?\\s*[:\\-]?\\s*(?:₹|rs\\.?|inr)\\s*${AMT}\\s*$`,
-      "i"
+      "i",
     ),
   ];
   for (const re of patterns) {
@@ -118,12 +104,9 @@ function extractSmsAmount(text: string): string | null {
     new RegExp(`(?:₹|rs\\.?|inr)\\s*${AMT}`, "i"),
     new RegExp(
       `(?:debited|credited|spent|paid|sent|received|withdrawn)(?:\\s+(?:for|with|of|by))?\\s*(?:₹|rs\\.?|inr)?\\s*${AMT}`,
-      "i"
+      "i",
     ),
-    new RegExp(
-      `(?:amount|amt)\\s*(?:of\\s*)?(?:₹|rs\\.?|inr)?\\s*${AMT}`,
-      "i"
-    ),
+    new RegExp(`(?:amount|amt)\\s*(?:of\\s*)?(?:₹|rs\\.?|inr)?\\s*${AMT}`, "i"),
   ];
   for (const re of patterns) {
     const m = text.match(re);
@@ -138,22 +121,22 @@ function extractSmsAmount(text: string): string | null {
 function extractSmsMerchant(text: string): string | null {
   const patterns: RegExp[] = [
     // to VPA merchant@ybl / UPI-merchant@okaxis
-    /(?:to|towards)\s+(?:vpa\s+)?([A-Za-z0-9][A-Za-z0-9._\-]{1,40}@[A-Za-z0-9.\-]{2,30})/i,
-    /(?:upi[\s\-:]+)([A-Za-z0-9][A-Za-z0-9._\-]{1,40}@[A-Za-z0-9.\-]{2,30})/i,
+    /(?:to|towards)\s+(?:vpa\s+)?([A-Za-z0-9][A-Za-z0-9._-]{1,40}@[A-Za-z0-9.-]{2,30})/i,
+    /(?:upi[\s\-:]+)([A-Za-z0-9][A-Za-z0-9._-]{1,40}@[A-Za-z0-9.-]{2,30})/i,
     // Paid Rs.450 to Swiggy / You paid ₹99 to Ravi
-    /(?:paid|sent)\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d{1,2})?\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s*$)/i,
+    /(?:paid|sent)\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d{1,2})?\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s*$)/i,
     // paid/sent to Merchant Name
-    /(?:paid\s+to|sent\s+to|payment\s+to|transfer\s+to)\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s*$)/i,
+    /(?:paid\s+to|sent\s+to|payment\s+to|transfer\s+to)\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s*$)/i,
     // you paid … to Merchant
-    /you\s+paid\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d{1,2})?\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s*$)/i,
+    /you\s+paid\s+(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d{1,2})?\s+to\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s*$)/i,
     // received from
-    /(?:received\s+from|credited\s+from|from\s+vpa)\s+([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s*$)/i,
+    /(?:received\s+from|credited\s+from|from\s+vpa)\s+([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s*$)/i,
     // credited to X / Info: MERCHANT
-    /(?:credited\s+to|info[:\s]+)([A-Za-z0-9][A-Za-z0-9 .&'@\-]{1,50}?)(?:\s*[.;,]|\s+upi|\s+ref|\s*$)/i,
+    /(?:credited\s+to|info[:\s]+)([A-Za-z0-9][A-Za-z0-9 .&'@-]{1,50}?)(?:\s*[.;,]|\s+upi|\s+ref|\s*$)/i,
     // UPI/MerchantName/ref style (SBI etc.)
-    /upi\/([A-Za-z][A-Za-z0-9 .&'\-]{1,40}?)(?:\/|\s)/i,
+    /upi\/([A-Za-z][A-Za-z0-9 .&'-]{1,40}?)(?:\/|\s)/i,
     // at MERCHANT
-    /\bat\s+([A-Za-z][A-Za-z0-9 .&'@\-]{2,40}?)(?:\s*[.;,]|\s+on\b|\s+upi|\s+ref|\s*$)/i,
+    /\bat\s+([A-Za-z][A-Za-z0-9 .&'@-]{2,40}?)(?:\s*[.;,]|\s+on\b|\s+upi|\s+ref|\s*$)/i,
   ];
 
   for (const re of patterns) {
@@ -164,7 +147,10 @@ function extractSmsMerchant(text: string): string | null {
     if (raw.includes("@")) {
       const local = raw.split("@")[0] ?? raw;
       const name = cleanMerchantName(
-        local.replace(/[._\-]+/g, " ").replace(/\d{4,}/g, "").trim()
+        local
+          .replace(/[._-]+/g, " ")
+          .replace(/\d{4,}/g, "")
+          .trim(),
       );
       if (name && name.length >= 2) return name;
       // Fall back to full VPA if local part is junk
@@ -178,7 +164,7 @@ function extractSmsMerchant(text: string): string | null {
 
 function extractSmsUpiRef(text: string): string | null {
   const patterns = [
-    /(?:upi\s*(?:ref(?:erence)?(?:\s*no\.?)?|txn(?:\s*id)?|transaction\s*id)|utr|ref(?:erence)?\s*(?:no\.?|num(?:ber)?)?)\s*[:\-]?\s*([A-Z0-9]{8,40})/i,
+    /(?:upi\s*(?:ref(?:erence)?(?:\s*no\.?)?|txn(?:\s*id)?|transaction\s*id)|utr|ref(?:erence)?\s*(?:no\.?|num(?:ber)?)?)\s*[:-]?\s*([A-Z0-9]{8,40})/i,
     /\b([0-9]{12})\b/,
     /\b(T\d{10,}[A-Z0-9]*)\b/,
   ];
@@ -192,13 +178,13 @@ function extractSmsUpiRef(text: string): string | null {
 /** Indian bank SMS dates: 17-07-26, 17/07/2026, 17Jul26, 17-Jul-26 */
 function extractSmsPaidAt(
   text: string,
-  fallbackMs?: number | null
+  fallbackMs?: number | null,
 ): string | null {
   const fromText = extractPaidAt(text);
   if (fromText) return fromText;
 
   const reShort =
-    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?)?/i;
+    /(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?)?/i;
   const m = text.match(reShort);
   if (m) {
     const day = Number(m[1]);
@@ -327,13 +313,13 @@ export type ParseSmsOptions = {
  */
 export function parseSmsMessages(
   messages: SmsMessageInput[],
-  options: ParseSmsOptions = {}
+  options: ParseSmsOptions = {},
 ): ParsedExpense[] {
   const minConfidence = options.minConfidence ?? 0.35;
   const filterNonPayment = options.filterNonPayment !== false;
 
   const sorted = [...messages].sort(
-    (a, b) => (b.dateMs ?? 0) - (a.dateMs ?? 0)
+    (a, b) => (b.dateMs ?? 0) - (a.dateMs ?? 0),
   );
 
   const out: ParsedExpense[] = [];
@@ -346,9 +332,7 @@ export function parseSmsMessages(
     if (!parsed.amount) continue;
 
     // Dedupe within this batch: upi ref or merchant|amount|day
-    const day = parsed.paidAt
-      ? parsed.paidAt.slice(0, 10)
-      : "unknown";
+    const day = parsed.paidAt ? parsed.paidAt.slice(0, 10) : "unknown";
     const key = parsed.upiRef
       ? `upi:${parsed.upiRef}`
       : `${(parsed.merchant ?? "").toLowerCase()}|${parsed.amount}|${day}`;

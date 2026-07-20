@@ -1,11 +1,11 @@
-import { randomUUID } from "expo-crypto";
 import {
-  createExpenseSchema,
   type Category,
+  createExpenseSchema,
   type Expense,
   type ExpenseSource,
   type MonthSummary,
 } from "@paymenttracker/shared";
+import { randomUUID } from "expo-crypto";
 import {
   getStoredUserId,
   hashUpiRef,
@@ -14,7 +14,7 @@ import {
   sealNullable,
   sealString,
 } from "./crypto";
-import { getDb, type CategoryRow, type ExpenseRow } from "./db";
+import { type CategoryRow, type ExpenseRow, getDb } from "./db";
 
 async function requireUserId(): Promise<string> {
   const id = await getStoredUserId();
@@ -35,7 +35,7 @@ function mapCategory(row: CategoryRow | null | undefined): Category | null {
 
 async function decryptExpense(
   row: ExpenseRow,
-  category: CategoryRow | null
+  category: CategoryRow | null,
 ): Promise<Expense> {
   const [amount, merchant, notes, rawOcr, upiRef] = await Promise.all([
     openString(row.amount_enc),
@@ -64,15 +64,13 @@ async function decryptExpense(
   };
 }
 
-async function loadCategory(
-  id: string | null
-): Promise<CategoryRow | null> {
+async function loadCategory(id: string | null): Promise<CategoryRow | null> {
   if (!id) return null;
   const db = await getDb();
   return (
     (await db.getFirstAsync<CategoryRow>(
       "SELECT id, name, slug, icon, color FROM categories WHERE id = ?",
-      id
+      id,
     )) ?? null
   );
 }
@@ -91,7 +89,7 @@ async function findSoftDuplicate(
   userId: string,
   merchant: string,
   amount: string,
-  paidAt: Date
+  paidAt: Date,
 ): Promise<ExpenseRow | null> {
   const db = await getDb();
   const { start, end } = dayBounds(paidAt);
@@ -101,7 +99,7 @@ async function findSoftDuplicate(
      LIMIT 40`,
     userId,
     start,
-    end
+    end,
   );
 
   const norm = merchant.trim().toLowerCase();
@@ -110,10 +108,7 @@ async function findSoftDuplicate(
       openString(row.merchant_enc),
       openString(row.amount_enc),
     ]);
-    if (
-      (m ?? "").trim().toLowerCase() === norm &&
-      (a ?? "") === amount
-    ) {
+    if ((m ?? "").trim().toLowerCase() === norm && (a ?? "") === amount) {
       return row;
     }
   }
@@ -161,7 +156,7 @@ export async function listExpenses(params?: {
      WHERE ${clauses.join(" AND ")}
      ORDER BY e.paid_at DESC
      LIMIT ?`,
-    ...binds
+    ...binds,
   );
 
   const q = params?.q?.trim().toLowerCase();
@@ -187,7 +182,7 @@ export async function listExpenses(params?: {
 
 export async function monthSummary(
   year?: number,
-  month?: number
+  month?: number,
 ): Promise<MonthSummary> {
   const userId = await requireUserId();
   const now = new Date();
@@ -207,7 +202,7 @@ export async function monthSummary(
      WHERE user_id = ? AND paid_at >= ? AND paid_at < ?`,
     userId,
     start,
-    end
+    end,
   );
 
   let totalDebit = 0;
@@ -229,15 +224,13 @@ export async function monthSummary(
   };
 }
 
-export async function getExpense(
-  id: string
-): Promise<{ expense: Expense }> {
+export async function getExpense(id: string): Promise<{ expense: Expense }> {
   const userId = await requireUserId();
   const db = await getDb();
   const row = await db.getFirstAsync<ExpenseRow>(
     "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
     id,
-    userId
+    userId,
   );
   if (!row) throw new LocalDataError("Not found", 404);
   const category = await loadCategory(row.category_id);
@@ -248,7 +241,7 @@ type CreateInput = Record<string, unknown>;
 
 async function insertExpense(
   userId: string,
-  data: ReturnType<typeof createExpenseSchema.parse>
+  data: ReturnType<typeof createExpenseSchema.parse>,
 ): Promise<Expense> {
   const upiRef = data.upiRef?.trim() || null;
   const paidAt = new Date(data.paidAt);
@@ -262,13 +255,13 @@ async function insertExpense(
     const dup = await db.getFirstAsync<{ id: string }>(
       "SELECT id FROM expenses WHERE user_id = ? AND upi_ref_hash = ?",
       userId,
-      refHash
+      refHash,
     );
     if (dup) {
       throw new LocalDataError(
         "An expense with this UPI reference already exists.",
         409,
-        { existingId: dup.id }
+        { existingId: dup.id },
       );
     }
   }
@@ -279,25 +272,24 @@ async function insertExpense(
       userId,
       data.merchant,
       data.amount,
-      paidAt
+      paidAt,
     );
     if (soft) {
       throw new LocalDataError(
         "Same merchant and amount already exist on this day.",
         409,
-        { existingId: soft.id }
+        { existingId: soft.id },
       );
     }
   }
 
-  const [amountEnc, merchantEnc, notesEnc, rawEnc, upiEnc] =
-    await Promise.all([
-      sealString(data.amount),
-      sealString(data.merchant),
-      sealNullable(data.notes ?? null),
-      sealNullable(data.rawOcrText ?? null),
-      sealNullable(upiRef),
-    ]);
+  const [amountEnc, merchantEnc, notesEnc, rawEnc, upiEnc] = await Promise.all([
+    sealString(data.amount),
+    sealString(data.merchant),
+    sealNullable(data.notes ?? null),
+    sealNullable(data.rawOcrText ?? null),
+    sealNullable(upiRef),
+  ]);
 
   const upiHash = upiRef ? await hashUpiRef(userId, upiRef) : null;
 
@@ -323,7 +315,7 @@ async function insertExpense(
       notesEnc,
       rawEnc,
       now,
-      now
+      now,
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -354,14 +346,14 @@ async function insertExpense(
 }
 
 export async function createExpense(
-  body: CreateInput
+  body: CreateInput,
 ): Promise<{ expense: Expense }> {
   const userId = await requireUserId();
   const parsed = createExpenseSchema.safeParse(body);
   if (!parsed.success) {
     throw new LocalDataError(
       parsed.error.issues[0]?.message ?? "Invalid input",
-      400
+      400,
     );
   }
   const expense = await insertExpense(userId, parsed.data);
@@ -441,14 +433,14 @@ export async function createExpensesBatch(items: CreateInput[]): Promise<{
 
 export async function updateExpense(
   id: string,
-  body: CreateInput
+  body: CreateInput,
 ): Promise<{ expense: Expense }> {
   const userId = await requireUserId();
   const db = await getDb();
   const existing = await db.getFirstAsync<ExpenseRow>(
     "SELECT * FROM expenses WHERE id = ? AND user_id = ?",
     id,
-    userId
+    userId,
   );
   if (!existing) throw new LocalDataError("Not found", 404);
 
@@ -456,7 +448,7 @@ export async function updateExpense(
   if (!parsed.success) {
     throw new LocalDataError(
       parsed.error.issues[0]?.message ?? "Invalid input",
-      400
+      400,
     );
   }
   const data = parsed.data;
@@ -510,7 +502,7 @@ export async function updateExpense(
     rawEnc,
     now,
     id,
-    userId
+    userId,
   );
 
   return getExpense(id);
@@ -522,7 +514,7 @@ export async function deleteExpense(id: string): Promise<{ ok: boolean }> {
   const result = await db.runAsync(
     "DELETE FROM expenses WHERE id = ? AND user_id = ?",
     id,
-    userId
+    userId,
   );
   if (result.changes === 0) throw new LocalDataError("Not found", 404);
   return { ok: true };
@@ -531,7 +523,7 @@ export async function deleteExpense(id: string): Promise<{ ok: boolean }> {
 export async function listCategories(): Promise<{ categories: Category[] }> {
   const db = await getDb();
   const rows = await db.getAllAsync<CategoryRow>(
-    "SELECT id, name, slug, icon, color FROM categories ORDER BY name"
+    "SELECT id, name, slug, icon, color FROM categories ORDER BY name",
   );
   return {
     categories: rows.map((r) => ({

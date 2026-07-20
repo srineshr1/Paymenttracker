@@ -16,13 +16,13 @@ import { AppHeader } from "@/src/components/AppHeader";
 import { Button, Card, Input, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
+import { useAuth } from "@/src/features/auth/AuthContext";
 import {
   isFastOcrAvailable,
   parseScreenshotAll,
   recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
 import { TesseractHost } from "@/src/features/ocr/TesseractHost";
-import { useAuth } from "@/src/features/auth/AuthContext";
 import {
   enableSmsAutoImport,
   getSmsAutoImportEnabled,
@@ -103,7 +103,7 @@ export default function ImportScreen() {
         ? `Reading ${assets.length} screenshots…`
         : fastOcr
           ? "Reading text on this device…"
-          : "Reading screenshot… first time may take a moment"
+          : "Reading screenshot… first time may take a moment",
     );
 
     try {
@@ -122,7 +122,7 @@ export default function ImportScreen() {
 
       if (!texts.length) {
         throw new Error(
-          "No text found in these images. Try clearer screenshots or paste text."
+          "No text found in these images. Try clearer screenshots or paste text.",
         );
       }
 
@@ -130,9 +130,7 @@ export default function ImportScreen() {
       goReview(assets[0]?.uri ?? null, texts.join("\n\n"));
     } catch (e) {
       setStatus(null);
-      setError(
-        e instanceof Error ? e.message : "Could not read this image."
-      );
+      setError(e instanceof Error ? e.message : "Could not read this image.");
       setShowPaste(true);
     } finally {
       setBusy(false);
@@ -158,7 +156,7 @@ export default function ImportScreen() {
         allowsEditing: false,
         allowsMultipleSelection: true,
         selectionLimit: 6,
-      })
+      }),
     );
     if (result.canceled || !result.assets?.length) return;
 
@@ -194,7 +192,7 @@ export default function ImportScreen() {
     }
     if (!isSmsInboxAvailable()) {
       setError(
-        "SMS import needs a native Spentd build (expo run:android), not Expo Go."
+        "SMS import needs a native Spentd build (expo run:android), not Expo Go.",
       );
       return;
     }
@@ -213,7 +211,7 @@ export default function ImportScreen() {
             ? "No SMS found in the last 90 days."
             : paymentLike === 0
               ? `Scanned ${scanned} messages — none looked like bank/UPI payments.`
-              : `Found ${paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`
+              : `Found ${paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`,
         );
         return;
       }
@@ -237,7 +235,7 @@ export default function ImportScreen() {
       });
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Could not read SMS on this device."
+        e instanceof Error ? e.message : "Could not read SMS on this device.",
       );
     } finally {
       setBusy(false);
@@ -356,7 +354,11 @@ export default function ImportScreen() {
                       },
                     ]}
                   >
-                    <Ionicons name="add" size={22} color={colors.accentStrong} />
+                    <Ionicons
+                      name="add"
+                      size={22}
+                      color={colors.accentStrong}
+                    />
                   </Pressable>
                 ) : null}
               </View>
@@ -437,8 +439,8 @@ export default function ImportScreen() {
               </Pressable>
             </View>
             <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-              Copy text from PhonePe / GPay (or long-press → share → copy), paste
-              here, then parse.
+              Copy text from PhonePe / GPay (or long-press → share → copy),
+              paste here, then parse.
             </Text>
             <Input
               value={pasteText}

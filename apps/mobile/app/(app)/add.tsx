@@ -1,22 +1,16 @@
 import { useRouter } from "expo-router";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import {
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError, api } from "@/src/api/client";
@@ -44,8 +38,7 @@ function sanitizeAmountInput(raw: string): string {
   const firstDot = next.indexOf(".");
   if (firstDot !== -1) {
     next =
-      next.slice(0, firstDot + 1) +
-      next.slice(firstDot + 1).replace(/\./g, "");
+      next.slice(0, firstDot + 1) + next.slice(firstDot + 1).replace(/\./g, "");
     const [whole, frac = ""] = next.split(".");
     next = `${whole}.${frac.slice(0, 2)}`;
   }
@@ -144,7 +137,7 @@ export default function AddExpenseScreen() {
       setError(
         direction === "credit"
           ? "Enter who you received from"
-          : "Enter a merchant name"
+          : "Enter a merchant name",
       );
       return;
     }
@@ -172,7 +165,7 @@ export default function AddExpenseScreen() {
         setError(
           e.message.includes("already")
             ? e.message
-            : "This payment looks already saved today."
+            : "This payment looks already saved today.",
         );
       } else {
         setError(e instanceof ApiError ? e.message : "Could not save expense");
