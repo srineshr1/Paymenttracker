@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**Premium Android expense tracker** that imports **PhonePe** and **GPay** screenshots + bank SMS, with **username + passcode** auth and optional **cloud sync**.
+**Premium Android expense tracker** that imports payment screenshots from **any app** (PhonePe, GPay, Paytm, your bank…) + bank SMS, with **username + passcode** auth and optional **cloud sync**.
 
 <p align="center">
   <a href="https://github.com/srineshr1/Paymenttracker/releases/latest"><img src="https://img.shields.io/github/v/release/srineshr1/Paymenttracker?label=Download%20APK&color=C4A574" alt="Download APK" /></a>
@@ -16,8 +16,8 @@
 
 ## Features
 
-- **Screenshot OCR** — import PhonePe / GPay payment screenshots on-device
-- **SMS import** — scan bank/UPI SMS (native Android build)
+- **Screenshot OCR** — import payment screenshots from any app (PhonePe, GPay, Paytm, your bank…) on-device
+- **SMS import** — automatically reads bank/UPI SMS (native Android build)
 - **Privacy-first auth** — username remembered; 6-digit passcode never stored on device (Argon2id on server)
 - **Cloud sync** — structured expense fields only; screenshots stay local
 - **Budgets & cash** — track spending limits and cash wallets
@@ -226,16 +226,16 @@ Never commit `spentd-upload.keystore` or `keystore.properties`.
    - Prefer **More details → Install anyway** when shown.
    - Or: **Settings → Google → Play Protect → Settings (gear)** → temporarily turn off **Scan apps with Play Protect** → install → turn scanning back on.
    - Or USB: `adb install -r path/to/spentd.apk`
-4. Open **Spentd** (not Expo Go) → grant **SMS** when prompted → Agree on the consent screen or use **Import → SMS**.
+4. Open **Spentd** (not Expo Go) → grant **SMS** when prompted → Agree on the consent screen (or enable **SMS auto-import** later in Settings).
 
 > Image OCR (ML Kit) and SMS need a **dev/production build**, not Expo Go.  
 > Paste-text import works in Expo Go.
 
 ### Import payments (on-device)
 
-1. **SMS inbox** — bank/UPI SMS parse (native build, `READ_SMS`)
-2. **Screenshot OCR** — PhonePe / GPay via ML Kit or Tesseract
-3. **Paste text** — fallback on Import screen
+1. **SMS (automatic)** — bank/UPI SMS parsed on-device once enabled (consent screen or Settings; native build, `READ_SMS`)
+2. **Screenshot OCR** — payment screenshots from any app via ML Kit or Tesseract
+3. **Paste text** — fallback on the Import screen
 
 Parsers live in `packages/shared/src/ocr`.
 

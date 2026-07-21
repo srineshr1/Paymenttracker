@@ -32,6 +32,7 @@ import {
   enableSmsAutoImport,
   getSmsAutoImportEnabled,
 } from "@/src/features/sms/autoImport";
+import { importAndSavePaymentsFromSms } from "@/src/features/sms/importSms";
 import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
 
 /** Docs page for SMS auto-import — update when the site is live. */
@@ -69,6 +70,24 @@ export default function SettingsScreen() {
       if (next) {
         await enableSmsAutoImport();
         setSmsAuto(true);
+        // One-time catch-up of the last 90 days so turning this on also imports
+        // recent history (not just messages that arrive from now on).
+        try {
+          const result = await importAndSavePaymentsFromSms({
+            lookbackDays: 90,
+            maxCount: 2000,
+          });
+          if (result.created > 0) {
+            Alert.alert(
+              "SMS import on",
+              `Added ${result.created} recent payment${
+                result.created === 1 ? "" : "s"
+              } from the last 90 days. New messages import automatically.`,
+            );
+          }
+        } catch {
+          /* best-effort backfill — live import is already enabled */
+        }
       } else {
         await disableSmsAutoImport();
         setSmsAuto(false);

@@ -255,7 +255,7 @@ function blockStatus(
 export function parseHistoryListOcr(raw: string): ParsedExpense[] {
   const text = normalizeOcrText(raw);
   const source: ParsedSource =
-    detectSource(text) === "unknown" ? "phonepe" : detectSource(text);
+    detectSource(text) === "unknown" ? "upi" : detectSource(text);
   const lines = text
     .split("\n")
     .map((l) => l.trim())
@@ -321,7 +321,7 @@ export function parseHistoryListOcr(raw: string): ParsedExpense[] {
       merchant,
       paidAt: paidAt ?? new Date().toISOString(),
       upiRef: null,
-      source: source === "unknown" ? "phonepe" : source,
+      source: source === "unknown" ? "upi" : source,
       status: status === "unknown" ? "success" : status,
       confidence: Math.max(confidence, amount && merchant ? 0.6 : confidence),
       rawText: [labelLine, ...block].join("\n"),

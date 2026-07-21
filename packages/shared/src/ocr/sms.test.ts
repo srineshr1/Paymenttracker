@@ -21,8 +21,48 @@ describe("isPaymentSms", () => {
     assert.equal(isPaymentSms(HDFC, "VM-HDFCBK"), true);
   });
 
+  it("accepts card spend SMS", () => {
+    assert.equal(
+      isPaymentSms(
+        "INR 2,499.00 spent on AXIS Bank Card ending 1234 at FLIPKART on 17-07-26. Avl Limit INR 50,000.00",
+        "AX-AXISBK",
+      ),
+      true,
+    );
+  });
+
+  it("accepts ATM withdrawal SMS", () => {
+    assert.equal(
+      isPaymentSms(
+        "Rs 5,000.00 withdrawn from HDFC Bank ATM at MG Road on 17-07-26. Avl Bal Rs 22,340.00",
+        "VM-HDFCBK",
+      ),
+      true,
+    );
+  });
+
+  it("accepts UPI autopay / mandate SMS", () => {
+    assert.equal(
+      isPaymentSms(
+        "Rs 199.00 debited via UPI AutoPay mandate to Netflix from Kotak A/c XX9988 on 17/07/2026. Ref 417600011122",
+        "VM-KOTAK",
+      ),
+      true,
+    );
+  });
+
   it("rejects OTP SMS", () => {
     assert.equal(isPaymentSms(OTP, "VM-HDFCBK"), false);
+  });
+
+  it("rejects promotional SMS with no transaction", () => {
+    assert.equal(
+      isPaymentSms(
+        "Get FLAT 50% OFF up to Rs 200 on your next order! Use code SAVE50. Limited period offer, hurry!",
+        "VM-PROMOS",
+      ),
+      false,
+    );
   });
 });
 

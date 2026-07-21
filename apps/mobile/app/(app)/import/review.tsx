@@ -55,9 +55,10 @@ export default function ImportReviewScreen() {
   const source =
     initial?.source === "phonepe" ||
     initial?.source === "gpay" ||
+    initial?.source === "upi" ||
     initial?.source === "sms"
       ? initial.source
-      : "manual";
+      : "upi";
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -82,7 +83,7 @@ export default function ImportReviewScreen() {
         amount: String(amount).replace(/,/g, ""),
         direction,
         paidAt: paidAtIso,
-        source: source === "manual" ? "manual" : source,
+        source,
         upiRef: upiRef.trim() || null,
         notes: notes.trim() || null,
         categoryId,
@@ -182,10 +183,7 @@ export default function ImportReviewScreen() {
           ) : null}
 
           <View style={styles.badges}>
-            <Badge
-              label={source === "manual" ? "Unknown source" : source}
-              tone="accent"
-            />
+            <Badge label={source === "upi" ? "UPI" : source} tone="accent" />
             <Badge
               label={`${Math.round((initial.confidence ?? 0) * 100)}% confidence`}
               tone={

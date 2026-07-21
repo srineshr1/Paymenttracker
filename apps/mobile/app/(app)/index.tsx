@@ -979,7 +979,7 @@ export default function HomeScreen() {
           {!loading && recent.length === 0 ? (
             <EmptyState
               title="No expenses yet"
-              body="Tap Add payments to import a PhonePe/GPay screenshot or enter one manually."
+              body="Tap Add payments to import a payment screenshot from any app or enter one manually."
             />
           ) : (
             <Card

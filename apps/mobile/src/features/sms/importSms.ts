@@ -11,7 +11,12 @@ import {
   createExpensesBatch,
 } from "@/src/data/expenses";
 import { resolveCategoryId } from "./categorize";
-import { dayKey, isJunkForAutoImport, safePaidAtIso } from "./quality";
+import {
+  dayKey,
+  isJunkForAutoImport,
+  resolveMerchant,
+  safePaidAtIso,
+} from "./quality";
 import { type ListInboxOptions, listInboxSms } from "./readInbox";
 
 export type ImportSmsResult = {
@@ -62,7 +67,7 @@ export async function importPaymentsFromSms(
 async function toBatchPayload(rows: ParsedExpense[]) {
   const out: Record<string, unknown>[] = [];
   for (const r of rows) {
-    const merchant = (r.merchant ?? "").trim();
+    const merchant = resolveMerchant(r);
     const direction = r.direction ?? "debit";
     const categoryId = await resolveCategoryId(merchant, direction, r.rawText);
     out.push({
@@ -71,7 +76,10 @@ async function toBatchPayload(rows: ParsedExpense[]) {
       direction,
       paidAt: safePaidAtIso(r.paidAt),
       source:
-        r.source === "phonepe" || r.source === "gpay" || r.source === "sms"
+        r.source === "phonepe" ||
+        r.source === "gpay" ||
+        r.source === "upi" ||
+        r.source === "sms"
           ? r.source
           : ("sms" as const),
       upiRef: r.upiRef ?? null,

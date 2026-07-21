@@ -61,4 +61,31 @@ UPI transaction ID 123456789012
     assert.equal(r.direction, "credit");
     assert.equal(r.amount, "99.00");
   });
+
+  it("parses a Paytm screenshot with a neutral upi source", () => {
+    const r = parseUpiScreenshotText(`
+Paytm
+Payment Successful
+₹350.00
+Paid to Blinkit
+17 Jul 2026, 08:42 pm
+UPI Ref No. 417612345678
+`);
+    assert.equal(r.amount, "350.00");
+    assert.match(r.merchant ?? "", /blinkit/i);
+    assert.equal(r.source, "upi");
+    assert.equal(r.status, "success");
+  });
+
+  it("parses an unbranded app screenshot (source unknown, still extracts fields)", () => {
+    const r = parseUpiScreenshotText(`
+Payment Successful
+₹1,299.00
+Paid to Croma Retail
+Transaction ID 417698765432
+`);
+    assert.equal(r.amount, "1299.00");
+    assert.match(r.merchant ?? "", /croma/i);
+    assert.equal(r.source, "unknown");
+  });
 });

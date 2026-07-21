@@ -262,7 +262,7 @@ export function AddPaymentsMenu({
                 Import screenshot
               </Text>
               <Text style={[styles.rowHint, { color: colors.textMuted }]}>
-                PhonePe or GPay
+                Any payment app
               </Text>
             </View>
             <Ionicons

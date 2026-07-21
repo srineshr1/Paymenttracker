@@ -40,6 +40,7 @@ export const directionSchema = z.enum(["debit", "credit"]);
 export const sourceSchema = z.enum([
   "phonepe",
   "gpay",
+  "upi",
   "sms",
   "manual",
   "cash",

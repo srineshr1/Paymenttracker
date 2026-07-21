@@ -1,12 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -24,23 +22,6 @@ import {
   recognizeTextFromImage,
 } from "@/src/features/ocr/recognize";
 import { TesseractHost } from "@/src/features/ocr/TesseractHost";
-import {
-  enableSmsAutoImport,
-  getSmsAutoImportEnabled,
-} from "@/src/features/sms/autoImport";
-import { importAndSavePaymentsFromSms } from "@/src/features/sms/importSms";
-import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
-
-const SAMPLE_PHONEPE = `PhonePe
-Payment Successful
-₹450.00
-Paid to Swiggy
-Transaction ID
-T2407171234567890123456
-17 Jul 2026, 08:42 pm
-UPI Ref No. 417612345678
-Debited from
-HDFC Bank XX1234`;
 
 type Picked = {
   id: string;
@@ -52,11 +33,9 @@ type Picked = {
 export default function ImportScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string }>();
   const { colors } = useTheme();
   const { runWithoutAppLock } = useAuth();
   const fastOcr = useMemo(() => isFastOcrAvailable(), []);
-  const autoSmsStarted = useRef(false);
 
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -183,91 +162,6 @@ export default function ImportScreen() {
     goReview(null, pasteText);
   };
 
-  const scanSms = async () => {
-    setError(null);
-    setStatus(null);
-
-    if (Platform.OS !== "android") {
-      setError("SMS import is only available on Android.");
-      return;
-    }
-    if (!isSmsInboxAvailable()) {
-      setError(
-        "SMS import needs the Spentd APK (not Expo Go). Install from GitHub Releases or run: npx expo run:android",
-      );
-      return;
-    }
-
-    setBusy(true);
-    setStatus("Scanning messages…");
-    try {
-      const result = await importAndSavePaymentsFromSms(
-        { lookbackDays: 90, maxCount: 2000 },
-        (msg) => setStatus(msg),
-      );
-
-      if (result.considered === 0 && result.created === 0) {
-        setError(
-          result.scanned === 0
-            ? "No SMS found in the last 90 days."
-            : result.paymentLike === 0
-              ? `Scanned ${result.scanned} messages — none looked like bank/UPI payments.`
-              : result.parsed > 0 && result.junked > 0
-                ? `Found ${result.paymentLike} payment-like messages; ${result.junked} were parsed but none met the quality bar (merchant, confidence, or pending status). Try a screenshot import instead.`
-                : `Found ${result.paymentLike} payment-like messages but could not parse amounts confidently. Try a screenshot import instead.`,
-        );
-        return;
-      }
-
-      // First successful SMS import → turn on live auto-import for next messages
-      try {
-        const already = await getSmsAutoImportEnabled();
-        if (!already) await enableSmsAutoImport();
-      } catch {
-        /* permission edge — bulk import already finished */
-      }
-
-      setStatus(null);
-      const parts = [
-        result.created > 0 ? `Added ${result.created}` : null,
-        result.skipped > 0
-          ? `skipped ${result.skipped} duplicate${result.skipped === 1 ? "" : "s"}`
-          : null,
-        result.failed > 0 ? `${result.failed} failed` : null,
-        result.partial ? "stopped early (partial save)" : null,
-      ].filter(Boolean);
-
-      Alert.alert(
-        result.partial
-          ? "Import partially complete"
-          : result.created > 0
-            ? "Import complete"
-            : "Nothing new added",
-        parts.join(" · ") || "No changes",
-        [{ text: "OK", onPress: () => router.replace("/(app)") }],
-      );
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Could not read SMS on this device.",
-      );
-    } finally {
-      setBusy(false);
-      setStatus(null);
-    }
-  };
-
-  const smsAvailable = Platform.OS === "android";
-
-  // Home menu "SMS" opens Import with mode=sms and starts the scan once.
-  useEffect(() => {
-    if (params.mode !== "sms") return;
-    if (autoSmsStarted.current) return;
-    if (!smsAvailable || busy) return;
-    autoSmsStarted.current = true;
-    void scanSms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot on mount/mode
-  }, [params.mode]);
-
   return (
     <Screen style={{ paddingTop: insets.top }}>
       {/* Tesseract.js host — enables OCR in Expo Go */}
@@ -275,7 +169,7 @@ export default function ImportScreen() {
 
       <AppHeader
         title="Import"
-        subtitle="SMS · PhonePe & GPay · stays on device"
+        subtitle="Screenshots & text · stays on device"
       />
       <ScrollView
         contentContainerStyle={{
@@ -285,33 +179,11 @@ export default function ImportScreen() {
         }}
         keyboardShouldPersistTaps="handled"
       >
-        {smsAvailable ? (
-          <Card variant="soft" style={{ gap: spacing.md }}>
-            <Text variant="label">SMS inbox</Text>
-            <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-              Scan the last 90 days, then keep auto-importing new bank/UPI SMS
-              as they arrive (while the app is unlocked). Nothing is uploaded.
-            </Text>
-            <Button
-              title={
-                busy
-                  ? status?.startsWith("Found") ||
-                    status?.startsWith("Importing")
-                    ? "Importing…"
-                    : "Scanning…"
-                  : "Import from SMS"
-              }
-              loading={busy}
-              onPress={scanSms}
-              disabled={busy}
-            />
-          </Card>
-        ) : null}
-
         <Card variant="soft" style={{ gap: spacing.md }}>
           <Text variant="label">Screenshot</Text>
           <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-            Pick PhonePe or GPay screenshots. Text is read on this device.
+            Pick a payment screenshot from any app (PhonePe, GPay, Paytm, your
+            bank…). Text is read on this device.
           </Text>
 
           {picked.length === 0 ? (
@@ -459,13 +331,13 @@ export default function ImportScreen() {
               </Pressable>
             </View>
             <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
-              Copy text from PhonePe / GPay (or long-press → share → copy),
-              paste here, then parse.
+              Copy the transaction text from any payment app (or long-press →
+              share → copy), paste here, then parse.
             </Text>
             <Input
               value={pasteText}
               onChangeText={setPasteText}
-              placeholder="Paste PhonePe or GPay text…"
+              placeholder="Paste payment text…"
               multiline
               style={{
                 height: 140,
@@ -479,11 +351,6 @@ export default function ImportScreen() {
               title="Parse & continue"
               disabled={!pasteText.trim() || busy}
               onPress={parsePaste}
-            />
-            <Button
-              title="Load sample (PhonePe)"
-              variant="secondary"
-              onPress={() => setPasteText(SAMPLE_PHONEPE)}
             />
           </Card>
         )}

@@ -9,7 +9,7 @@ import { isUnlocked, LocalDataError } from "@/src/data/crypto";
 import { createExpense } from "@/src/data/expenses";
 import { resolveCategoryId } from "./categorize";
 import { getSmsAutoImportEnabled, setSmsAutoImportEnabled } from "./prefs";
-import { MIN_AUTO_IMPORT_CONFIDENCE } from "./quality";
+import { isJunkForAutoImport, resolveMerchant } from "./quality";
 import {
   drainPendingSms,
   isSmsInboxAvailable,
@@ -120,23 +120,20 @@ export async function processIncomingSms(
     await syncBalance();
     return { status: "skipped", reason: "pending_tx" };
   }
-  if ((parsed.confidence ?? 0) < MIN_AUTO_IMPORT_CONFIDENCE) {
+  if (isJunkForAutoImport(parsed)) {
     await syncBalance();
-    return { status: "skipped", reason: "low_confidence" };
-  }
-  if (!parsed.amount || !(parsed.merchant ?? "").trim()) {
-    await syncBalance();
-    return { status: "skipped", reason: "incomplete" };
+    return { status: "skipped", reason: "low_quality" };
   }
 
   const source =
     parsed.source === "phonepe" ||
     parsed.source === "gpay" ||
+    parsed.source === "upi" ||
     parsed.source === "sms"
       ? parsed.source
       : "sms";
 
-  const merchant = (parsed.merchant ?? "").trim();
+  const merchant = resolveMerchant(parsed);
   const direction = parsed.direction ?? "debit";
   let categoryId: string | null = null;
   try {

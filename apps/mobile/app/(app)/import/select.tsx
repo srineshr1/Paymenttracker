@@ -21,7 +21,12 @@ import { saveExpenseChunks } from "@/src/data/expenseChunks";
 import { formatDateTime, formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
-import { dayKey, isJunk, safePaidAtIso } from "@/src/features/sms/quality";
+import {
+  dayKey,
+  isJunk,
+  resolveMerchant,
+  safePaidAtIso,
+} from "@/src/features/sms/quality";
 
 type Row = ParsedExpense & { id: string; notes?: string | null };
 
@@ -176,14 +181,17 @@ export default function ImportSelectScreen() {
 
     try {
       const payload = unique.map((r) => ({
-        merchant: (r.merchant ?? "").trim(),
+        merchant: resolveMerchant(r),
         amount: String(r.amount).replace(/,/g, ""),
         direction: r.direction ?? "debit",
         paidAt: safePaidAtIso(r.paidAt),
         source:
-          r.source === "phonepe" || r.source === "gpay" || r.source === "sms"
+          r.source === "phonepe" ||
+          r.source === "gpay" ||
+          r.source === "upi" ||
+          r.source === "sms"
             ? r.source
-            : "manual",
+            : "upi",
         upiRef: r.upiRef ?? null,
         notes: r.notes?.trim() || null,
         rawOcrText: r.rawText || params.rawText || null,

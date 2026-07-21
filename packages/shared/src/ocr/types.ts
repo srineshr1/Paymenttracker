@@ -1,4 +1,11 @@
-export type ParsedSource = "phonepe" | "gpay" | "sms" | "unknown";
+/**
+ * Where a parsed expense came from.
+ * - phonepe / gpay: brand detected (drives the logo)
+ * - upi: a UPI / wallet / payment app we don't brand individually (app-agnostic)
+ * - sms: parsed from a bank/UPI text message
+ * - unknown: source could not be determined
+ */
+export type ParsedSource = "phonepe" | "gpay" | "upi" | "sms" | "unknown";
 export type ParsedDirection = "debit" | "credit";
 
 export interface ParsedExpense {

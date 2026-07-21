@@ -1,12 +1,14 @@
-import { parseGPayOcr } from "./gpay.js";
 import { looksLikeHistoryList, parseHistoryListOcr } from "./history.js";
-import { parsePhonePeOcr } from "./phonepe.js";
-import { detectSource, normalizeOcrText } from "./shared.js";
+import { interpretTransactionText } from "./interpret.js";
+import { normalizeOcrText } from "./shared.js";
 import type { ParsedExpense } from "./types.js";
 
 /**
- * Parse one or more expenses from UPI screenshot OCR text.
- * Handles single success screens and multi-row PhonePe/GPay history lists.
+ * Parse one or more expenses from a payment screenshot's OCR text.
+ *
+ * App-agnostic: works for any UPI / wallet / bank app because the shared
+ * interpreter reads fields from the text itself. Multi-row history lists are
+ * split into individual transactions.
  */
 export function parseUpiScreenshotAll(raw: string): ParsedExpense[] {
   const text = normalizeOcrText(raw);
@@ -16,19 +18,18 @@ export function parseUpiScreenshotAll(raw: string): ParsedExpense[] {
     if (list.length > 0) return list;
   }
 
-  // Single-transaction success screen
-  return [parseUpiScreenshotText(text)];
+  // Single-transaction success / receipt screen.
+  return [interpretTransactionText(text)];
 }
 
 export function parseUpiScreenshotText(raw: string): ParsedExpense {
   const text = normalizeOcrText(raw);
 
-  // Prefer history if multiple rows
+  // Prefer history if multiple rows.
   if (looksLikeHistoryList(text)) {
     const list = parseHistoryListOcr(text);
     if (list.length === 1) return list[0];
     if (list.length > 1) {
-      // Return first with a note — callers should use parseUpiScreenshotAll
       return {
         ...list[0],
         warnings: [
@@ -39,39 +40,14 @@ export function parseUpiScreenshotText(raw: string): ParsedExpense {
     }
   }
 
-  const source = detectSource(text);
-
-  if (source === "gpay") return parseGPayOcr(text);
-  if (source === "phonepe") return parsePhonePeOcr(text);
-
-  const phonepe = parsePhonePeOcr(text);
-  const gpay = parseGPayOcr(text);
-  const best = gpay.confidence >= phonepe.confidence ? gpay : phonepe;
-
-  // If history-like "Paid to" still, try list parser once more
-  if (best.confidence < 0.5 && /paid\s+to/i.test(text)) {
-    const list = parseHistoryListOcr(text);
-    if (list.length > 0) {
-      return list.reduce((a, b) => (a.confidence >= b.confidence ? a : b));
-    }
-  }
-
-  return {
-    ...best,
-    source: best.source === "unknown" ? "unknown" : best.source,
-    warnings:
-      best.source === "unknown" || best.confidence < 0.5
-        ? [
-            ...best.warnings,
-            "Could not confidently detect PhonePe or GPay — please verify fields",
-          ]
-        : best.warnings,
-  };
+  return interpretTransactionText(text);
 }
 
 export { parseGPayOcr } from "./gpay.js";
 export * from "./history.js";
+export * from "./interpret.js";
 export { parsePhonePeOcr } from "./phonepe.js";
+export * from "./quality.js";
 export * from "./shared.js";
 export * from "./sms.js";
 export * from "./types.js";

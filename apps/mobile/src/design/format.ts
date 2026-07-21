@@ -174,10 +174,16 @@ export function sourceLabel(source: string) {
       return "PhonePe";
     case "gpay":
       return "GPay";
+    case "upi":
+      return "UPI";
     case "sms":
       return "SMS";
+    case "cash":
+      return "Cash";
     case "manual":
       return "Manual";
+    case "unknown":
+      return "Payment";
     default:
       return source;
   }

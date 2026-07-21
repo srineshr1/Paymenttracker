@@ -16,6 +16,7 @@ export const sourceEnum = pgEnum("source", [
   "manual",
   "sms",
   "cash",
+  "upi",
 ]);
 
 export const users = pgTable(

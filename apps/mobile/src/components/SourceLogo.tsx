@@ -67,6 +67,31 @@ export function SourceLogo({
     );
   }
 
+  // App-agnostic payment (any UPI / wallet app, or brand not detected).
+  if (source === "upi" || source === "unknown") {
+    return (
+      <View
+        style={[
+          styles.wrap,
+          {
+            width: size,
+            height: size,
+            borderRadius: Math.max(10, size * 0.28),
+            borderColor: colors.border,
+            backgroundColor: colors.accentSoft,
+          },
+        ]}
+      >
+        <Ionicons
+          name="wallet-outline"
+          size={Math.round(size * 0.48)}
+          color={colors.accentStrong}
+          accessibilityLabel="Payment app"
+        />
+      </View>
+    );
+  }
+
   const key =
     source === "phonepe" || source === "gpay" || source === "manual"
       ? source
