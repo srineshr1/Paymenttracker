@@ -43,10 +43,31 @@ jobs:
           fi
           npx expo prebuild --platform android --non-interactive
 
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SPENTD_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::SPENTD_UPLOAD_KEYSTORE_BASE64 secret missing — release will be debug-signed (Play Protect may block install)."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > apps/mobile/android/spentd-upload.keystore
+          ls -lh apps/mobile/android/spentd-upload.keystore
+
       - name: Build release APK
         working-directory: apps/mobile/android
+        env:
+          SPENTD_UPLOAD_STORE_PASSWORD: ${{ secrets.SPENTD_UPLOAD_STORE_PASSWORD }}
+          SPENTD_UPLOAD_KEY_ALIAS: ${{ secrets.SPENTD_UPLOAD_KEY_ALIAS }}
+          SPENTD_UPLOAD_KEY_PASSWORD: ${{ secrets.SPENTD_UPLOAD_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
+          if [ -f spentd-upload.keystore ]; then
+            export SPENTD_UPLOAD_STORE_FILE="$(pwd)/spentd-upload.keystore"
+            echo "Using release keystore at $SPENTD_UPLOAD_STORE_FILE"
+          else
+            echo "No release keystore present — Gradle will fall back to debug signing"
+          fi
           ./gradlew assembleRelease --no-daemon
 
       - name: Prepare APK

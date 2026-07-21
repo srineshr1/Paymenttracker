@@ -193,7 +193,7 @@ export default function ImportScreen() {
     }
     if (!isSmsInboxAvailable()) {
       setError(
-        "SMS import needs a native Spentd build (expo run:android), not Expo Go.",
+        "SMS import needs the Spentd APK (not Expo Go). Install from GitHub Releases or run: npx expo run:android",
       );
       return;
     }

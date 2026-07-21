@@ -128,7 +128,7 @@ export async function listInboxSms(
   if (!native) {
     throw new Error(
       Platform.OS === "android"
-        ? "SMS import needs a native Spentd build (not Expo Go). Rebuild with expo run:android."
+        ? "SMS import needs the Spentd APK (not Expo Go). Install from GitHub Releases or run: npx expo run:android"
         : "SMS import is only available on Android.",
     );
   }

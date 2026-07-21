@@ -98,7 +98,12 @@ export function parseAmountToken(raw: string): string | null {
 
 /**
  * History-list amount token: same as parseAmountToken plus leading-2 ₹ glue
- * (₹100 → 2100, ₹1 → 21) which is common when ML Kit/Tesseract eat the glyph.
+ * for 3-digit amounts (₹100 → OCR "2100") which is common when ML Kit/Tesseract
+ * eat the rupee glyph into a leading "2".
+ *
+ * Does NOT strip 2-digit tokens (21–29) by default — real UPI amounts like ₹25
+ * are common. Use {@link parseGluedHistoryAmountToken} only for bare
+ * "Paid to 21" style lines where PhonePe OCR glues ₹→2 onto ₹1–₹9.
  *
  * Never applies the no-comma "2xxx→xxx" strip when the source token had a comma
  * (so real ₹2,500 stays 2500, while OCR "2100" for ₹100 still becomes 100).
@@ -113,10 +118,6 @@ export function parseHistoryAmountToken(raw: string): string | null {
 
   const hadComma = s.includes(",");
   const cleaned = s.replace(/,/g, "");
-  // ₹1 → 21 / ₹5 → 25 (2-digit, single-digit remainder only)
-  if (!hadComma && /^2[1-9]$/.test(cleaned)) {
-    return Number(cleaned.slice(1)).toFixed(2);
-  }
   // ₹100 → 2100 — only when OCR omitted commas (not "2,500")
   if (!hadComma && /^2\d{3}(\.\d{1,2})?$/.test(cleaned)) {
     const alt = cleaned.slice(1);
@@ -125,6 +126,26 @@ export function parseHistoryAmountToken(raw: string): string | null {
   }
   // Prefer base (handles 249,999 → 49,999 etc.)
   return base;
+}
+
+/**
+ * Aggressive PhonePe label glue: "Paid to 21" → ₹1, "Paid to 25" → ₹5.
+ * Only call when the token sits alone after Paid to / Payment to with no ₹ glyph.
+ */
+export function parseGluedHistoryAmountToken(raw: string): string | null {
+  const s = raw
+    .replace(/[₹%¥₽]/g, "")
+    .replace(/[^\d,.]/g, "")
+    .trim();
+  if (!s) return parseHistoryAmountToken(raw);
+
+  const hadComma = s.includes(",");
+  const cleaned = s.replace(/,/g, "");
+  // ₹1 → 21 / ₹5 → 25 (2-digit, single-digit remainder only)
+  if (!hadComma && /^2[1-9]$/.test(cleaned)) {
+    return Number(cleaned.slice(1)).toFixed(2);
+  }
+  return parseHistoryAmountToken(raw);
 }
 
 export function extractAmount(text: string): string | null {

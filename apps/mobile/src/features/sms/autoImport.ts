@@ -277,6 +277,13 @@ export async function stopSmsAutoImport(): Promise<void> {
 
 /** Enable preference and start listening (requests SMS permissions). */
 export async function enableSmsAutoImport(): Promise<void> {
+  if (Platform.OS !== "android" || !isSmsInboxAvailable()) {
+    throw new Error(
+      Platform.OS === "android"
+        ? "SMS import needs the Spentd APK (not Expo Go). Install from GitHub Releases or run: npx expo run:android"
+        : "SMS import is only available on Android.",
+    );
+  }
   await setSmsAutoImportEnabled(true);
   await startSmsAutoImport();
 }

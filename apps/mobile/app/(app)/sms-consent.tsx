@@ -14,6 +14,10 @@ import {
   clearSmsConsentPending,
   setSmsAutoImportEnabled,
 } from "@/src/features/sms/prefs";
+import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
+
+const NATIVE_BUILD_HINT =
+  "SMS import needs the Spentd APK (not Expo Go).\n\nInstall the APK from GitHub Releases, or rebuild with:\nnpx expo run:android\n\nIf Play Protect blocks install: Settings → Play Protect → turn off scan temporarily, install, then turn it back on. Or use: adb install -r app-release.apk";
 
 export default function SmsConsentScreen() {
   const insets = useSafeAreaInsets();
@@ -28,10 +32,21 @@ export default function SmsConsentScreen() {
     setStatus(null);
     try {
       if (enable && Platform.OS === "android") {
+        // Native module missing (Expo Go / bad prebuild) — never claim watching is on.
+        if (!isSmsInboxAvailable()) {
+          await setSmsAutoImportEnabled(false);
+          await clearSmsConsentPending();
+          Alert.alert("Native build required", NATIVE_BUILD_HINT, [
+            { text: "OK", onPress: () => router.replace("/(app)") },
+          ]);
+          return;
+        }
+
         // Backfill first (requests SMS permission via inbox read), then enable
         // live listening — same order as Import → SMS, avoids catch-up races.
         let backfillError: string | null = null;
         let liveEnabled = false;
+        let liveError: string | null = null;
 
         try {
           setStatus("Importing past payments…");
@@ -51,19 +66,31 @@ export default function SmsConsentScreen() {
           setStatus("Turning on SMS import…");
           await enableSmsAutoImport();
           liveEnabled = true;
-        } catch {
-          // Permission denied or Expo Go — keep preference off
+        } catch (e) {
+          // Permission denied — keep preference off
           await setSmsAutoImportEnabled(false);
+          liveError =
+            e instanceof Error
+              ? e.message
+              : "Could not enable SMS listening. Check permissions in Settings.";
         }
 
         await clearSmsConsentPending();
 
+        if (!liveEnabled) {
+          Alert.alert(
+            "SMS import not enabled",
+            [backfillError, liveError].filter(Boolean).join("\n\n") ||
+              "SMS permission was denied or unavailable.",
+            [{ text: "OK", onPress: () => router.replace("/(app)") }],
+          );
+          return;
+        }
+
         if (backfillError) {
           Alert.alert(
-            liveEnabled ? "SMS watching is on" : "Import incomplete",
-            liveEnabled
-              ? `Past messages could not be fully imported — try Import → SMS later.\n\n${backfillError}`
-              : backfillError,
+            "SMS watching is on",
+            `Past messages could not be fully imported — try Import → SMS later.\n\n${backfillError}`,
             [{ text: "OK", onPress: () => router.replace("/(app)") }],
           );
           return;

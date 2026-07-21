@@ -27,7 +27,9 @@
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT",
+        "android.permission.USE_FINGERPRINT"
+      ],
+      "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
       ],
       "usesCleartextTraffic": true,
@@ -70,7 +72,9 @@
       ],
       "expo-sqlite",
       "expo-sharing",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "./plugins/withSmsInbox",
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true

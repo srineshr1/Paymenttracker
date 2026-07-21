@@ -164,9 +164,15 @@ cd apps/mobile && npx expo start -c
 
 ## Build a real APK
 
+**SMS import and ML Kit OCR require a native Spentd build.** Expo Go cannot read the SMS inbox.
+
 ### Option A — GitHub Actions (recommended)
 
-1. Add repo secret `EXPO_TOKEN` (from [expo.dev](https://expo.dev/settings/access-tokens))
+1. (Optional but recommended) Add release-signing secrets so Play Protect is less aggressive:
+   - `SPENTD_UPLOAD_KEYSTORE_BASE64` — `base64 -w0 spentd-upload.keystore`
+   - `SPENTD_UPLOAD_STORE_PASSWORD`
+   - `SPENTD_UPLOAD_KEY_ALIAS`
+   - `SPENTD_UPLOAD_KEY_PASSWORD`
 2. **Actions → Build APK → Run workflow**, or:
 
 ```bash
@@ -176,12 +182,14 @@ git push origin v1.0.1
 
 APK appears under [Releases](https://github.com/srineshr1/Paymenttracker/releases).
 
-### Option B — local debug build
+### Option B — local native build
 
 ```bash
 cd apps/mobile
 npx expo prebuild --platform android
 npx expo run:android
+# or release APK:
+cd android && ./gradlew assembleRelease
 ```
 
 ### Option C — EAS CLI
@@ -193,7 +201,34 @@ eas login
 eas build -p android --profile preview
 ```
 
-> Image OCR (ML Kit) needs a **dev/production build**, not Expo Go.  
+### Release signing (local)
+
+Debug-signed release APKs are often **hard-blocked by Google Play Protect** when the app requests SMS. Use a private keystore:
+
+```bash
+cd apps/mobile/android
+keytool -genkeypair -v -storetype PKCS12 \
+  -keystore spentd-upload.keystore -alias spentd \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+cp keystore.properties.example keystore.properties
+# edit passwords in keystore.properties
+./gradlew assembleRelease
+```
+
+Never commit `spentd-upload.keystore` or `keystore.properties`.
+
+### Install on a phone (sideload)
+
+1. Enable **Install unknown apps** for your browser/Files app.
+2. Open the APK (from Releases or `app/build/outputs/apk/release/`).
+3. If **Google Play Protect** blocks Spentd (common for SMS apps outside Play Store):
+   - Prefer **More details → Install anyway** when shown.
+   - Or: **Settings → Google → Play Protect → Settings (gear)** → temporarily turn off **Scan apps with Play Protect** → install → turn scanning back on.
+   - Or USB: `adb install -r path/to/spentd.apk`
+4. Open **Spentd** (not Expo Go) → grant **SMS** when prompted → Agree on the consent screen or use **Import → SMS**.
+
+> Image OCR (ML Kit) and SMS need a **dev/production build**, not Expo Go.  
 > Paste-text import works in Expo Go.
 
 ### Import payments (on-device)
