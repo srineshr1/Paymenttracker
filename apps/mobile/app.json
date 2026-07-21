@@ -29,9 +29,7 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
       ],
-      "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "usesCleartextTraffic": true,
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize"

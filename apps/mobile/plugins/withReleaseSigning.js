@@ -88,7 +88,10 @@ function withReleaseSigning(config) {
     }
 
     if (contents.includes(RELEASE_SIGNING_DEBUG)) {
-      contents = contents.replace(RELEASE_SIGNING_DEBUG, RELEASE_SIGNING_CONDITIONAL);
+      contents = contents.replace(
+        RELEASE_SIGNING_DEBUG,
+        RELEASE_SIGNING_CONDITIONAL,
+      );
     } else if (
       contents.includes("signingConfig signingConfigs.debug") &&
       contents.includes("buildTypes")

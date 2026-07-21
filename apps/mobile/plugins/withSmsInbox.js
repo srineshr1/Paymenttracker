@@ -50,7 +50,10 @@ function withSmsInboxSources(config) {
   return withDangerousMod(config, [
     "android",
     async (cfg) => {
-      copySmsKotlinSources(cfg.modRequest.projectRoot, cfg.modRequest.platformProjectRoot);
+      copySmsKotlinSources(
+        cfg.modRequest.projectRoot,
+        cfg.modRequest.platformProjectRoot,
+      );
       return cfg;
     },
   ]);
