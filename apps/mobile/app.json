@@ -73,7 +73,8 @@
       "expo-sharing",
       "@react-native-community/datetimepicker",
       "./plugins/withSmsInbox",
-      "./plugins/withReleaseSigning"
+      "./plugins/withReleaseSigning",
+      "./plugins/withJavaHome"
     ],
     "experiments": {
       "typedRoutes": true
