@@ -1,0 +1,124 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write the bug-condition exploration test (expected to FAIL on current code)": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142559
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707155844
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707561055
+      }
+    ],
+    "2. Widen the payment-detection gate to accept colon-separated amounts": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142582
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707566723
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784708481144
+      }
+    ],
+    "3. Attribute currency across the colon in amount scanning": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142607
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784708486470
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784708813866
+      }
+    ],
+    "4. Extract available balance from colon format": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142627
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784708819330
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784713747558
+      }
+    ],
+    "5. Capture the Fvg/Favouring beneficiary as merchant (Requirement 6)": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142655
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784713753826
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784714073952
+      }
+    ],
+    "6. Confirm the bug-condition test passes and add import-eligibility assertions": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142693
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784714081892
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784716875132
+      }
+    ],
+    "7. Regression and type check across the shared package": [
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784707142713
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784716880461
+      },
+      {
+        "executionId": "4bd1baa4-8117-43f6-b2a5-cdcd63602b00",
+        "chatSessionId": "sess_0696736a-7ad1-43d9-8d01-9db59eb82ff8",
+        "timestamp": 1784717229675
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  extractAvailableBalance,
   extractBestAmount,
   extractBestMerchant,
   interpretTransactionText,
@@ -11,6 +12,12 @@ describe("extractBestAmount — picks txn amount over distractors", () => {
     const t =
       "Rs.450.00 debited from A/c **1234 on 17-07-26 to VPA swiggy@ybl. Avl Bal Rs 10,000.00";
     assert.equal(extractBestAmount(t), "450.00");
+  });
+
+  it("binds currency across a colon so the txn beats the date and balance", () => {
+    const t =
+      "Union Bank A/c XX Debited Rs:25.00 on 20-07-2026 by UPI ref 417600011122 Avl Bal Rs:999.00";
+    assert.equal(extractBestAmount(t), "25.00");
   });
 
   it("ignores 12-digit reference numbers", () => {
@@ -31,6 +38,15 @@ describe("extractBestAmount — picks txn amount over distractors", () => {
 
   it("returns null when there is no amount", () => {
     assert.equal(extractBestAmount("Your OTP is 482910. Do not share."), null);
+  });
+});
+
+describe("extractAvailableBalance — colon-format footer", () => {
+  it("reads 'Avl Bal Rs:999.00' (colon after currency)", () => {
+    assert.equal(
+      extractAvailableBalance("SB A/c debited. Avl Bal Rs:999.00"),
+      "999.00",
+    );
   });
 });
 

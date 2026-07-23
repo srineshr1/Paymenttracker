@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { isJunkForAutoImport } from "./quality";
 import { isPaymentSms, parseSmsMessage, parseSmsMessages } from "./sms";
 
 const HDFC = `HDFC Bank: Rs.450.00 debited from A/c **1234 on 17-07-26 to VPA swiggy@ybl. UPI Ref 417612345678. Not you? Call 18002586161`;
@@ -15,6 +16,13 @@ const GPAY = `Google Pay: You paid ₹99.00 to Ravi Kumar. UPI transaction ID 12
 const CREDIT = `Your A/c XX1234 is credited for Rs.500.00 on 17-07-2026 from VPA friend@oksbi (UPI Ref No 417612345681)`;
 
 const OTP = `Your OTP for login is 482910. Do not share with anyone. Valid for 5 minutes.`;
+
+// Reported Union Bank of India messages (verbatim) that use the compact
+// "Rs:<amount>" colon form the importer currently drops.
+const UNION1 =
+  "Union Bank of India A/c *0008 Debited Rs:25.00 on 20-07-2026 15:46:17 by Mob Bk ref no 289917195718, Fvg: MS K  SA Avl Bal Rs:999.00. Not you?Call 18002333/SMS BLOCK 0008 to 8879365472";
+const UNION2 =
+  "Union Bank of India A/c *0008 Debited Rs:2.00 on 21-07-2026 21:42:34 by Mob Bk ref no 620230268587, Fvg: AWS Indi Avl Bal Rs:712.00. Not you?Call 18002333/SMS BLOCK 0008 to 8879365472";
 
 describe("isPaymentSms", () => {
   it("accepts bank debit SMS", () => {
@@ -144,5 +152,103 @@ describe("parseSmsMessages", () => {
       { body: HDFC, dateMs: 1 },
     ]);
     assert.equal(list.length, 1);
+  });
+});
+
+// Bug-condition exploration: currency tokens separated from the amount by a
+// colon (e.g. "Rs:25.00"). These are EXPECTED TO FAIL on the current, unfixed
+// parser — the failure reproduces and proves the reported bug.
+describe("colon-separated currency amounts (Rs:25.00) — bug reproduction", () => {
+  const CURRENCIES = ["₹", "Rs", "Rs.", "INR"];
+  const SEPARATORS = ["", " ", ":", ": "];
+  const AMOUNTS = ["25.00", "2.00", "1,250.50"];
+  // Amounts already carry 2 decimals; normalization only strips grouping commas
+  // ("1,250.50" -> "1250.50") to match what the interpreter emits.
+  const normalize = (amt: string): string => amt.replace(/,/g, "");
+
+  it("detects and extracts the amount across currency/separator/amount combos", () => {
+    const failures: string[] = [];
+    for (const cur of CURRENCIES) {
+      for (const sep of SEPARATORS) {
+        // Keep tokens well-formed: only "₹" glues directly to the number, so
+        // skip the empty separator for the multi-char textual tokens.
+        if (sep === "" && cur !== "₹") continue;
+        for (const amt of AMOUNTS) {
+          const body = `ICICI A/c XX debited ${cur}${sep}${amt} ref 417600011122`;
+          const expected = normalize(amt);
+          const detected = isPaymentSms(body);
+          const parsedAmount = parseSmsMessage({ body }).amount;
+          if (detected !== true || parsedAmount !== expected) {
+            failures.push(
+              `cur=${JSON.stringify(cur)} sep=${JSON.stringify(sep)} amt=${JSON.stringify(amt)} -> ` +
+                `isPaymentSms=${detected}, amount=${JSON.stringify(parsedAmount)} (expected ${JSON.stringify(expected)})`,
+            );
+          }
+        }
+      }
+    }
+    assert.equal(
+      failures.length,
+      0,
+      `colon/separator combos not handled:\n${failures.join("\n")}`,
+    );
+  });
+});
+
+describe("Union Bank of India colon-format messages", () => {
+  it("recognizes both reported messages as payments", () => {
+    assert.equal(isPaymentSms(UNION1), true);
+    assert.equal(isPaymentSms(UNION2), true);
+  });
+
+  it("parses UNION1 (Rs:25.00) fields", () => {
+    const r = parseSmsMessage({ body: UNION1 });
+    assert.equal(r.amount, "25.00");
+    assert.equal(r.direction, "debit");
+    assert.equal(r.availableBalance, "999.00");
+    assert.equal(r.upiRef, "289917195718");
+    assert.ok(r.paidAt?.startsWith("2026-07-20"), `paidAt ${r.paidAt}`);
+  });
+
+  it("parses UNION2 (Rs:2.00) fields", () => {
+    const r = parseSmsMessage({ body: UNION2 });
+    assert.equal(r.amount, "2.00");
+    assert.equal(r.availableBalance, "712.00");
+    assert.equal(r.upiRef, "620230268587");
+  });
+
+  it("captures the Fvg beneficiary as merchant (trimming account-type code)", () => {
+    // UNION1: "Fvg: MS K  SA Avl Bal ..." → beneficiary "MS K" (trailing "SA" trimmed).
+    assert.match(parseSmsMessage({ body: UNION1 }).merchant ?? "", /MS K/);
+    // UNION2: "Fvg: AWS Indi Avl Bal ..." → beneficiary "AWS Indi" (no code to trim).
+    assert.match(parseSmsMessage({ body: UNION2 }).merchant ?? "", /AWS Indi/);
+  });
+
+  it("retains both messages through parseSmsMessages", () => {
+    const list = parseSmsMessages([{ body: UNION1 }, { body: UNION2 }]);
+    assert.equal(list.length, 2);
+  });
+});
+
+// End-to-end import-quality gate: parsing correctly is not enough — the two
+// reported messages must also clear the unattended auto-import threshold
+// (confidence >= MIN_AUTO_IMPORT_CONFIDENCE = 0.55) and not be treated as junk.
+describe("Union Bank colon-format messages — import eligibility", () => {
+  it("UNION1 clears the auto-import confidence threshold and is not junk", () => {
+    const r = parseSmsMessage({ body: UNION1 });
+    assert.ok(
+      r.confidence >= 0.55,
+      `UNION1 confidence ${r.confidence} should be >= 0.55`,
+    );
+    assert.equal(isJunkForAutoImport(r), false);
+  });
+
+  it("UNION2 clears the auto-import confidence threshold and is not junk", () => {
+    const r = parseSmsMessage({ body: UNION2 });
+    assert.ok(
+      r.confidence >= 0.55,
+      `UNION2 confidence ${r.confidence} should be >= 0.55`,
+    );
+    assert.equal(isJunkForAutoImport(r), false);
   });
 });

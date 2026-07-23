@@ -10,8 +10,14 @@ import {
 import type { ParsedExpense, SmsMessageInput } from "./types.js";
 
 /** Amount-like token in SMS bodies (with or without ₹/Rs). */
-const AMOUNT_TOKEN_RE =
-  /(?:₹|rs\.?\s*|inr\s*)\s*[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|(?:₹|rs\.?\s*|inr\s*)\s*[0-9]+(?:\.[0-9]{1,2})?/i;
+// Currency token, then an optional ":" and/or whitespace, then the number.
+// Matches "Rs 25", "Rs.25", "Rs:25", "₹25", "INR: 25".
+const CURRENCY_AMOUNT_SEP = String.raw`(?:₹|rs\.?|inr)\s*:?\s*`;
+const AMOUNT_TOKEN_RE = new RegExp(
+  `${CURRENCY_AMOUNT_SEP}[0-9]{1,3}(?:,[0-9]{2,3})*(?:\\.[0-9]{1,2})?` +
+    `|${CURRENCY_AMOUNT_SEP}[0-9]+(?:\\.[0-9]{1,2})?`,
+  "i",
+);
 
 const PAYMENT_VERB_ALT = verbAlternation(PAYMENT_VERBS);
 const RAIL_ALT = verbAlternation(RAIL_TOKENS);

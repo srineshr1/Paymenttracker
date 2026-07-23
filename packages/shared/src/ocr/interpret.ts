@@ -48,7 +48,7 @@ const RAIL_ALT = verbAlternation(RAIL_TOKENS);
 
 /** Amount-with-optional-currency scanner. Group 1 = currency, group 2 = number. */
 const AMOUNT_SCAN_RE =
-  /(₹|rs\.?|inr|%|¥|₽)?\s*((?:[0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?)|(?:[0-9]+(?:\.[0-9]{1,2})?))/gi;
+  /(₹|rs\.?|inr|%|¥|₽)?\s*:?\s*((?:[0-9]{1,3}(?:,[0-9]{2,3})+(?:\.[0-9]{1,2})?)|(?:[0-9]+(?:\.[0-9]{1,2})?))/gi;
 
 type AmountCandidate = {
   value: string;
@@ -170,11 +170,11 @@ const AMT =
 export function extractAvailableBalance(text: string): string | null {
   const patterns = [
     new RegExp(
-      `(?:avl\\.?\\s*bal(?:ance)?|available\\s*bal(?:ance)?|avail\\.?\\s*bal(?:ance)?|a\\/c\\s*bal(?:ance)?|acct?\\.?\\s*bal(?:ance)?|cleared\\s*bal(?:ance)?|total\\s*avail(?:able)?\\.?\\s*bal(?:ance)?)\\s*[:\\-]?\\s*(?:is\\s*)?(?:₹|rs\\.?|inr)?\\s*${AMT}`,
+      `(?:avl\\.?\\s*bal(?:ance)?|available\\s*bal(?:ance)?|avail\\.?\\s*bal(?:ance)?|a\\/c\\s*bal(?:ance)?|acct?\\.?\\s*bal(?:ance)?|cleared\\s*bal(?:ance)?|total\\s*avail(?:able)?\\.?\\s*bal(?:ance)?)\\s*[:\\-]?\\s*(?:is\\s*)?(?:₹|rs\\.?|inr)?\\s*:?\\s*${AMT}`,
       "i",
     ),
     new RegExp(
-      `(?:^|[.\\s])bal(?:ance)?\\s*[:\\-]?\\s*(?:₹|rs\\.?|inr)\\s*${AMT}\\s*$`,
+      `(?:^|[.\\s])bal(?:ance)?\\s*[:\\-]?\\s*(?:₹|rs\\.?|inr)\\s*:?\\s*${AMT}\\s*$`,
       "i",
     ),
   ];
@@ -273,7 +273,13 @@ type MerchantCandidate = { name: string; score: number };
 const VPA_RE = /\b([A-Za-z0-9][A-Za-z0-9._-]{1,40}@[A-Za-z0-9.-]{2,30})\b/g;
 
 /** Merchant phrases, each with a base score (higher = more trustworthy). */
-const MERCHANT_PATTERNS: { re: RegExp; score: number; credit?: boolean }[] = [
+const MERCHANT_PATTERNS: {
+  re: RegExp;
+  score: number;
+  credit?: boolean;
+  /** Trim a trailing account-type code (SA/CA/…) from this pattern's capture. */
+  trimAccountType?: boolean;
+}[] = [
   {
     re: /(?:paid\s+to|payment\s+to)\s+([A-Za-z0-9][A-Za-z0-9 .&'@()-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s+vpa|\s+from\b|\n|\s*$)/i,
     score: 3.0,
@@ -298,6 +304,14 @@ const MERCHANT_PATTERNS: { re: RegExp; score: number; credit?: boolean }[] = [
   {
     re: /(?:towards|to\s+vpa)\s+([A-Za-z0-9][A-Za-z0-9 .&'@()-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+from\b|\n|\s*$)/i,
     score: 2.4,
+  },
+  // Union-style beneficiary field: "Fvg: MS K SA Avl Bal ...", "Favouring AWS Indi ...".
+  // Terminates at the balance/footer, ref, punctuation, currency, or line end. A
+  // trailing uppercase account-type code (SA/CA/CC/OD/SB) is trimmed before scoring.
+  {
+    re: /(?:fvg|favou?ring)\s*[:.]?\s*([A-Za-z][A-Za-z0-9 .&'()-]{1,40}?)(?:\s+(?:avl|avail|bal)\b|\s+ref\b|\s*[.;,]|\s+(?:₹|rs\.?|inr)\b|\n|\s*$)/i,
+    score: 2.6,
+    trimAccountType: true,
   },
   {
     re: /\b(?:spent|purchase)\s+(?:of\s+)?(?:₹|rs\.?|inr)?\s*[\d,]+(?:\.\d{1,2})?\s+(?:at|on)\s+([A-Za-z0-9][A-Za-z0-9 .&'@()-]{1,50}?)(?:\s*[.;,]|\s+on\b|\s+from\b|\n|\s*$)/i,
@@ -363,7 +377,7 @@ export function extractBestMerchant(
   for (const vpa of text.matchAll(VPA_RE)) {
     pushMerchant(out, vpa[1], 2.5);
   }
-  for (const { re, score, credit } of MERCHANT_PATTERNS) {
+  for (const { re, score, credit, trimAccountType } of MERCHANT_PATTERNS) {
     const m = text.match(re);
     if (m?.[1]) {
       const bias = credit
@@ -373,7 +387,13 @@ export function extractBestMerchant(
         : direction === "debit"
           ? 0.3
           : 0;
-      pushMerchant(out, m[1], score + bias);
+      // Pattern-scoped, conservative trim of a trailing account-type code
+      // (e.g. Union "Fvg: MS K SA" → "MS K"). Uppercase-only + anchored to the
+      // end so it never alters real names like "AWS Indi".
+      const captured = trimAccountType
+        ? m[1].replace(/\s+(SA|CA|CC|OD|SB)$/, "")
+        : m[1];
+      pushMerchant(out, captured, score + bias);
     }
   }
 
