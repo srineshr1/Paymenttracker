@@ -39,9 +39,16 @@ export function WeekBars({
   canGoPrev = true,
   canGoNext = false,
 }: Props) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const max = Math.max(1, ...days.map((d) => (d.empty ? 0 : d.amount)));
   const chartH = 120;
+  // Theme-tinted bars: soft wash for low spend → full accent for peak / today
+  const barMuted = isDark
+    ? "rgba(201,164,108,0.28)"
+    : "rgba(154,107,47,0.22)";
+  const barMid = isDark
+    ? "rgba(201,164,108,0.55)"
+    : "rgba(154,107,47,0.48)";
 
   const goPrev = useCallback(() => {
     if (canGoPrev) onPrevWeek?.();
@@ -109,6 +116,17 @@ export function WeekBars({
               // Label peak day + today when it has spend
               const isPeak = !d.empty && d.amount > 0 && d.amount === max;
               const showLabel = d.amount > 0 && (d.active || isPeak);
+              const ratio = d.amount > 0 ? d.amount / max : 0;
+              let barColor = barMuted;
+              if (d.amount <= 0) {
+                barColor = isDark
+                  ? "rgba(201,164,108,0.12)"
+                  : "rgba(154,107,47,0.1)";
+              } else if (d.active || isPeak) {
+                barColor = colors.accent;
+              } else if (ratio >= 0.45) {
+                barColor = barMid;
+              }
               return (
                 <View key={d.dayIndex} style={styles.col}>
                   {showLabel ? (
@@ -116,7 +134,7 @@ export function WeekBars({
                       style={{
                         fontFamily: typography.fontSansMedium,
                         fontSize: 10,
-                        color: colors.textSecondary,
+                        color: colors.accentStrong,
                         marginBottom: 4,
                       }}
                       numberOfLines={1}
@@ -132,7 +150,9 @@ export function WeekBars({
                         style={[
                           styles.barEmpty,
                           {
-                            borderColor: colors.borderStrong,
+                            borderColor: isDark
+                              ? "rgba(201,164,108,0.35)"
+                              : "rgba(154,107,47,0.3)",
                             height: Math.max(36, chartH * 0.35),
                           },
                         ]}
@@ -143,10 +163,7 @@ export function WeekBars({
                           styles.bar,
                           {
                             height: h || 4,
-                            backgroundColor: d.active
-                              ? colors.accent
-                              : colors.bgMuted,
-                            opacity: d.amount > 0 ? 1 : 0.35,
+                            backgroundColor: barColor,
                           },
                         ]}
                       />
