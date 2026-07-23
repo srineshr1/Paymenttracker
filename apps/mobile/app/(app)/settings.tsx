@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api/client";
 import { BudgetSheet } from "@/src/components/BudgetSheet";
-import { Screen, Text } from "@/src/components/ui";
+import { Screen, Segmented, Text } from "@/src/components/ui";
 import {
   type BudgetPrefs,
   computeBudgetPlan,
@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const navigation = useNavigation();
-  const { colors, preference, setPreference, isDark } = useTheme();
+  const { colors, preference, setPreference, mode, isDark } = useTheme();
   const { user, logout, runWithoutAppLock } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
@@ -202,12 +202,12 @@ export default function SettingsScreen() {
     );
   };
 
-  const themeValue =
+  const modeLabel =
     preference === "system"
-      ? "System"
+      ? `System · ${mode === "dark" ? "Dark" : "Light"}`
       : preference === "dark"
-        ? "Dark"
-        : "Light";
+        ? "Dark mode"
+        : "Light mode";
 
   const budgetValue =
     budgetPrefs.mode === "manual"
@@ -245,24 +245,6 @@ export default function SettingsScreen() {
           router.replace("/(auth)/login");
         },
       },
-    ]);
-  };
-
-  const onPickTheme = () => {
-    Alert.alert("Appearance", undefined, [
-      {
-        text: "System",
-        onPress: () => setPreference("system"),
-      },
-      {
-        text: "Light",
-        onPress: () => setPreference("light"),
-      },
-      {
-        text: "Dark",
-        onPress: () => setPreference("dark"),
-      },
-      { text: "Cancel", style: "cancel" },
     ]);
   };
 
@@ -318,22 +300,52 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
+        <SectionLabel>Appearance</SectionLabel>
+        <View
+          style={[
+            styles.group,
+            styles.appearanceCard,
+            { backgroundColor: colors.bgElevated },
+          ]}
+        >
+          <View style={styles.appearanceHead}>
+            <View
+              style={[styles.iconBadge, { backgroundColor: colors.accentSoft }]}
+            >
+              <Ionicons
+                name={mode === "dark" ? "moon" : "sunny"}
+                size={18}
+                color={colors.accentStrong}
+              />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>
+                {modeLabel}
+              </Text>
+              <Text style={[styles.rowSub, { color: colors.textSecondary }]}>
+                Warm paper in light · ink & gold in dark
+              </Text>
+            </View>
+          </View>
+          <Segmented
+            value={preference}
+            onChange={(v) => setPreference(v as "system" | "light" | "dark")}
+            options={[
+              { label: "System", value: "system" },
+              { label: "Light", value: "light" },
+              { label: "Dark", value: "dark" },
+            ]}
+          />
+        </View>
+
         <SectionLabel>General</SectionLabel>
         <View style={[styles.group, { backgroundColor: colors.bgElevated }]}>
-          <SettingsRow
-            icon="contrast-outline"
-            title="Appearance"
-            value={themeValue}
-            onPress={onPickTheme}
-            position="first"
-            showDivider
-          />
           <SettingsRow
             icon="wallet-outline"
             title="Budget & savings"
             value={budgetValue}
             onPress={() => setBudgetOpen(true)}
-            position={smsSupported ? "middle" : "last"}
+            position={smsSupported ? "first" : "only"}
             showDivider={smsSupported}
           />
           {smsSupported ? (
@@ -638,6 +650,15 @@ const styles = StyleSheet.create({
   group: {
     borderRadius: GROUP_RADIUS,
     overflow: "hidden",
+  },
+  appearanceCard: {
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  appearanceHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
   },
   sectionLabel: {
     fontFamily: typography.fontSansMedium,

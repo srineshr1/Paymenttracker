@@ -1,6 +1,8 @@
 import type React from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  type LayoutChangeEvent,
   Pressable,
   type PressableProps,
   Text as RNText,
@@ -11,6 +13,11 @@ import {
   View,
   type ViewProps,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { formatExpenseAmount } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import {
@@ -499,7 +506,11 @@ export function Divider() {
   );
 }
 
-/** Segmented control — pill track, soft selected capsule */
+const SEG_PAD = 3;
+const SEG_GAP = 3;
+const SEG_SPRING = { damping: 18, stiffness: 220, mass: 0.7 } as const;
+
+/** Segmented control — sliding pill selection (System / Light / Dark style). */
 export function Segmented({
   options,
   value,
@@ -510,30 +521,81 @@ export function Segmented({
   onChange: (v: string) => void;
 }) {
   const { colors } = useTheme();
+  const [trackW, setTrackW] = useState(0);
+  const index = Math.max(
+    0,
+    options.findIndex((o) => o.value === value),
+  );
+  const n = Math.max(1, options.length);
+  const pillW = trackW > 0 ? (trackW - SEG_PAD * 2 - SEG_GAP * (n - 1)) / n : 0;
+
+  const translateX = useSharedValue(0);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (pillW <= 0) return;
+    const x = SEG_PAD + index * (pillW + SEG_GAP);
+    if (!ready) {
+      translateX.value = x;
+      setReady(true);
+      return;
+    }
+    translateX.value = withSpring(x, SEG_SPRING);
+  }, [index, pillW, ready, translateX]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    width: pillW,
+  }));
+
+  const onTrackLayout = (e: LayoutChangeEvent) => {
+    setTrackW(e.nativeEvent.layout.width);
+  };
+
   return (
     <View
+      onLayout={onTrackLayout}
       style={{
         flexDirection: "row",
         backgroundColor: colors.bgMuted,
         borderRadius: radius.sm,
-        padding: 3,
-        gap: 3,
+        padding: SEG_PAD,
+        gap: SEG_GAP,
+        position: "relative",
       }}
     >
+      {pillW > 0 ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: "absolute",
+              top: SEG_PAD,
+              bottom: SEG_PAD,
+              left: 0,
+              borderRadius: radius.xs,
+              backgroundColor: colors.bgCard,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: colors.border,
+            },
+            pillStyle,
+          ]}
+        />
+      ) : null}
       {options.map((opt) => {
         const active = opt.value === value;
         return (
           <Pressable
             key={opt.value}
             onPress={() => onChange(opt.value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
             style={{
               flex: 1,
               paddingVertical: 10,
               borderRadius: radius.xs,
-              backgroundColor: active ? colors.bgCard : "transparent",
               alignItems: "center",
-              borderWidth: active ? StyleSheet.hairlineWidth : 0,
-              borderColor: colors.border,
+              zIndex: 1,
             }}
           >
             <RNText
