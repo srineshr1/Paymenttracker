@@ -263,9 +263,7 @@ const REASON_LABELS: Record<SmsSkipReason | "importable", string> = {
   already_saved: "Already saved",
 };
 
-export function smsReasonLabel(
-  reason: SmsSkipReason | "importable",
-): string {
+export function smsReasonLabel(reason: SmsSkipReason | "importable"): string {
   return REASON_LABELS[reason] ?? reason;
 }
 
@@ -282,11 +280,7 @@ function withReceiveTime(
   parsed: ParsedExpense,
   msg: SmsMessageInput,
 ): ParsedExpense {
-  if (
-    msg.dateMs == null ||
-    !Number.isFinite(msg.dateMs) ||
-    msg.dateMs <= 0
-  ) {
+  if (msg.dateMs == null || !Number.isFinite(msg.dateMs) || msg.dateMs <= 0) {
     return parsed;
   }
   const bodyHasClock = /\d{1,2}:\d{2}/.test(msg.body ?? "");
@@ -340,7 +334,8 @@ export function classifySmsMessages(
         id,
         message: msg,
         parsed,
-        reason: skip === "low_confidence" || skip === "junk" ? skip : "no_amount",
+        reason:
+          skip === "low_confidence" || skip === "junk" ? skip : "no_amount",
       });
       continue;
     }
@@ -426,9 +421,7 @@ export function classifySmsMessages(
 
   const paymentLike = rows.filter((r) => r.reason !== "not_payment");
   const importable = rows.filter((r) => r.outcome === "importable");
-  const skippedPaymentLike = paymentLike.filter(
-    (r) => r.outcome === "skipped",
-  );
+  const skippedPaymentLike = paymentLike.filter((r) => r.outcome === "skipped");
 
   return {
     rows,

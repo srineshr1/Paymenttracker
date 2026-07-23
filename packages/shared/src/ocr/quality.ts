@@ -84,13 +84,7 @@ export function isJunkForAutoImport(item: ParsedExpense): boolean {
  */
 export function autoImportSkipReason(
   item: ParsedExpense,
-):
-  | "no_amount"
-  | "failed_tx"
-  | "pending_tx"
-  | "low_confidence"
-  | "junk"
-  | null {
+): "no_amount" | "failed_tx" | "pending_tx" | "low_confidence" | "junk" | null {
   if (!item.amount) return "no_amount";
   if (item.status === "failed") return "failed_tx";
   if (item.status === "pending") return "pending_tx";

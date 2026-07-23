@@ -113,7 +113,13 @@ function ReasonBadge({ reason, label }: { reason: string; label: string }) {
         { backgroundColor: `${tone}22`, borderColor: `${tone}44` },
       ]}
     >
-      <Text style={{ color: tone, fontSize: 11, fontFamily: typography.fontSansSemi }}>
+      <Text
+        style={{
+          color: tone,
+          fontSize: 11,
+          fontFamily: typography.fontSansSemi,
+        }}
+      >
         {label}
       </Text>
     </View>
@@ -160,9 +166,7 @@ export default function SmsImportScreen() {
       setStats(result.stats);
       setSkipped(result.skippedPaymentLike);
       setReady(result.importable);
-      setAllPayment(
-        result.rows.filter((r) => r.reason !== "not_payment"),
-      );
+      setAllPayment(result.rows.filter((r) => r.reason !== "not_payment"));
       setSelected(new Set());
       setStatus(null);
       // Prefer balance sync so the number matches UPI apps
@@ -404,13 +408,19 @@ export default function SmsImportScreen() {
             ) : null}
 
             {error ? (
-              <Text color={colors.warning} style={{ lineHeight: 20, fontSize: 14 }}>
+              <Text
+                color={colors.warning}
+                style={{ lineHeight: 20, fontSize: 14 }}
+              >
                 {error}
               </Text>
             ) : null}
 
             {lastImport ? (
-              <Text color={colors.success} style={{ fontSize: 13, lineHeight: 18 }}>
+              <Text
+                color={colors.success}
+                style={{ fontSize: 13, lineHeight: 18 }}
+              >
                 {lastImport}
               </Text>
             ) : null}
@@ -499,7 +509,9 @@ export default function SmsImportScreen() {
                           style={{
                             fontSize: 12,
                             fontFamily: typography.fontSansSemi,
-                            color: on ? colors.accentStrong : colors.textSecondary,
+                            color: on
+                              ? colors.accentStrong
+                              : colors.textSecondary,
                           }}
                         >
                           {label}
@@ -543,11 +555,7 @@ export default function SmsImportScreen() {
             )}
           </View>
         }
-        ListEmptyComponent={
-          stats ? null : (
-            <View style={{ height: 8 }} />
-          )
-        }
+        ListEmptyComponent={stats ? null : <View style={{ height: 8 }} />}
       />
 
       {selected.size > 0 ? (
@@ -562,11 +570,7 @@ export default function SmsImportScreen() {
           ]}
         >
           <Button
-            title={
-              busy
-                ? "Saving…"
-                : `Import selected (${selected.size})`
-            }
+            title={busy ? "Saving…" : `Import selected (${selected.size})`}
             onPress={() => void runImportSelected()}
             loading={busy}
             disabled={busy}

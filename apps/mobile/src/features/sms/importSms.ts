@@ -1,8 +1,8 @@
 import {
-  classifySmsMessages,
   type ClassifiedSmsRow,
   type ClassifySmsResult,
   type ClassifySmsStats,
+  classifySmsMessages,
   isPaymentSms,
   type ParsedExpense,
   parseSmsMessages,
@@ -46,8 +46,8 @@ export type ScanSmsInboxResult = ClassifySmsResult & {
   messages: SmsMessageInput[];
 };
 
-export { smsReasonLabel };
 export type { ClassifiedSmsRow, ClassifySmsStats, SmsSkipReason };
+export { smsReasonLabel };
 
 /**
  * Read the Android SMS inbox on-device and parse payment-like messages.
