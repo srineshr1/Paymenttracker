@@ -63,9 +63,42 @@ describe("isJunk", () => {
 });
 
 describe("isJunkForAutoImport", () => {
-  it("applies the stricter 0.55 confidence bar", () => {
-    assert.equal(isJunkForAutoImport(make({ confidence: 0.5 })), true);
+  it("applies the stricter 0.55 confidence bar without strong signals", () => {
+    assert.equal(
+      isJunkForAutoImport(
+        make({ confidence: 0.5, upiRef: null, availableBalance: null }),
+      ),
+      true,
+    );
     assert.equal(isJunkForAutoImport(make({ confidence: 0.6 })), false);
+  });
+
+  it("keeps amount+ref even slightly under the 0.55 bar", () => {
+    assert.equal(
+      isJunkForAutoImport(
+        make({
+          confidence: 0.48,
+          merchant: null,
+          upiRef: "289917195718",
+          availableBalance: null,
+        }),
+      ),
+      false,
+    );
+  });
+
+  it("keeps amount+available balance as a strong bank signal", () => {
+    assert.equal(
+      isJunkForAutoImport(
+        make({
+          confidence: 0.5,
+          merchant: null,
+          upiRef: null,
+          availableBalance: "999.00",
+        }),
+      ),
+      false,
+    );
   });
 
   it("rejects pending transactions unattended", () => {

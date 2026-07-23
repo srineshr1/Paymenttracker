@@ -327,15 +327,25 @@ export default function SettingsScreen() {
             showDivider={smsSupported}
           />
           {smsSupported ? (
-            <SettingsToggleRow
-              icon="chatbubble-ellipses-outline"
-              title="Auto-import SMS"
-              value={smsAuto}
-              onValueChange={(v) => void onToggleSmsAuto(v)}
-              disabled={smsBusy}
-              onInfo={() => void Linking.openURL(SMS_AUTO_IMPORT_INFO_URL)}
-              position="last"
-            />
+            <>
+              <SettingsToggleRow
+                icon="chatbubble-ellipses-outline"
+                title="Auto-import SMS"
+                value={smsAuto}
+                onValueChange={(v) => void onToggleSmsAuto(v)}
+                disabled={smsBusy}
+                onInfo={() => void Linking.openURL(SMS_AUTO_IMPORT_INFO_URL)}
+                position="middle"
+                showDivider
+              />
+              <SettingsRow
+                icon="file-tray-full-outline"
+                title="SMS import review"
+                value="Not imported"
+                onPress={() => router.push("/(app)/import/sms" as never)}
+                position="last"
+              />
+            </>
           ) : null}
         </View>
 
@@ -540,6 +550,7 @@ function SettingsToggleRow({
   disabled,
   onInfo,
   position = "middle",
+  showDivider,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
@@ -548,34 +559,40 @@ function SettingsToggleRow({
   disabled?: boolean;
   onInfo?: () => void;
   position?: RowPosition;
+  showDivider?: boolean;
 }) {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.row, rowRadius(position)]}>
-      <Pressable
-        onPress={onInfo}
-        disabled={!onInfo}
-        accessibilityRole={onInfo ? "link" : "text"}
-        style={styles.toggleLabel}
-      >
-        <View style={[styles.iconBadge, { backgroundColor: colors.bgMuted }]}>
-          <Ionicons name={icon} size={18} color={colors.text} />
-        </View>
-        <Text style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
-      </Pressable>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        trackColor={{
-          false: colors.borderStrong,
-          true: colors.accent,
-        }}
-        thumbColor={colors.bgCard}
-        accessibilityLabel={title}
-      />
-    </View>
+    <>
+      <View style={[styles.row, rowRadius(position)]}>
+        <Pressable
+          onPress={onInfo}
+          disabled={!onInfo}
+          accessibilityRole={onInfo ? "link" : "text"}
+          style={styles.toggleLabel}
+        >
+          <View style={[styles.iconBadge, { backgroundColor: colors.bgMuted }]}>
+            <Ionicons name={icon} size={18} color={colors.text} />
+          </View>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{title}</Text>
+        </Pressable>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          disabled={disabled}
+          trackColor={{
+            false: colors.borderStrong,
+            true: colors.accent,
+          }}
+          thumbColor={colors.bgCard}
+          accessibilityLabel={title}
+        />
+      </View>
+      {showDivider ? (
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      ) : null}
+    </>
   );
 }
 

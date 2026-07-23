@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-07-23
+
 ### Added
-- CI pipeline (typecheck, lint, tests)
-- EAS APK builds published to GitHub Releases
-- Contributor docs, Code of Conduct, Security policy
-- Biome for formatting and linting
+- SMS import review screen with scanned / ready / not-imported counts
+- Per-message skip reasons and force-import for skipped payment SMS
+- Stronger SMS balance footer parsing and cross-SMS (bank + UPI app) dedupe
+
+### Improved
+- Auto-import keeps amount + ref/balance payments even when merchant is weak
+- Soft dedupe within ±5 minutes for twin PhonePe/GPay + bank alerts
 
 ## [1.0.0] - 2026-07-20
 

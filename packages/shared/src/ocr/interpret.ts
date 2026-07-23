@@ -165,16 +165,29 @@ const AMT =
 
 /**
  * Post-transaction available balance (bank SMS footer).
- * e.g. "Avl Bal Rs 10,000.00", "Available Balance: INR 5,432.10"
+ * e.g. "Avl Bal Rs 10,000.00", "Available Balance: INR 5,432.10",
+ * "Bal:Rs.1234.00", "Current Bal Rs 5,000", "Avl Bal Rs:999.00"
  */
 export function extractAvailableBalance(text: string): string | null {
   const patterns = [
+    // Long-form markers (most specific first)
     new RegExp(
-      `(?:avl\\.?\\s*bal(?:ance)?|available\\s*bal(?:ance)?|avail\\.?\\s*bal(?:ance)?|a\\/c\\s*bal(?:ance)?|acct?\\.?\\s*bal(?:ance)?|cleared\\s*bal(?:ance)?|total\\s*avail(?:able)?\\.?\\s*bal(?:ance)?)\\s*[:\\-]?\\s*(?:is\\s*)?(?:₹|rs\\.?|inr)?\\s*:?\\s*${AMT}`,
+      `(?:avl\\.?\\s*bal(?:ance)?|available\\s*bal(?:ance)?|avail(?:able)?\\.?\\s*bal(?:ance)?|a\\/c\\s*bal(?:ance)?|acct?\\.?\\s*bal(?:ance)?|cleared\\s*bal(?:ance)?|closing\\s*bal(?:ance)?|current\\s*bal(?:ance)?|net\\s*(?:avl\\.?\\s*)?bal(?:ance)?|ledger\\s*bal(?:ance)?|total\\s*avail(?:able)?\\.?\\s*bal(?:ance)?)\\s*[:.\\-]?\\s*(?:is\\s*)?(?:₹|rs\\.?|inr)?\\s*:?\\s*${AMT}`,
       "i",
     ),
+    // "Balance is Rs 1,234.56" / "Bal is INR …"
     new RegExp(
-      `(?:^|[.\\s])bal(?:ance)?\\s*[:\\-]?\\s*(?:₹|rs\\.?|inr)\\s*:?\\s*${AMT}\\s*$`,
+      `(?:bal(?:ance)?)\\s+is\\s*(?:₹|rs\\.?|inr)?\\s*:?\\s*${AMT}`,
+      "i",
+    ),
+    // Trailing compact "Bal:Rs.1234" / "Bal Rs 1234" (often end of SMS)
+    new RegExp(
+      `(?:^|[.\\s,;])bal(?:ance)?\\s*[:.\\-]?\\s*(?:₹|rs\\.?|inr)\\s*:?\\s*${AMT}`,
+      "i",
+    ),
+    // "Available: Rs 5,000" without the word balance
+    new RegExp(
+      `(?:available|avail)\\s*[:.\\-]\\s*(?:₹|rs\\.?|inr)?\\s*:?\\s*${AMT}`,
       "i",
     ),
   ];
@@ -192,6 +205,8 @@ export function extractAvailableBalance(text: string): string | null {
 export function extractRef(text: string): string | null {
   const patterns = [
     /(?:upi\s*(?:ref(?:erence)?(?:\s*no\.?)?|txn(?:\s*id)?|transaction\s*id)|utr|rrn|ref(?:erence)?\s*(?:no\.?|num(?:ber)?)?)\s*[:-]?\s*([A-Z0-9]{8,40})/i,
+    // "by Mob Bk ref no 289917195718" / "ref no. 123…"
+    /\bref\s*(?:no\.?|num(?:ber)?)?\s*[:-]?\s*([0-9]{10,22})\b/i,
     /\b(T\d{10,}[A-Z0-9]*)\b/,
     /\b([0-9]{12})\b/,
   ];
@@ -462,6 +477,10 @@ export function interpretTransactionText(
   });
   if (amount && merchant && isPayment)
     confidence = Math.min(1, confidence + 0.05);
+  // Bank SMS often carry Avl Bal — treat as a strong authenticity signal.
+  if (availableBalance && amount) confidence = Math.min(1, confidence + 0.1);
+  if (upiRef && amount && !merchant)
+    confidence = Math.min(1, confidence + 0.08);
   if (!isPayment) confidence = Math.min(confidence, 0.4);
 
   return {

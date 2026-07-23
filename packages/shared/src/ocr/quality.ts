@@ -29,6 +29,19 @@ function merchantUsable(merchant: string | null | undefined): boolean {
 }
 
 /**
+ * Strong enough to auto-save even with a weak/missing merchant:
+ * amount + (UPI/ref OR bank available balance) with a floor confidence.
+ * Matches real bank SMS that omit a clean merchant name.
+ */
+export function hasStrongPaymentSignal(item: ParsedExpense): boolean {
+  if (!item.amount) return false;
+  if (item.status === "failed" || item.status === "pending") return false;
+  const conf = item.confidence ?? 0;
+  if (conf < 0.4) return false;
+  return Boolean(item.upiRef) || Boolean(item.availableBalance);
+}
+
+/**
  * Whether a parsed payment is too weak / incomplete to import.
  *
  * A confident payment is NOT dropped just because the merchant is missing — a
@@ -41,9 +54,14 @@ export function isJunk(item: ParsedExpense, opts: IsJunkOptions = {}): boolean {
   const rejectPending = opts.rejectPending ?? false;
 
   if (!item.amount) return true;
-  if ((item.confidence ?? 0) < minConf) return true;
   if (item.status === "failed") return true;
   if (rejectPending && item.status === "pending") return true;
+
+  // Amount + ref/balance is enough even when confidence is a bit soft or
+  // merchant is missing (common on compact bank SMS).
+  if (hasStrongPaymentSignal(item)) return false;
+
+  if ((item.confidence ?? 0) < minConf) return true;
 
   if (!merchantUsable(item.merchant)) {
     const strong = Boolean(item.upiRef) || (item.confidence ?? 0) >= 0.6;
@@ -58,6 +76,31 @@ export function isJunkForAutoImport(item: ParsedExpense): boolean {
     minConfidence: MIN_AUTO_IMPORT_CONFIDENCE,
     rejectPending: true,
   });
+}
+
+/**
+ * Human-readable reason a parsed row fails the auto-import gate
+ * (for skipped-message UI). Returns null when the row is importable.
+ */
+export function autoImportSkipReason(
+  item: ParsedExpense,
+):
+  | "no_amount"
+  | "failed_tx"
+  | "pending_tx"
+  | "low_confidence"
+  | "junk"
+  | null {
+  if (!item.amount) return "no_amount";
+  if (item.status === "failed") return "failed_tx";
+  if (item.status === "pending") return "pending_tx";
+  if (isJunkForAutoImport(item)) {
+    if ((item.confidence ?? 0) < MIN_AUTO_IMPORT_CONFIDENCE) {
+      return "low_confidence";
+    }
+    return "junk";
+  }
+  return null;
 }
 
 /**

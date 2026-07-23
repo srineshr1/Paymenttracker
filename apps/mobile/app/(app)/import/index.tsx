@@ -180,6 +180,19 @@ export default function ImportScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Card variant="soft" style={{ gap: spacing.md }}>
+          <Text variant="label">SMS messages</Text>
+          <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
+            Scan bank and UPI SMS on this device. See counts for ready vs not
+            imported, and force-save any message the auto-parser skipped.
+          </Text>
+          <Button
+            title="Import from SMS"
+            onPress={() => router.push("/(app)/import/sms" as never)}
+            disabled={busy}
+          />
+        </Card>
+
+        <Card variant="soft" style={{ gap: spacing.md }}>
           <Text variant="label">Screenshot</Text>
           <Text muted style={{ fontSize: 13, lineHeight: 19 }}>
             Pick a payment screenshot from any app (PhonePe, GPay, Paytm, your

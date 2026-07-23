@@ -45,6 +45,7 @@ export default function AppLayout() {
         <Stack.Screen name="expenses/index" />
         <Stack.Screen name="expenses/[id]" />
         <Stack.Screen name="import/index" />
+        <Stack.Screen name="import/sms" />
         <Stack.Screen name="import/select" />
         <Stack.Screen name="import/review" />
         <Stack.Screen name="add" />

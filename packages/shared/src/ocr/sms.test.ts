@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { extractAvailableBalance } from "./interpret";
 import { isJunkForAutoImport } from "./quality";
-import { isPaymentSms, parseSmsMessage, parseSmsMessages } from "./sms";
+import {
+  classifySmsMessages,
+  dedupeParsedExpenses,
+  isPaymentSms,
+  isSoftDuplicatePayment,
+  parseSmsMessage,
+  parseSmsMessages,
+} from "./sms";
 
 const HDFC = `HDFC Bank: Rs.450.00 debited from A/c **1234 on 17-07-26 to VPA swiggy@ybl. UPI Ref 417612345678. Not you? Call 18002586161`;
 
@@ -250,5 +258,95 @@ describe("Union Bank colon-format messages — import eligibility", () => {
       `UNION2 confidence ${r.confidence} should be >= 0.55`,
     );
     assert.equal(isJunkForAutoImport(r), false);
+  });
+});
+
+describe("extractAvailableBalance — bank footers", () => {
+  it("reads Avl Bal Rs: colon form", () => {
+    assert.equal(extractAvailableBalance(UNION1), "999.00");
+  });
+
+  it("reads Current Bal and Balance is forms", () => {
+    assert.equal(
+      extractAvailableBalance("Txn ok. Current Bal Rs 12,345.50. Thank you"),
+      "12345.50",
+    );
+    assert.equal(
+      extractAvailableBalance("Payment done. Balance is Rs. 800.00"),
+      "800.00",
+    );
+  });
+});
+
+describe("dedupe — UPI twin SMS", () => {
+  it("collapses PhonePe + bank with same amount and close timestamps", () => {
+    const bank = {
+      ...parseSmsMessage({ body: HDFC }),
+      amount: "450.00",
+      direction: "debit" as const,
+      paidAt: "2026-07-17T10:00:00.000Z",
+      upiRef: "417612345678",
+      availableBalance: "9000.00",
+    };
+    const app = {
+      ...parseSmsMessage({
+        body: "PhonePe: Paid Rs.450.00 to Swiggy. UPI Ref 999999999999. Debited from HDFC",
+      }),
+      amount: "450.00",
+      direction: "debit" as const,
+      paidAt: "2026-07-17T10:01:30.000Z",
+      upiRef: "999999999999",
+      availableBalance: null,
+    };
+    assert.equal(isSoftDuplicatePayment(bank, app), true);
+    const { unique, duplicates } = dedupeParsedExpenses([bank, app]);
+    assert.equal(unique.length, 1);
+    assert.equal(duplicates.length, 1);
+    assert.equal(unique[0].amount, "450.00");
+    // Prefer bank side when it carries available balance
+    assert.equal(unique[0].availableBalance, "9000.00");
+  });
+
+  it("dedupes identical UPI refs", () => {
+    const a = parseSmsMessage({ body: HDFC });
+    const b = parseSmsMessage({ body: HDFC });
+    const { unique } = dedupeParsedExpenses([a, b]);
+    assert.equal(unique.length, 1);
+  });
+});
+
+describe("classifySmsMessages", () => {
+  it("reports stats and marks OTP as not_payment", () => {
+    const result = classifySmsMessages([
+      { body: HDFC, address: "VM-HDFCBK", dateMs: 1 },
+      { body: OTP, address: "VM-HDFCBK", dateMs: 2 },
+      { body: SBI, address: "VM-SBIINB", dateMs: 3 },
+    ]);
+    assert.equal(result.stats.scanned, 3);
+    assert.ok(result.stats.paymentLike >= 2);
+    assert.ok(result.stats.importable >= 2);
+    assert.equal(result.stats.byReason.not_payment, 1);
+    assert.ok(result.importable.every((r) => r.outcome === "importable"));
+    assert.ok(
+      result.skippedPaymentLike.every((r) => r.reason !== "not_payment"),
+    );
+  });
+
+  it("marks soft-duplicate bank+app pair once as importable", () => {
+    // Bodies without embedded dates so dateMs drives paidAt into the same window
+    const result = classifySmsMessages([
+      {
+        body: `HDFC Bank: Rs.450.00 debited from A/c **1234 to VPA swiggy@ybl. UPI Ref 417612345678. Avl Bal Rs 9,000.00`,
+        address: "VM-HDFCBK",
+        dateMs: Date.parse("2026-07-17T10:00:00.000Z"),
+      },
+      {
+        body: "PhonePe: Paid Rs.450.00 to Swiggy. UPI Ref 888888888888. Debited from HDFC Bank XX1234",
+        address: "AD-PHONPE",
+        dateMs: Date.parse("2026-07-17T10:02:00.000Z"),
+      },
+    ]);
+    assert.equal(result.stats.importable, 1);
+    assert.equal(result.stats.byReason.duplicate, 1);
   });
 });
