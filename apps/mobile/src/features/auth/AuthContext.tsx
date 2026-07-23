@@ -193,13 +193,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearSession();
   }, [clearSession]);
 
+  /**
+   * Suppress passcode-lock while system UI is up (gallery, SMS permission,
+   * share sheet). Keeps the vault unlocked until we are back in the
+   * foreground — releasing the suppress flag immediately in `finally` races
+   * the background→active transition and aborts SMS import mid-read.
+   */
   const runWithoutAppLock = useCallback(
     async <T,>(fn: () => Promise<T>): Promise<T> => {
       suppressLockCount.current += 1;
       try {
         return await fn();
       } finally {
-        suppressLockCount.current = Math.max(0, suppressLockCount.current - 1);
+        const release = () => {
+          suppressLockCount.current = Math.max(
+            0,
+            suppressLockCount.current - 1,
+          );
+        };
+        // Still backgrounded (permission dialog / gallery) — release only
+        // after we return to active, plus a short OEM grace period.
+        if (AppState.currentState !== "active") {
+          const sub = AppState.addEventListener("change", (s) => {
+            if (s === "active") {
+              sub.remove();
+              setTimeout(release, 400);
+            }
+          });
+        } else {
+          setTimeout(release, 400);
+        }
       }
     },
     [],

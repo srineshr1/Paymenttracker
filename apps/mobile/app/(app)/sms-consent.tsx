@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
+import { useAuth } from "@/src/features/auth/AuthContext";
 import {
   disableSmsAutoImport,
   enableSmsAutoImport,
@@ -14,46 +15,97 @@ import {
   clearSmsConsentPending,
   setSmsAutoImportEnabled,
 } from "@/src/features/sms/prefs";
-import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
+import {
+  hasSmsPermission,
+  isSmsInboxAvailable,
+  requestSmsPermission,
+} from "@/src/features/sms/readInbox";
 
 const NATIVE_BUILD_HINT =
   "SMS import needs the Spentd APK (not Expo Go).\n\nInstall the APK from GitHub Releases, or rebuild with:\nnpx expo run:android\n\nIf Play Protect blocks install: Settings → Play Protect → turn off scan temporarily, install, then turn it back on. Or use: adb install -r app-release.apk";
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 export default function SmsConsentScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { colors } = useTheme();
+  const { runWithoutAppLock } = useAuth();
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+
+  const goHome = () => {
+    router.replace("/(app)");
+  };
 
   const finish = async (enable: boolean) => {
     if (busy) return;
     setBusy(true);
     setStatus(null);
     try {
-      if (enable && Platform.OS === "android") {
-        // Native module missing (Expo Go / bad prebuild) — never claim watching is on.
+      if (!enable) {
+        await disableSmsAutoImport();
+        await clearSmsConsentPending();
+        goHome();
+        return;
+      }
+
+      if (Platform.OS !== "android") {
+        await setSmsAutoImportEnabled(false);
+        await clearSmsConsentPending();
+        goHome();
+        return;
+      }
+
+      // Whole Agree path stays unlocked — the SMS permission dialog backgrounds
+      // the app, which would otherwise lock the vault and abort the import.
+      await runWithoutAppLock(async () => {
         if (!isSmsInboxAvailable()) {
           await setSmsAutoImportEnabled(false);
           await clearSmsConsentPending();
           Alert.alert("Native build required", NATIVE_BUILD_HINT, [
-            { text: "OK", onPress: () => router.replace("/(app)") },
+            { text: "OK", onPress: goHome },
           ]);
           return;
         }
 
-        // Backfill first (requests SMS permission via inbox read), then enable
-        // live listening — same order as Import → SMS, avoids catch-up races.
+        // 1) Ask for READ_SMS first so the user sees a clear step
+        setStatus("Waiting for SMS permission…");
+        let granted = await hasSmsPermission();
+        if (!granted) {
+          granted = await requestSmsPermission();
+        }
+        if (!granted) {
+          await setSmsAutoImportEnabled(false);
+          await clearSmsConsentPending();
+          Alert.alert(
+            "SMS permission needed",
+            "Without message access Spentd can’t import payments. You can enable it later in Settings → Auto-import SMS.",
+            [{ text: "OK", onPress: goHome }],
+          );
+          return;
+        }
+
+        // OEM race: grant is live a tick after the dialog dismisses
+        await sleep(350);
+
+        // 2) Backfill history while vault is still unlocked
+        let created = 0;
+        let scanned = 0;
+        let paymentLike = 0;
         let backfillError: string | null = null;
-        let liveEnabled = false;
-        let liveError: string | null = null;
 
         try {
-          setStatus("Importing past payments…");
+          setStatus("Scanning messages…");
           const result = await importAndSavePaymentsFromSms(
             { lookbackDays: 90, maxCount: 2000 },
             (msg) => setStatus(msg),
           );
+          created = result.created;
+          scanned = result.scanned;
+          paymentLike = result.paymentLike;
           if (result.partial && result.created > 0) {
             backfillError = `Imported ${result.created} payments, then hit an error mid-batch.`;
           }
@@ -62,12 +114,14 @@ export default function SmsConsentScreen() {
             e instanceof Error ? e.message : "Could not import past messages.";
         }
 
+        // 3) Live listening
+        let liveEnabled = false;
+        let liveError: string | null = null;
         try {
           setStatus("Turning on SMS import…");
           await enableSmsAutoImport();
           liveEnabled = true;
         } catch (e) {
-          // Permission denied — keep preference off
           await setSmsAutoImportEnabled(false);
           liveError =
             e instanceof Error
@@ -82,7 +136,7 @@ export default function SmsConsentScreen() {
             "SMS import not enabled",
             [backfillError, liveError].filter(Boolean).join("\n\n") ||
               "SMS permission was denied or unavailable.",
-            [{ text: "OK", onPress: () => router.replace("/(app)") }],
+            [{ text: "OK", onPress: goHome }],
           );
           return;
         }
@@ -90,19 +144,45 @@ export default function SmsConsentScreen() {
         if (backfillError) {
           Alert.alert(
             "SMS watching is on",
-            `Past messages could not be fully imported — try Import → SMS later.\n\n${backfillError}`,
-            [{ text: "OK", onPress: () => router.replace("/(app)") }],
+            `Past messages could not be fully imported — open Import → SMS later.\n\n${backfillError}`,
+            [{ text: "OK", onPress: goHome }],
           );
           return;
         }
 
-        router.replace("/(app)");
-        return;
-      }
+        // Always confirm what happened so an empty dashboard isn’t a mystery
+        if (created > 0) {
+          Alert.alert(
+            "SMS import on",
+            `Added ${created} payment${created === 1 ? "" : "s"} from your messages. New bank/UPI SMS will import automatically.`,
+            [{ text: "OK", onPress: goHome }],
+          );
+          return;
+        }
 
-      await disableSmsAutoImport();
-      await clearSmsConsentPending();
-      router.replace("/(app)");
+        if (paymentLike > 0 || scanned > 0) {
+          Alert.alert(
+            "SMS watching is on",
+            scanned === 0
+              ? "Permission is on, but no messages were readable yet. Try Import → SMS after a moment."
+              : `Scanned ${scanned} message${scanned === 1 ? "" : "s"} (${paymentLike} looked like payments) — none were new enough to import. Open Import → SMS to review.`,
+            [
+              {
+                text: "Review SMS",
+                onPress: () => router.replace("/(app)/import/sms" as never),
+              },
+              { text: "Home", onPress: goHome, style: "cancel" },
+            ],
+          );
+          return;
+        }
+
+        Alert.alert(
+          "SMS watching is on",
+          "No bank or UPI messages found in the last 90 days. New payment SMS will still import automatically.",
+          [{ text: "OK", onPress: goHome }],
+        );
+      });
     } finally {
       setBusy(false);
       setStatus(null);
@@ -181,22 +261,26 @@ export default function SmsConsentScreen() {
         <Button
           title={
             busy
-              ? status?.startsWith("Found") || status?.startsWith("Importing")
-                ? "Importing…"
-                : status?.includes("Scanning")
-                  ? "Scanning…"
-                  : "Please wait…"
+              ? status?.includes("permission")
+                ? "Waiting for permission…"
+                : status?.startsWith("Found") ||
+                    status?.startsWith("Importing") ||
+                    status?.includes("Categorizing")
+                  ? "Importing…"
+                  : status?.includes("Scanning")
+                    ? "Scanning…"
+                    : "Please wait…"
               : "Agree"
           }
           loading={busy}
           disabled={busy}
-          onPress={() => finish(true)}
+          onPress={() => void finish(true)}
         />
         <Button
           title="Disagree"
           variant="ghost"
           disabled={busy}
-          onPress={() => finish(false)}
+          onPress={() => void finish(false)}
           style={{ marginTop: spacing.sm }}
         />
       </View>

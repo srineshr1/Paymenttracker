@@ -133,7 +133,7 @@ export async function listInboxSms(
     );
   }
 
-  const granted = await hasSmsPermission();
+  let granted = await hasSmsPermission();
   if (!granted) {
     const ok = await requestSmsPermission();
     if (!ok) {
@@ -141,6 +141,16 @@ export async function listInboxSms(
         "SMS permission was denied. Enable it in Settings to import payments from messages.",
       );
     }
+    granted = true;
+    // Some OEMs grant the permission a moment after the dialog returns.
+    await new Promise((r) => setTimeout(r, 250));
+  }
+
+  // Re-check native flag — PermissionsAndroid can race ContentResolver.
+  if (!(await hasSmsPermission()) && !(await requestSmsPermission())) {
+    throw new Error(
+      "SMS permission was denied. Enable it in Settings to import payments from messages.",
+    );
   }
 
   const maxCount = Math.min(2000, Math.max(1, options.maxCount ?? 500));
@@ -150,8 +160,19 @@ export async function listInboxSms(
     minDateMs = Date.now() - days * 24 * 60 * 60 * 1000;
   }
 
-  const rows = await native.listInbox(maxCount, minDateMs);
-  return (rows ?? []).map(mapRow);
+  // Retry once if the provider briefly rejects right after grant.
+  try {
+    const rows = await native.listInbox(maxCount, minDateMs);
+    return (rows ?? []).map(mapRow);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/permission|E_SMS/i.test(msg)) {
+      await new Promise((r) => setTimeout(r, 400));
+      const rows = await native.listInbox(maxCount, minDateMs);
+      return (rows ?? []).map(mapRow);
+    }
+    throw e;
+  }
 }
 
 /** Start native ContentObserver + SMS_RECEIVED broadcast. */

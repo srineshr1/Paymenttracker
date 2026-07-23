@@ -421,27 +421,48 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
       selectionArgs = null
     }
 
-    val sortOrder = "${Telephony.Sms.DATE} DESC LIMIT $limit"
+    // Never put LIMIT in sortOrder — many OEMs reject or return empty for
+    // Telephony provider when sortOrder is not a pure ORDER BY clause.
+    val sortOrder = "${Telephony.Sms.DATE} DESC"
     val uri: Uri = Telephony.Sms.Inbox.CONTENT_URI
     var cursor: Cursor? = null
     val results: WritableArray = Arguments.createArray()
+    val maxRows = limit.coerceIn(1, 2000)
 
     try {
       cursor =
-        reactContext.contentResolver.query(
-          uri,
-          projection,
-          selection,
-          selectionArgs,
-          sortOrder
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          val args = android.os.Bundle()
+          if (selection != null) {
+            args.putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
+            args.putStringArray(
+              android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
+              selectionArgs
+            )
+          }
+          args.putString(
+            android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
+            sortOrder
+          )
+          args.putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, maxRows)
+          reactContext.contentResolver.query(uri, projection, args, null)
+        } else {
+          reactContext.contentResolver.query(
+            uri,
+            projection,
+            selection,
+            selectionArgs,
+            sortOrder
+          )
+        }
       if (cursor != null) {
         val idxAddress = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
         val idxBody = cursor.getColumnIndex(Telephony.Sms.BODY)
         val idxDate = cursor.getColumnIndex(Telephony.Sms.DATE)
         val idxId = cursor.getColumnIndex(Telephony.Sms._ID)
 
-        while (cursor.moveToNext()) {
+        var count = 0
+        while (cursor.moveToNext() && count < maxRows) {
           val map: WritableMap = Arguments.createMap()
           map.putString(
             "id",
@@ -460,6 +481,7 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
             if (idxDate >= 0) cursor.getLong(idxDate).toDouble() else 0.0
           )
           results.pushMap(map)
+          count++
         }
       }
     } finally {
