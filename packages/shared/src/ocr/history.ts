@@ -278,7 +278,7 @@ export function parseHistoryListOcr(raw: string): ParsedExpense[] {
 
     const direction: ParsedExpense["direction"] = /received/i.test(labelLine)
       ? "credit"
-      : extractDirection(labelLine + " " + block.join(" "));
+      : extractDirection(`${labelLine} ${block.join(" ")}`);
 
     const status = blockStatus(labelLine, block);
     // Skip failed history rows (user cannot spend a failed txn)

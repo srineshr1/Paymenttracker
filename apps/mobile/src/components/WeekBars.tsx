@@ -43,12 +43,8 @@ export function WeekBars({
   const max = Math.max(1, ...days.map((d) => (d.empty ? 0 : d.amount)));
   const chartH = 120;
   // Theme-tinted bars: soft wash for low spend → full accent for peak / today
-  const barMuted = isDark
-    ? "rgba(201,164,108,0.28)"
-    : "rgba(154,107,47,0.22)";
-  const barMid = isDark
-    ? "rgba(201,164,108,0.55)"
-    : "rgba(154,107,47,0.48)";
+  const barMuted = isDark ? "rgba(201,164,108,0.28)" : "rgba(154,107,47,0.22)";
+  const barMid = isDark ? "rgba(201,164,108,0.55)" : "rgba(154,107,47,0.48)";
 
   const goPrev = useCallback(() => {
     if (canGoPrev) onPrevWeek?.();

@@ -66,7 +66,7 @@ function Chip({
       style={({ pressed }) => [
         styles.chip,
         {
-          backgroundColor: active ? color + "33" : colors.bgMuted,
+          backgroundColor: active ? `${color}33` : colors.bgMuted,
           borderColor: active ? color : colors.border,
           opacity: pressed ? 0.88 : 1,
         },
