@@ -292,10 +292,6 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 - [Security policy](SECURITY.md)
 - [Changelog](CHANGELOG.md)
 
-## Design
-
-Dark private-banking UI: ink background, warm gold accent, DM Sans + IBM Plex Mono for amounts.
-
 ## License
 
 [MIT](LICENSE) © 2026 Srinesh R
