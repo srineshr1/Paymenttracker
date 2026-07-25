@@ -3,6 +3,11 @@
  * All data lives on device; this re-exports the local repository.
  * Backend HTTP client is intentionally unused (apps/api untouched for future sync).
  */
+
+export type {
+  CreateExpenseOptions,
+  ExpenseListParams,
+} from "@/src/data/repository";
 export {
   ApiError,
   api,

@@ -13,9 +13,11 @@ import { LocalDataError } from "./crypto";
 import { getDb } from "./db";
 import { verifyDeviceOwner } from "./deviceAuth";
 import {
+  type CreateExpenseOptions,
   createExpense,
   createExpensesBatch,
   deleteExpense,
+  type ExpenseListParams,
   getExpense,
   listCategories,
   listExpenses,
@@ -35,6 +37,7 @@ import {
   updateUsernameLocal,
 } from "./localAuth";
 
+export type { CreateExpenseOptions, ExpenseListParams };
 export { LocalDataError };
 
 /** Same shape as former ApiError for screen catch blocks. */
@@ -159,12 +162,9 @@ export const api = {
     }
   },
 
-  async listExpenses(params?: {
-    from?: string;
-    to?: string;
-    q?: string;
-    limit?: number;
-  }): Promise<{ expenses: Expense[] }> {
+  async listExpenses(
+    params?: ExpenseListParams,
+  ): Promise<{ expenses: Expense[] }> {
     try {
       return await listExpenses(params);
     } catch (e) {
@@ -190,9 +190,10 @@ export const api = {
 
   async createExpense(
     body: Record<string, unknown>,
+    opts?: CreateExpenseOptions,
   ): Promise<{ expense: Expense }> {
     try {
-      return await createExpense(body);
+      return await createExpense(body, opts);
     } catch (e) {
       asApiError(e);
     }

@@ -2,7 +2,7 @@ import { randomUUID } from "expo-crypto";
 import * as SQLite from "expo-sqlite";
 
 const DB_NAME = "spentd_local.db";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 let openPromise: Promise<SQLite.SQLiteDatabase> | null = null;
@@ -54,6 +54,21 @@ export type ExpenseRow = {
   created_at: string;
   updated_at: string;
   sync_status: string;
+};
+
+/**
+ * Learned merchant → category mapping.
+ * The merchant is stored only as a keyed hash (lookup) plus an encrypted copy
+ * (display), so the plaintext name never lands on disk.
+ */
+export type MerchantCategoryRow = {
+  user_id: string;
+  merchant_hash: string;
+  merchant_enc: string;
+  category_id: string;
+  hits: number;
+  created_at: string;
+  updated_at: string;
 };
 
 function isDbDeadError(err: unknown): boolean {
@@ -121,8 +136,28 @@ CREATE TABLE IF NOT EXISTS expenses (
     await db.execAsync(
       "CREATE UNIQUE INDEX IF NOT EXISTS expenses_user_upi_ref_hash_idx ON expenses(user_id, upi_ref_hash);",
     );
+    await db.execAsync("PRAGMA user_version = 1");
+    version = 1;
+  }
+
+  if (version < 2) {
+    // Learned merchant → category mappings (user edits teach future imports).
+    await db.execAsync(`
+CREATE TABLE IF NOT EXISTS merchant_categories (
+  user_id TEXT NOT NULL,
+  merchant_hash TEXT NOT NULL,
+  merchant_enc TEXT NOT NULL,
+  category_id TEXT NOT NULL,
+  hits INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (user_id, merchant_hash)
+);
+`);
+    await db.execAsync(
+      "CREATE INDEX IF NOT EXISTS merchant_categories_user_idx ON merchant_categories(user_id);",
+    );
     await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
-    version = DATABASE_VERSION;
   }
 
   await seedCategories(db);
@@ -227,6 +262,7 @@ export async function wipeDatabaseTables() {
   const db = await getDb();
   try {
     await db.execAsync("DELETE FROM expenses;");
+    await db.execAsync("DELETE FROM merchant_categories;");
     await db.execAsync("DELETE FROM users;");
   } catch (err) {
     if (isDbDeadError(err)) {

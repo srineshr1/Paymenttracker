@@ -1,6 +1,6 @@
 import type { ParsedExpense } from "@paymenttracker/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -17,6 +17,10 @@ import { Badge, Button, Card, Input, Screen, Text } from "@/src/components/ui";
 import { applyPaymentToAccount } from "@/src/data/cash";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
+import {
+  learnedCategoryIdFor,
+  suggestCategoryId,
+} from "@/src/features/sms/categorize";
 
 export default function ImportReviewScreen() {
   const insets = useSafeAreaInsets();
@@ -48,9 +52,27 @@ export default function ImportReviewScreen() {
   );
   const [notes, setNotes] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState(false);
+
+  // Prefill from a learned merchant→category mapping (user edits win over rules).
+  useEffect(() => {
+    if (categoryTouched) return;
+    const name = merchant.trim();
+    if (name.length < 2) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      void learnedCategoryIdFor(name).then((id) => {
+        if (!cancelled && id) setCategoryId(id);
+      });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [merchant, categoryTouched]);
 
   const source =
     initial?.source === "phonepe" ||
@@ -78,17 +100,28 @@ export default function ImportReviewScreen() {
     setLoading(true);
     try {
       const paidAtIso = new Date(paidAt).toISOString();
-      await api.createExpense({
-        merchant: merchant.trim(),
-        amount: String(amount).replace(/,/g, ""),
-        direction,
-        paidAt: paidAtIso,
-        source,
-        upiRef: upiRef.trim() || null,
-        notes: notes.trim() || null,
-        categoryId,
-        rawOcrText: initial?.rawText ?? null,
-      });
+      const resolvedCategoryId = categoryTouched
+        ? categoryId
+        : (categoryId ??
+          (await suggestCategoryId(
+            merchant.trim(),
+            direction,
+            initial?.rawText ?? null,
+          )));
+      await api.createExpense(
+        {
+          merchant: merchant.trim(),
+          amount: String(amount).replace(/,/g, ""),
+          direction,
+          paidAt: paidAtIso,
+          source,
+          upiRef: upiRef.trim() || null,
+          notes: notes.trim() || null,
+          categoryId: resolvedCategoryId,
+          rawOcrText: initial?.rawText ?? null,
+        },
+        { learnCategory: categoryTouched && categoryId != null },
+      );
       if (initial?.availableBalance) {
         try {
           await applyPaymentToAccount({
@@ -236,7 +269,13 @@ export default function ImportReviewScreen() {
               />
             </Field>
             <Field label="Category">
-              <CategoryChips value={categoryId} onChange={setCategoryId} />
+              <CategoryChips
+                value={categoryId}
+                onChange={(id) => {
+                  setCategoryTouched(true);
+                  setCategoryId(id);
+                }}
+              />
             </Field>
             <Field label="Notes">
               <Input value={notes} onChangeText={setNotes} />

@@ -22,6 +22,10 @@ import {
   DEFAULT_SAVINGS_RATE,
   getBudgetPrefs,
 } from "@/src/data/budget";
+import {
+  clearLearnedMerchantCategories,
+  listLearnedMerchantCategories,
+} from "@/src/data/categoryLearning";
 import { exportExpensesShare } from "@/src/data/export";
 import { formatINR } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
@@ -56,6 +60,7 @@ export default function SettingsScreen() {
   const [autoPreview, setAutoPreview] = useState(DEFAULT_BUDGET);
   const [smsAuto, setSmsAuto] = useState(false);
   const [smsBusy, setSmsBusy] = useState(false);
+  const [learnedCount, setLearnedCount] = useState<number | null>(null);
   const smsSupported = Platform.OS === "android" && isSmsInboxAvailable();
 
   useEffect(() => {
@@ -167,6 +172,47 @@ export default function SettingsScreen() {
   }, [refreshBudget]);
 
   const initial = (user?.username?.trim()?.[0] ?? "?").toUpperCase();
+
+  const refreshLearnedCount = useCallback(async () => {
+    try {
+      const learned = await listLearnedMerchantCategories(1000);
+      setLearnedCount(learned.length);
+    } catch {
+      setLearnedCount(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshLearnedCount();
+  }, [refreshLearnedCount]);
+
+  const onForgetLearned = () => {
+    if (!learnedCount) {
+      Alert.alert(
+        "Nothing learned yet",
+        "Change a category on an expense and Spentd will reuse it for that merchant.",
+      );
+      return;
+    }
+    Alert.alert(
+      "Forget learned categories?",
+      "Future imports fall back to the built-in rules. Saved expenses are not changed.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Forget",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await clearLearnedMerchantCategories();
+            } finally {
+              await refreshLearnedCount();
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const onExport = (format: "csv" | "json") => {
     Alert.alert(
@@ -395,6 +441,17 @@ export default function SettingsScreen() {
             icon="code-slash-outline"
             title="Export JSON"
             onPress={() => !exporting && onExport("json")}
+            showDivider
+          />
+          <SettingsRow
+            icon="school-outline"
+            title="Forget learned categories"
+            value={
+              learnedCount != null && learnedCount > 0
+                ? `${learnedCount} saved`
+                : undefined
+            }
+            onPress={onForgetLearned}
             position="last"
           />
         </View>

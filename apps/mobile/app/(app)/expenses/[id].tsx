@@ -190,6 +190,11 @@ export default function ExpenseDetailScreen() {
               <View style={{ gap: spacing.sm }}>
                 <Text variant="label">Category</Text>
                 <CategoryChips value={categoryId} onChange={setCategoryId} />
+                <Text muted style={{ fontSize: 12 }}>
+                  {`Spentd remembers this choice for “${
+                    merchant.trim() || "this merchant"
+                  }” and uses it for future imports.`}
+                </Text>
               </View>
               <View style={{ gap: spacing.sm }}>
                 <Text variant="label">Notes</Text>

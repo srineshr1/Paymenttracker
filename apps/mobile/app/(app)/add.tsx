@@ -20,6 +20,10 @@ import { DateField } from "@/src/components/DateField";
 import { Button, Input, Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
+import {
+  learnedCategoryIdFor,
+  suggestCategoryId,
+} from "@/src/features/sms/categorize";
 
 function normalizeAmount(raw: string): string | null {
   const cleaned = raw.replace(/,/g, "").replace(/\s/g, "").trim();
@@ -66,6 +70,7 @@ export default function AddExpenseScreen() {
   const [direction, setDirection] = useState<"debit" | "credit">("debit");
   const [paidAt, setPaidAt] = useState(() => new Date());
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryTouched, setCategoryTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keyboardPad, setKeyboardPad] = useState(0);
@@ -98,6 +103,23 @@ export default function AddExpenseScreen() {
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     scrollY.current = e.nativeEvent.contentOffset.y;
   };
+
+  // Prefill the category from a learned merchant→category mapping.
+  useEffect(() => {
+    if (categoryTouched) return;
+    const name = merchant.trim();
+    if (name.length < 2) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      void learnedCategoryIdFor(name).then((id) => {
+        if (!cancelled && id) setCategoryId(id);
+      });
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [merchant, categoryTouched]);
 
   /**
    * Measure the focused field on screen and scroll until it sits above the keyboard.
@@ -149,15 +171,23 @@ export default function AddExpenseScreen() {
     setError(null);
     setLoading(true);
     try {
-      await api.createExpense({
-        merchant: name,
-        amount: amt,
-        direction,
-        paidAt: paidAt.toISOString(),
-        source: "manual",
-        notes: notes.trim() || null,
-        categoryId,
-      });
+      // No explicit pick → learned mapping, then rule-based heuristics.
+      // An explicit "None" is respected.
+      const resolvedCategoryId = categoryTouched
+        ? categoryId
+        : (categoryId ?? (await suggestCategoryId(name, direction, null)));
+      await api.createExpense(
+        {
+          merchant: name,
+          amount: amt,
+          direction,
+          paidAt: paidAt.toISOString(),
+          source: "manual",
+          notes: notes.trim() || null,
+          categoryId: resolvedCategoryId,
+        },
+        { learnCategory: categoryTouched && categoryId != null },
+      );
       if (router.canGoBack()) router.back();
       else router.replace("/(app)");
     } catch (e) {
@@ -306,7 +336,13 @@ export default function AddExpenseScreen() {
             >
               Category
             </Text>
-            <CategoryChips value={categoryId} onChange={setCategoryId} />
+            <CategoryChips
+              value={categoryId}
+              onChange={(id) => {
+                setCategoryTouched(true);
+                setCategoryId(id);
+              }}
+            />
           </View>
 
           {error ? (

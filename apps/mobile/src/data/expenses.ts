@@ -4,8 +4,10 @@ import {
   type Expense,
   type ExpenseSource,
   type MonthSummary,
+  matchesExpenseSearch,
 } from "@paymenttracker/shared";
 import { randomUUID } from "expo-crypto";
+import { learnMerchantCategory } from "./categoryLearning";
 import {
   getStoredUserId,
   hashUpiRef,
@@ -33,16 +35,33 @@ function mapCategory(row: CategoryRow | null | undefined): Category | null {
   };
 }
 
+/**
+ * Decrypt one field for list/detail rendering.
+ * Swallows per-field crypto glitches so one bad blob cannot blank Recent;
+ * still rethrows vault-locked so the auth gate can take over.
+ */
+async function openField(
+  blob: string | null | undefined,
+): Promise<string | null> {
+  try {
+    return await openString(blob);
+  } catch (err) {
+    if (err instanceof LocalDataError && err.status === 401) throw err;
+    return null;
+  }
+}
+
 async function decryptExpense(
   row: ExpenseRow,
   category: CategoryRow | null,
 ): Promise<Expense> {
+  // Parallel field opens; openString itself retries released SharedObject races.
   const [amount, merchant, notes, rawOcr, upiRef] = await Promise.all([
-    openString(row.amount_enc),
-    openString(row.merchant_enc),
-    openString(row.notes_enc),
-    openString(row.raw_ocr_enc),
-    openString(row.upi_ref_enc),
+    openField(row.amount_enc),
+    openField(row.merchant_enc),
+    openField(row.notes_enc),
+    openField(row.raw_ocr_enc),
+    openField(row.upi_ref_enc),
   ]);
 
   return {
@@ -115,15 +134,39 @@ async function findSoftDuplicate(
   return null;
 }
 
-export async function listExpenses(params?: {
+/** List/filter options for the local expense timeline. */
+export type ExpenseListParams = {
   from?: string;
   to?: string;
+  /** Free text; matched in memory after decryption (merchant/notes/amount/ref). */
   q?: string;
+  /** Max rows returned after filtering (1–500). */
   limit?: number;
-}): Promise<{ expenses: Expense[] }> {
+  /** Keep only these category ids (OR-ed with `uncategorized`). */
+  categoryIds?: string[];
+  /** Include rows with no category. */
+  uncategorized?: boolean;
+  /** Keep only these sources (phonepe/gpay/upi/sms/manual/cash). */
+  sources?: ExpenseSource[];
+  direction?: Expense["direction"];
+};
+
+const SOURCES: ExpenseSource[] = [
+  "phonepe",
+  "gpay",
+  "upi",
+  "sms",
+  "manual",
+  "cash",
+];
+
+export async function listExpenses(
+  params?: ExpenseListParams,
+): Promise<{ expenses: Expense[] }> {
   const userId = await requireUserId();
   const db = await getDb();
-  const limit = Math.min(Math.max(params?.limit ?? 50, 1), 200);
+  const limit = Math.min(Math.max(params?.limit ?? 50, 1), 500);
+  const q = params?.q?.trim() ?? "";
 
   const clauses = ["e.user_id = ?"];
   const binds: (string | number)[] = [userId];
@@ -136,8 +179,31 @@ export async function listExpenses(params?: {
     clauses.push("e.paid_at <= ?");
     binds.push(params.to);
   }
+  if (params?.direction) {
+    clauses.push("e.direction = ?");
+    binds.push(params.direction);
+  }
 
-  binds.push(limit);
+  const sources = (params?.sources ?? []).filter((s) => SOURCES.includes(s));
+  if (sources.length) {
+    clauses.push(`e.source IN (${sources.map(() => "?").join(", ")})`);
+    binds.push(...sources);
+  }
+
+  const categoryIds = (params?.categoryIds ?? []).filter(Boolean);
+  if (categoryIds.length || params?.uncategorized) {
+    const parts: string[] = [];
+    if (categoryIds.length) {
+      parts.push(`e.category_id IN (${categoryIds.map(() => "?").join(", ")})`);
+      binds.push(...categoryIds);
+    }
+    if (params?.uncategorized) parts.push("e.category_id IS NULL");
+    clauses.push(`(${parts.join(" OR ")})`);
+  }
+
+  // Text search happens after decryption, so scan a wider window and slice.
+  const scanLimit = q ? Math.min(Math.max(limit * 6, 300), 2000) : limit;
+  binds.push(scanLimit);
 
   const rows = await db.getAllAsync<
     ExpenseRow & {
@@ -159,7 +225,6 @@ export async function listExpenses(params?: {
     ...binds,
   );
 
-  const q = params?.q?.trim().toLowerCase();
   const expenses: Expense[] = [];
   for (const row of rows) {
     const cat: CategoryRow | null =
@@ -173,8 +238,23 @@ export async function listExpenses(params?: {
           }
         : null;
     const exp = await decryptExpense(row, cat);
-    if (q && !exp.merchant.toLowerCase().includes(q)) continue;
+    if (
+      q &&
+      !matchesExpenseSearch(
+        {
+          merchant: exp.merchant,
+          notes: exp.notes,
+          amount: exp.amount,
+          categoryName: exp.category?.name ?? null,
+          upiRef: exp.upiRef,
+        },
+        q,
+      )
+    ) {
+      continue;
+    }
     expenses.push(exp);
+    if (expenses.length >= limit) break;
   }
 
   return { expenses };
@@ -208,7 +288,12 @@ export async function monthSummary(
   let totalDebit = 0;
   let totalCredit = 0;
   for (const row of rows) {
-    const amountStr = await openString(row.amount_enc);
+    let amountStr: string | null = null;
+    try {
+      amountStr = await openString(row.amount_enc);
+    } catch {
+      continue;
+    }
     const n = Number(amountStr ?? 0);
     if (!Number.isFinite(n)) continue;
     if (row.direction === "credit") totalCredit += n;
@@ -345,8 +430,17 @@ async function insertExpense(
   };
 }
 
+export type CreateExpenseOptions = {
+  /**
+   * Remember merchant → category for future imports. Set when the category was
+   * picked by the user (manual add, import review), not by the rule engine.
+   */
+  learnCategory?: boolean;
+};
+
 export async function createExpense(
   body: CreateInput,
+  opts?: CreateExpenseOptions,
 ): Promise<{ expense: Expense }> {
   const userId = await requireUserId();
   const parsed = createExpenseSchema.safeParse(body);
@@ -357,6 +451,9 @@ export async function createExpense(
     );
   }
   const expense = await insertExpense(userId, parsed.data);
+  if (opts?.learnCategory && expense.categoryId) {
+    await learnMerchantCategory(expense.merchant, expense.categoryId);
+  }
   return { expense };
 }
 
@@ -506,7 +603,19 @@ export async function updateExpense(
     userId,
   );
 
-  return getExpense(id);
+  const result = await getExpense(id);
+
+  // A category edit is the strongest signal we get: teach it for this merchant
+  // so future SMS / screenshot / manual entries land in the right bucket.
+  const categoryChanged =
+    data.categoryId !== undefined && categoryId !== existing.category_id;
+  const merchantRenamedWithCategory =
+    data.merchant !== undefined && categoryId != null;
+  if (categoryChanged || merchantRenamedWithCategory) {
+    await learnMerchantCategory(result.expense.merchant, categoryId);
+  }
+
+  return result;
 }
 
 export async function deleteExpense(id: string): Promise<{ ok: boolean }> {

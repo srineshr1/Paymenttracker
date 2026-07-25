@@ -350,6 +350,8 @@ export async function clearHistoryAndResetPasscode(
 
   const db = await getDb();
   await db.execAsync("DELETE FROM expenses;");
+  // Learned merchant→category mappings are part of history.
+  await db.execAsync("DELETE FROM merchant_categories;");
 
   // Prefer recovery reset (same DEK, empty history is fine).
   // If recovery missing, wipe vault and re-setup for same user.

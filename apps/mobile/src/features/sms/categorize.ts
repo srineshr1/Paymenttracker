@@ -1,3 +1,4 @@
+import { getLearnedCategoryId } from "@/src/data/categoryLearning";
 import { listCategories } from "@/src/data/expenses";
 
 export type CategorySlug =
@@ -139,7 +140,32 @@ export async function resolveCategoryId(
   merchant: string,
   direction: "debit" | "credit" = "debit",
   rawText?: string | null,
+  opts?: { useLearned?: boolean },
 ): Promise<string | null> {
+  if (opts?.useLearned !== false) {
+    // User corrections win over heuristics; rules remain the fallback.
+    const learned = await getLearnedCategoryId(merchant);
+    if (learned) return learned;
+  }
   const slug = inferCategorySlug(merchant, direction, rawText);
   return getCategoryIdBySlug(slug);
+}
+
+/**
+ * Category suggestion for editors (manual add / import review) — same
+ * precedence as the import path: learned mapping first, then rules.
+ */
+export async function suggestCategoryId(
+  merchant: string,
+  direction: "debit" | "credit" = "debit",
+  rawText?: string | null,
+): Promise<string | null> {
+  return resolveCategoryId(merchant, direction, rawText);
+}
+
+/** Learned-only lookup (no rule fallback), for prefill hints. */
+export async function learnedCategoryIdFor(
+  merchant: string,
+): Promise<string | null> {
+  return getLearnedCategoryId(merchant);
 }

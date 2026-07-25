@@ -32,22 +32,79 @@ const RECOVERY_SECURE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
-/** In-memory DEK — cleared on lock / logout. Never written plaintext to disk. */
-let activeDek: AESEncryptionKey | null = null;
+/**
+ * In-memory DEK material (raw AES key bytes) — cleared on lock / logout.
+ * Never written plaintext to disk.
+ *
+ * We deliberately do **not** keep a long-lived `AESEncryptionKey` SharedObject.
+ * On Android, Expo SharedObjects can be released under GC / heavy concurrent
+ * AES use, which surfaces as:
+ *   ExpoCryptoAES.decryptAsync rejected — SealedData cast failed
+ *   (received Integer) / "shared object that was already released"
+ * Re-importing a fresh key for each seal/open keeps native IDs valid.
+ */
+let activeDekBytes: Uint8Array | null = null;
 
 export function isUnlocked(): boolean {
-  return activeDek != null;
+  return activeDekBytes != null;
 }
 
-export function getActiveDek(): AESEncryptionKey {
-  if (!activeDek) {
+function requireDekBytes(): Uint8Array {
+  if (!activeDekBytes) {
     throw new LocalDataError("Vault is locked. Enter your passcode.", 401);
   }
-  return activeDek;
+  return activeDekBytes;
+}
+
+/** Fresh native EncryptionKey from the in-memory DEK bytes. */
+async function importActiveKey(): Promise<AESEncryptionKey> {
+  return AESEncryptionKey.import(copyBytes(requireDekBytes()));
+}
+
+async function setActiveDekFromKey(dek: AESEncryptionKey): Promise<void> {
+  activeDekBytes = copyBytes(await dek.bytes());
 }
 
 export function clearActiveDek(): void {
-  activeDek = null;
+  if (activeDekBytes) {
+    activeDekBytes.fill(0);
+  }
+  activeDekBytes = null;
+}
+
+/** True when a native AES shared-object was GC'd / released mid-call. */
+function isReleasedSharedObjectError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    /already released/i.test(msg) ||
+    /cannot be cast to type class expo\.modules\.crypto/i.test(msg) ||
+    /UsingReleasedSharedObject/i.test(msg)
+  );
+}
+
+/**
+ * Cap concurrent native AES calls. Home load can fire hundreds of decrypts
+ * (3 list queries × N rows × 5 fields); unlimited parallelism churns Expo
+ * SharedObjects and trips "already released" on Android.
+ */
+const AES_MAX_INFLIGHT = 6;
+let aesInflight = 0;
+const aesWaiters: Array<() => void> = [];
+
+async function withAesSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (aesInflight >= AES_MAX_INFLIGHT) {
+    await new Promise<void>((resolve) => {
+      aesWaiters.push(resolve);
+    });
+  }
+  aesInflight += 1;
+  try {
+    return await fn();
+  } finally {
+    aesInflight -= 1;
+    const next = aesWaiters.shift();
+    if (next) next();
+  }
 }
 
 async function setSecure(
@@ -292,7 +349,7 @@ async function rewrapDekWithPasscode(
   await setSecure(KEYS.wrappedDek, newWrapped);
   await saveRecoveryDek(dek);
   await clearFailedAttempts();
-  activeDek = dek;
+  await setActiveDekFromKey(dek);
 }
 
 /**
@@ -323,7 +380,7 @@ export async function setupVault(
   await clearFailedAttempts();
 
   // Prove the stored material unlocks with the same PIN before we finish.
-  activeDek = null;
+  clearActiveDek();
   const salt2 = hexToBytes((await getSecure(KEYS.salt)) ?? "");
   const verifier2 = await getSecure(KEYS.verifier);
   const wrapped2 = await getSecure(KEYS.wrappedDek);
@@ -340,7 +397,7 @@ export async function setupVault(
     );
   }
   try {
-    activeDek = await unwrapDek(wrapped2, kek2);
+    await setActiveDekFromKey(await unwrapDek(wrapped2, kek2));
   } catch {
     await wipeVaultSecrets();
     throw new LocalDataError(
@@ -380,8 +437,9 @@ export async function unlockVault(passcode: string): Promise<void> {
     throw new LocalDataError("Incorrect passcode.", 401);
   }
 
+  let dek: AESEncryptionKey;
   try {
-    activeDek = await unwrapDek(wrapped, kek);
+    dek = await unwrapDek(wrapped, kek);
   } catch {
     // Verifier matched but unwrap failed — storage/format problem, not the PIN.
     await recordFailedAttempt();
@@ -390,12 +448,13 @@ export async function unlockVault(passcode: string): Promise<void> {
       500,
     );
   }
+  await setActiveDekFromKey(dek);
   await clearFailedAttempts();
 
   // Migrate legacy base64 wraps → hex on successful unlock
   if (!wrapped.startsWith("hex:")) {
     try {
-      const migrated = await wrapDek(activeDek, kek);
+      const migrated = await wrapDek(dek, kek);
       await setSecure(KEYS.wrappedDek, migrated);
     } catch {
       /* keep legacy wrap */
@@ -404,7 +463,7 @@ export async function unlockVault(passcode: string): Promise<void> {
 
   // Ensure recovery key exists for forgot-passcode flow
   try {
-    await saveRecoveryDek(activeDek);
+    await saveRecoveryDek(dek);
   } catch {
     /* ignore */
   }
@@ -434,8 +493,10 @@ export async function changeVaultPasscode(
     throw new LocalDataError("Current passcode is incorrect.", 401);
   }
 
-  let dek = activeDek;
-  if (!dek) {
+  let dek: AESEncryptionKey;
+  if (activeDekBytes) {
+    dek = await importActiveKey();
+  } else {
     dek = await unwrapDek(wrapped, oldKek);
   }
 
@@ -488,11 +549,26 @@ function sealedToBytes(sealed: string): Uint8Array {
 
 /** Encrypt a UTF-8 string; returns hex:… combined IV+ciphertext+tag. */
 export async function sealString(plaintext: string): Promise<string> {
-  const dek = getActiveDek();
-  const bytes = new TextEncoder().encode(plaintext);
-  const sealed = await aesEncryptAsync(bytes, dek);
-  const combined = copyBytes(await sealed.combined("bytes"));
-  return `hex:${bytesToHex(combined)}`;
+  const plainBytes = new TextEncoder().encode(plaintext);
+
+  return withAesSlot(async () => {
+    const run = async (): Promise<string> => {
+      // Fresh key each call — avoids long-lived EncryptionKey SharedObject release.
+      const dek = await importActiveKey();
+      const sealed = await aesEncryptAsync(plainBytes, dek);
+      // Hold `sealed` until combined bytes are copied out of the SharedObject.
+      const combined = copyBytes(await sealed.combined("bytes"));
+      return `hex:${bytesToHex(combined)}`;
+    };
+
+    try {
+      return await run();
+    } catch (err) {
+      if (!isReleasedSharedObjectError(err)) throw err;
+      // One retry after a native shared-object race (common under concurrent load).
+      return await run();
+    }
+  });
 }
 
 /** Decrypt a sealed string; null-safe for optional fields. */
@@ -500,14 +576,27 @@ export async function openString(
   sealedBlob: string | null | undefined,
 ): Promise<string | null> {
   if (sealedBlob == null || sealedBlob === "") return null;
-  const dek = getActiveDek();
   const combined = copyBytes(sealedToBytes(sealedBlob));
-  const sealed = AESSealedData.fromCombined(combined, {
-    ivLength: 12,
-    tagLength: 16,
+
+  return withAesSlot(async () => {
+    const run = async (): Promise<string> => {
+      // Fresh key + sealed payload per call so Android never sees a released ID.
+      const dek = await importActiveKey();
+      const sealed = AESSealedData.fromCombined(copyBytes(combined), {
+        ivLength: 12,
+        tagLength: 16,
+      });
+      const bytes = await aesDecryptAsync(sealed, dek, { output: "bytes" });
+      return new TextDecoder().decode(bytes);
+    };
+
+    try {
+      return await run();
+    } catch (err) {
+      if (!isReleasedSharedObjectError(err)) throw err;
+      return await run();
+    }
   });
-  const bytes = await aesDecryptAsync(sealed, dek, { output: "bytes" });
-  return new TextDecoder().decode(bytes);
 }
 
 export async function sealNullable(

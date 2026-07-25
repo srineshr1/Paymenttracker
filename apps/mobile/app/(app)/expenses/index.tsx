@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import type { Category, Expense } from "@paymenttracker/shared";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,8 +14,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
+import {
+  activeFilterCount,
+  EMPTY_EXPENSE_FILTERS,
+  ExpenseFilterPanel,
+  type ExpenseFilterState,
+  ExpenseSearchBar,
+  rangeToBounds,
+} from "@/src/components/ExpenseFilters";
 import { ExpenseRow } from "@/src/components/ExpenseRow";
-import { EmptyState, Input, Screen, Text } from "@/src/components/ui";
+import { EmptyState, Screen, Text } from "@/src/components/ui";
 import { formatINR, formatINRCompact } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
@@ -44,28 +52,41 @@ export default function ExpensesListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [filters, setFilters] = useState<ExpenseFilterState>(
+    EMPTY_EXPENSE_FILTERS,
+  );
+  const [showFilters, setShowFilters] = useState(false);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [filterSeeded, setFilterSeeded] = useState(false);
 
-  const load = useCallback(async (query?: string) => {
-    setError(null);
-    try {
-      const [expRes, catRes] = await Promise.all([
-        api.listExpenses({
-          limit: 200,
-          q: query?.trim() || undefined,
-        }),
-        api.listCategories(),
-      ]);
-      setItems(expRes.expenses);
-      setCategories(catRes.categories);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (query: string, active: ExpenseFilterState) => {
+      setError(null);
+      try {
+        const { from, to } = rangeToBounds(active.range);
+        const [expRes, catRes] = await Promise.all([
+          api.listExpenses({
+            limit: 200,
+            q: query.trim() || undefined,
+            sources: active.sources.length ? active.sources : undefined,
+            direction:
+              active.direction === "all" ? undefined : active.direction,
+            from,
+            to,
+          }),
+          api.listCategories(),
+        ]);
+        setItems(expRes.expenses);
+        setCategories(catRes.categories);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [],
+  );
 
   // Deep-link from home donut / legend
   useFocusEffect(
@@ -94,28 +115,45 @@ export default function ExpensesListScreen() {
     if (match) setFilter(match.id);
   }, [params.slug, categories]);
 
+  const queryRef = useRef({ q, filters });
+  useEffect(() => {
+    queryRef.current = { q, filters };
+  }, [q, filters]);
+
   useFocusEffect(
     useCallback(() => {
       const ready = requestAnimationFrame(() => {
-        void load(q);
+        const { q: query, filters: active } = queryRef.current;
+        void load(query, active);
       });
       return () => cancelAnimationFrame(ready);
-    }, [load, q]),
+    }, [load]),
   );
+
+  // Debounced reload while typing / toggling filters (focus effect covers mount)
+  const skipFirstQueryEffect = useRef(true);
+  useEffect(() => {
+    if (skipFirstQueryEffect.current) {
+      skipFirstQueryEffect.current = false;
+      return;
+    }
+    const t = setTimeout(() => void load(q, filters), q ? 260 : 0);
+    return () => clearTimeout(t);
+  }, [q, filters, load]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    void load(q);
+    void load(q, filters);
   };
 
-  const debouncedSearch = useMemo(() => {
-    let t: ReturnType<typeof setTimeout> | null = null;
-    return (text: string) => {
-      setQ(text);
-      if (t) clearTimeout(t);
-      t = setTimeout(() => void load(text), 280);
-    };
-  }, [load]);
+  const catFilterActive = filter !== "all";
+  const activeCount = activeFilterCount(filters, { category: catFilterActive });
+
+  const clearAll = () => {
+    setQ("");
+    setFilters(EMPTY_EXPENSE_FILTERS);
+    setFilter("all");
+  };
 
   const catStats: CatStat[] = useMemo(() => {
     const map = new Map<string, CatStat>();
@@ -182,7 +220,9 @@ export default function ExpensesListScreen() {
 
   const headerSubtitle =
     filter === "all"
-      ? "Search & browse on this device"
+      ? activeCount > 0 || q.trim()
+        ? `${filterSummary.count} match${filterSummary.count === 1 ? "" : "es"}`
+        : "Search & browse on this device"
       : `${filterSummary.count} payment${filterSummary.count === 1 ? "" : "s"}`;
 
   return (
@@ -190,17 +230,17 @@ export default function ExpensesListScreen() {
       <AppHeader title={headerTitle} subtitle={headerSubtitle} />
 
       <View style={{ paddingHorizontal: spacing.xl }}>
-        <Input
+        <ExpenseSearchBar
           value={q}
-          onChangeText={debouncedSearch}
-          placeholder="Search merchant…"
-          autoCorrect={false}
-          style={{
-            backgroundColor: colors.bgMuted,
-            borderWidth: 0,
-            minHeight: 48,
-          }}
+          onChangeText={setQ}
+          onToggleFilters={() => setShowFilters((v) => !v)}
+          filtersOpen={showFilters}
+          activeCount={activeCount}
+          onClear={clearAll}
         />
+        {showFilters ? (
+          <ExpenseFilterPanel state={filters} onChange={setFilters} />
+        ) : null}
         {error ? (
           <Text color={colors.danger} style={{ marginTop: spacing.sm }}>
             {error}
@@ -345,13 +385,13 @@ export default function ExpensesListScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              title={q.trim() ? "No matches" : "Nothing here yet"}
+              title={
+                q.trim() || activeCount > 0 ? "No matches" : "Nothing here yet"
+              }
               body={
-                q.trim()
-                  ? "Try a different search or category."
-                  : filter !== "all"
-                    ? "No payments in this category."
-                    : "Imported and manual expenses will show up in this timeline."
+                q.trim() || activeCount > 0
+                  ? "Try a different search, or clear the filters."
+                  : "Imported and manual expenses will show up in this timeline."
               }
             />
           }
