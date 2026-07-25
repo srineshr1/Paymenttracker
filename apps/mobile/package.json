@@ -1,15 +1,20 @@
 {
   "name": "@paymenttracker/mobile",
   "main": "expo-router/entry",
-  "version": "1.1.6",
+  "version": "1.2.2",
   "private": true,
   "scripts": {
+    "sync-version": "node scripts/sync-version.mjs",
+    "prestart": "node scripts/sync-version.mjs",
     "start": "expo start",
+    "preandroid": "node scripts/sync-version.mjs",
     "android": "JAVA_HOME=/usr/lib/jvm/java-21-openjdk PATH=/usr/lib/jvm/java-21-openjdk/bin:$PATH expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "pretypecheck": "node scripts/sync-version.mjs",
     "typecheck": "tsc --noEmit",
     "dev:android": "JAVA_HOME=/usr/lib/jvm/java-21-openjdk PATH=/usr/lib/jvm/java-21-openjdk/bin:$PATH expo run:android",
+    "preprebuild": "node scripts/sync-version.mjs",
     "prebuild": "expo prebuild"
   },
   "dependencies": {

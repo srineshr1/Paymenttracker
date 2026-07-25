@@ -15,6 +15,9 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Need full history so `git describe` / tags resolve for app version.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -35,8 +38,22 @@ jobs:
       - name: Build shared package
         run: npm run build -w @paymenttracker/shared
 
+      - name: Sync app version from git tag
+        id: ver
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            export SPENTD_VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          node apps/mobile/scripts/sync-version.mjs
+          VER="$(node -e "console.log(require('./apps/mobile/package.json').version)")"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "SPENTD_VERSION=$VER" >> "$GITHUB_ENV"
+          echo "App version → $VER"
+
       - name: Prebuild Android project
         working-directory: apps/mobile
+        env:
+          SPENTD_VERSION: ${{ env.SPENTD_VERSION }}
         run: |
           if [ ! -f .env ]; then
             echo "EXPO_PUBLIC_API_URL=https://api.example.com" > .env

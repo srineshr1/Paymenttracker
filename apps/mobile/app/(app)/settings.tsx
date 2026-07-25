@@ -38,6 +38,7 @@ import {
 } from "@/src/features/sms/autoImport";
 import { importAndSavePaymentsFromSms } from "@/src/features/sms/importSms";
 import { isSmsInboxAvailable } from "@/src/features/sms/readInbox";
+import { APP_VERSION, AUTHOR, AUTHOR_URL } from "@/src/version";
 
 /** Docs page for SMS auto-import — update when the site is live. */
 const SMS_AUTO_IMPORT_INFO_URL = "https://spentd.app/sms-auto-import";
@@ -486,9 +487,31 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        <Text style={[styles.footer, { color: colors.textMuted }]}>
-          Spentd 1.0
-        </Text>
+        <View style={styles.footerBlock}>
+          <Text style={[styles.footer, { color: colors.textMuted }]}>
+            Spentd {APP_VERSION}
+          </Text>
+          <Pressable
+            onPress={() => {
+              void Linking.openURL(AUTHOR_URL);
+            }}
+            hitSlop={8}
+            accessibilityRole="link"
+            accessibilityLabel={`Made by ${AUTHOR}`}
+          >
+            <Text style={[styles.footerCredit, { color: colors.textMuted }]}>
+              made by{" "}
+              <Text
+                style={{
+                  color: colors.accent,
+                  fontFamily: typography.fontSans,
+                }}
+              >
+                {AUTHOR}
+              </Text>
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
 
       {/* Translucent overlay — content scrolls underneath */}
@@ -795,10 +818,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
   },
+  footerBlock: {
+    alignItems: "center",
+    marginTop: spacing.xxl,
+    gap: 4,
+  },
   footer: {
     fontFamily: typography.fontSans,
     fontSize: 12,
     textAlign: "center",
-    marginTop: spacing.xxl,
+  },
+  footerCredit: {
+    fontFamily: typography.fontSans,
+    fontSize: 12,
+    textAlign: "center",
   },
 });
