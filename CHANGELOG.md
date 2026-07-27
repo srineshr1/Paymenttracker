@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-07-27
+
 ### Added
 - Payment category notifications: after SMS auto-import, Spentd guesses the category and shows a local notification with **Yes** (confirm / learn) or **Select the right one** (opens the expense in edit mode)
 
