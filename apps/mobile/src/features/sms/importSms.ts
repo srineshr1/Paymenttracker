@@ -80,7 +80,7 @@ export async function scanSmsInboxForImport(
   options: ListInboxOptions = {},
 ): Promise<ScanSmsInboxResult> {
   const messages = await listInboxSms({
-    lookbackDays: options.lookbackDays ?? 90,
+    lookbackDays: options.lookbackDays ?? 150,
     maxCount: options.maxCount ?? 2000,
     minDateMs: options.minDateMs,
   });
@@ -213,7 +213,7 @@ export async function importAndSavePaymentsFromSms(
 ): Promise<BulkImportSmsResult> {
   onProgress?.("Scanning messages…");
   const scan = await scanSmsInboxForImport({
-    lookbackDays: options.lookbackDays ?? 90,
+    lookbackDays: options.lookbackDays ?? 150,
     maxCount: options.maxCount ?? 2000,
     minDateMs: options.minDateMs,
   });

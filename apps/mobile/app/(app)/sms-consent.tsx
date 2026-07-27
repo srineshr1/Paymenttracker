@@ -100,7 +100,7 @@ export default function SmsConsentScreen() {
         try {
           setStatus("Scanning messages…");
           const result = await importAndSavePaymentsFromSms(
-            { lookbackDays: 90, maxCount: 2000 },
+            { lookbackDays: 150, maxCount: 2000 },
             (msg) => setStatus(msg),
           );
           created = result.created;
@@ -154,7 +154,7 @@ export default function SmsConsentScreen() {
         if (created > 0) {
           Alert.alert(
             "SMS import on",
-            `Added ${created} payment${created === 1 ? "" : "s"} from your messages. New bank/UPI SMS will import automatically.`,
+            `Added ${created} payment${created === 1 ? "" : "s"} from your messages. New bank/UPI SMS will import automatically — you'll get a notification to confirm the category.`,
             [{ text: "OK", onPress: goHome }],
           );
           return;

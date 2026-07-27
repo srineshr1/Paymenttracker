@@ -160,7 +160,7 @@ export default function SmsImportScreen() {
     setLastImport(null);
     try {
       const result = await scanSmsInboxForImport({
-        lookbackDays: 90,
+        lookbackDays: 150,
         maxCount: 2000,
       });
       setStats(result.stats);
@@ -190,7 +190,7 @@ export default function SmsImportScreen() {
     setLastImport(null);
     try {
       const res = await importAndSavePaymentsFromSms(
-        { lookbackDays: 90, maxCount: 2000 },
+        { lookbackDays: 150, maxCount: 2000 },
         (msg) => setStatus(msg),
       );
       setLastImport(

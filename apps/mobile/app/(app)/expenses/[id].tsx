@@ -24,7 +24,10 @@ import { useTheme } from "@/src/design/ThemeContext";
 import { radius, spacing, typography } from "@/src/design/tokens";
 
 export default function ExpenseDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, edit } = useLocalSearchParams<{
+    id: string;
+    edit?: string | string[];
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
@@ -32,7 +35,11 @@ export default function ExpenseDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [editing, setEditing] = useState(false);
+  // Deep link from payment notification: "Select the right one" → edit mode
+  const editFlag = Array.isArray(edit) ? edit[0] : edit;
+  const [editing, setEditing] = useState(
+    editFlag === "1" || editFlag === "true" || editFlag === "yes",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

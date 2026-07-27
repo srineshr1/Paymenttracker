@@ -81,6 +81,29 @@ function findAdb() {
   );
 }
 
+/** Host sqlite3 for pull/modify/push when the emulator image has none. */
+function findHostSqlite() {
+  const fromEnv =
+    process.env.ANDROID_HOME ||
+    process.env.ANDROID_SDK_ROOT ||
+    `${process.env.HOME}/Android/Sdk`;
+  const candidates = [
+    "sqlite3",
+    "/usr/bin/sqlite3",
+    `${fromEnv}/platform-tools/sqlite3`,
+    `${process.env.HOME}/Android/Sdk/platform-tools/sqlite3`,
+  ];
+  for (const c of candidates) {
+    try {
+      const r = spawnSync(c, ["-version"], { encoding: "utf8" });
+      if (r.status === 0) return c;
+    } catch {
+      /* next */
+    }
+  }
+  return null;
+}
+
 function adb(adbPath, adbArgs, opts = {}) {
   const full = SERIAL ? ["-s", SERIAL, ...adbArgs] : adbArgs;
   const r = spawnSync(adbPath, full, {
@@ -290,35 +313,130 @@ function main() {
     return;
   }
 
-  console.log("Restarting adbd as root (needed for mmssms.db)...");
+  // Prefer direct DB write (historical dates) when adbd can run as root.
+  // Google Play / "user" images refuse root → fall back to `adb emu sms send`
+  // (inbox date = now; Spentd still picks paidAt from body date strings).
+  console.log("Checking whether adbd can run as root (for historical SMS dates)...");
   adb(adbPath, ["root"], { allowFail: true });
-  // wait for adbd
   spawnSync("sleep", ["1"]);
   adb(adbPath, ["wait-for-device"], { allowFail: true });
+  const idOut = adb(adbPath, ["shell", "id"], { allowFail: true }).stdout;
+  const isRoot = /\buid=0\b/.test(idOut);
 
-  // Ensure sqlite3 exists on device
-  const hasSqlite = adb(adbPath, ["shell", "which", "sqlite3"], {
-    allowFail: true,
-  });
-  if (hasSqlite.status !== 0 || !hasSqlite.stdout.includes("sqlite3")) {
-    console.error(
-      "Device has no sqlite3 binary. This script needs an AOSP emulator with sqlite3.",
+  if (!isRoot) {
+    console.log(
+      "No root (Play/user image). Injecting via emulator console (adb emu sms send).",
     );
-    process.exit(1);
+    console.log(
+      "  Note: SMS timestamps will be 'now'; expense dates still come from message bodies.",
+    );
+    injectViaEmuSms(adbPath, messages);
+    return;
   }
 
-  const sql = buildSql(messages, { clear: doClear });
+  injectViaSqlite(adbPath, messages, { clear: doClear });
+}
+
+/**
+ * Inject via `adb emu sms send` — works on non-rooted Google Play AVDs.
+ * Bodies keep historical dates for Spentd's paidAt extraction.
+ */
+function injectViaEmuSms(adbPath, messages) {
+  let ok = 0;
+  let fail = 0;
+  const total = messages.length;
+  const started = Date.now();
+
+  for (let i = 0; i < total; i++) {
+    const m = messages[i];
+    const addr = String(m.address || "UNKNOWN").replace(/[\r\n]/g, " ");
+    // Emulator console treats the rest of the line as the body.
+    // Strip CR/LF so multi-line bodies don't break the console protocol.
+    const body = String(m.body ?? "")
+      .replace(/[\r\n]+/g, " ")
+      .trim();
+
+    const r = adb(adbPath, ["emu", "sms", "send", addr, body], {
+      allowFail: true,
+    });
+    if (r.status === 0 && !/KO|ERROR|unknown/i.test(r.stdout + r.stderr)) {
+      ok++;
+    } else {
+      fail++;
+      if (fail <= 5) {
+        console.warn(
+          `  fail #${fail}: ${addr} — ${(r.stderr || r.stdout || "unknown").slice(0, 120)}`,
+        );
+      }
+    }
+
+    if ((i + 1) % 50 === 0 || i + 1 === total) {
+      const sec = ((Date.now() - started) / 1000).toFixed(1);
+      console.log(`  … ${i + 1}/${total} sent (${ok} ok, ${fail} fail) [${sec}s]`);
+    }
+
+    // Telephony provider drops bursts on Play images — pace sends.
+    if (i % 10 === 9) spawnSync("sleep", ["0.12"]);
+    else spawnSync("sleep", ["0.03"]);
+  }
+
+  // Provider applies emu-sms asynchronously — poll until count stabilizes.
+  console.log("Waiting for telephony provider to flush inbox…");
+  let contentRows = "0";
+  let prev = -1;
+  for (let attempt = 0; attempt < 12; attempt++) {
+    spawnSync("sleep", [attempt === 0 ? "2" : "1.5"]);
+    const countOut = adb(
+      adbPath,
+      [
+        "shell",
+        "content query --uri content://sms/inbox --projection _id | grep -c '^Row:' || echo 0",
+      ],
+      { allowFail: true },
+    );
+    contentRows = (countOut.stdout || "").trim().split("\n").pop() || "0";
+    const n = Number(contentRows);
+    if (Number.isFinite(n) && n === prev && n > 0) break;
+    prev = n;
+  }
+
+  console.log(`\ncontent://sms/inbox rows: ${contentRows}`);
+  console.log(`emu send: ${ok} ok, ${fail} failed (of ${total})`);
+
+  if (ok < total * 0.9) {
+    console.error("✗ Too many failures — check emulator console / adb.");
+    process.exit(2);
+  }
+
+  console.log(`
+✓ Injected ~${ok} messages via adb emu sms send.
+
+Next steps:
+  1. Open Google Messages — bank / UPI / noise threads should appear.
+  2. Open Spentd (native Android build) → Import from SMS → allow READ_SMS.
+  3. Offline parse check:  npm run sms:verify
+
+Note: On non-root AVDs, inbox timestamps are "now". Spentd still uses dates
+inside bank SMS bodies for expense paidAt (5-month spread is preserved).
+`);
+}
+
+/**
+ * Root path: write mmssms.db directly so SMS date columns match fixture history.
+ */
+function injectViaSqlite(adbPath, messages, { clear }) {
+  const sql = buildSql(messages, { clear });
   const tmp = mkdtempSync(join(tmpdir(), "sms-inject-"));
   const localSql = join(tmp, "inject.sql");
   const remoteSql = "/data/local/tmp/spentd_sms_inject.sql";
   writeFileSync(localSql, sql, "utf8");
 
-  console.log(
-    `Pushing SQL (${(sql.length / 1024).toFixed(1)} KB) and applying to mmssms.db...`,
-  );
-  adb(adbPath, ["push", localSql, remoteSql]);
+  const hasSqlite = adb(adbPath, ["shell", "which", "sqlite3"], {
+    allowFail: true,
+  });
+  const deviceSqlite =
+    hasSqlite.status === 0 && hasSqlite.stdout.includes("sqlite3");
 
-  // Kill telephony provider so mmssms.db is not locked mid-write
   adb(
     adbPath,
     [
@@ -327,21 +445,89 @@ function main() {
     ],
     { allowFail: true },
   );
-  spawnSync("sleep", ["0.3"]);
+  spawnSync("sleep", ["0.4"]);
 
-  const result = adb(adbPath, ["shell", `sqlite3 ${MMSSMS_DB} < ${remoteSql}`]);
-  console.log(result.stdout || "(no stdout)");
-  if (result.stderr) console.warn(result.stderr);
+  let applyStdout = "";
+  let applyStderr = "";
 
-  // Cleanup remote
-  adb(adbPath, ["shell", `rm -f ${remoteSql}`], { allowFail: true });
+  if (deviceSqlite) {
+    console.log(
+      `Pushing SQL (${(sql.length / 1024).toFixed(1)} KB) and applying on-device...`,
+    );
+    adb(adbPath, ["push", localSql, remoteSql]);
+    const result = adb(adbPath, [
+      "shell",
+      `sqlite3 ${MMSSMS_DB} < ${remoteSql}`,
+    ]);
+    applyStdout = result.stdout;
+    applyStderr = result.stderr;
+    adb(adbPath, ["shell", `rm -f ${remoteSql}`], { allowFail: true });
+  } else {
+    const hostSqlite = findHostSqlite();
+    if (!hostSqlite) {
+      console.error(
+        "No sqlite3 on device or host. Install sqlite3 or use emu sms fallback.",
+      );
+      process.exit(1);
+    }
+    console.log(
+      `Device has no sqlite3 — using host ${hostSqlite} (pull → apply → push)...`,
+    );
+    const localDb = join(tmp, "mmssms.db");
+    adb(adbPath, ["pull", MMSSMS_DB, localDb]);
+    adb(adbPath, ["pull", `${MMSSMS_DB}-wal`, `${localDb}-wal`], {
+      allowFail: true,
+    });
+    adb(adbPath, ["pull", `${MMSSMS_DB}-shm`, `${localDb}-shm`], {
+      allowFail: true,
+    });
+
+    const applied = spawnSync(hostSqlite, [localDb], {
+      encoding: "utf8",
+      input: sql,
+      maxBuffer: 40 * 1024 * 1024,
+    });
+    if (applied.status !== 0) {
+      console.error(
+        `Host sqlite3 failed (${applied.status}): ${(applied.stderr || applied.stdout || "").trim()}`,
+      );
+      process.exit(1);
+    }
+    applyStdout = (applied.stdout || "").trim();
+    applyStderr = (applied.stderr || "").trim();
+
+    spawnSync(hostSqlite, [localDb, "PRAGMA wal_checkpoint(FULL);"], {
+      encoding: "utf8",
+    });
+
+    adb(
+      adbPath,
+      [
+        "shell",
+        `rm -f ${MMSSMS_DB}-wal ${MMSSMS_DB}-shm ${MMSSMS_DB}-journal`,
+      ],
+      { allowFail: true },
+    );
+    adb(adbPath, ["push", localDb, MMSSMS_DB]);
+    adb(
+      adbPath,
+      [
+        "shell",
+        `chown radio:radio ${MMSSMS_DB} 2>/dev/null || chown system:system ${MMSSMS_DB}; chmod 660 ${MMSSMS_DB}`,
+      ],
+      { allowFail: true },
+    );
+  }
+
+  console.log(applyStdout || "(no stdout)");
+  if (applyStderr) console.warn(applyStderr);
+
   try {
     unlinkSync(localSql);
   } catch {
     /* ignore */
   }
 
-  // Force provider restart so content resolver picks up rows
   adb(
     adbPath,
     [
@@ -352,8 +538,6 @@ function main() {
   );
   spawnSync("sleep", ["0.5"]);
 
-  // Google Messages keeps its own bugle_db cache — raw SQL into mmssms.db
-  // does not update it. Clear app data so it re-indexes from Telephony.
   console.log("Refreshing Google Messages (clears bugle cache, re-syncs)...");
   adb(adbPath, ["shell", "pm", "clear", "com.google.android.apps.messaging"], {
     allowFail: true,
@@ -397,10 +581,26 @@ function main() {
   );
   spawnSync("sleep", ["2"]);
 
-  const count = adb(adbPath, [
-    "shell",
-    `sqlite3 ${MMSSMS_DB} "SELECT COUNT(*) FROM sms;"`,
-  ]);
+  let dbCount = "?";
+  if (deviceSqlite) {
+    const count = adb(
+      adbPath,
+      ["shell", `sqlite3 ${MMSSMS_DB} "SELECT COUNT(*) FROM sms;"`],
+      { allowFail: true },
+    );
+    if (count.status === 0) dbCount = count.stdout;
+  } else {
+    const hostSqlite = findHostSqlite();
+    if (hostSqlite) {
+      const probe = join(tmp, "mmssms-probe.db");
+      adb(adbPath, ["pull", MMSSMS_DB, probe], { allowFail: true });
+      const c = spawnSync(hostSqlite, [probe, "SELECT COUNT(*) FROM sms;"], {
+        encoding: "utf8",
+      });
+      if (c.status === 0) dbCount = (c.stdout || "").trim();
+    }
+  }
+
   const content = adb(
     adbPath,
     [
@@ -418,34 +618,20 @@ function main() {
     .split("\n")
     .filter((l) => l.includes("Row:")).length;
 
-  let bugle = "?";
-  const bugleCount = adb(
-    adbPath,
-    [
-      "shell",
-      "sqlite3",
-      "/data/data/com.google.android.apps.messaging/databases/bugle_db",
-      "SELECT COUNT(*) FROM messages;",
-    ],
-    { allowFail: true },
-  );
-  if (bugleCount.status === 0) bugle = bugleCount.stdout;
-
-  console.log(`\nDB sms rows: ${count.stdout}`);
+  console.log(`\nDB sms rows: ${dbCount}`);
   console.log(`content://sms/inbox rows: ~${contentRows}`);
-  console.log(`Google Messages (bugle) messages: ${bugle}`);
 
-  if (Number(count.stdout) < messages.length && doClear) {
+  const dbNum = Number(dbCount);
+  if (Number.isFinite(dbNum) && dbNum < messages.length && clear) {
     console.error("✗ Fewer SMS in DB than injected — check SQL errors above.");
     process.exit(2);
   }
 
   console.log(`
-✓ Injected ${messages.length} messages into emulator inbox.
+✓ Injected ${messages.length} messages into emulator inbox (historical dates).
 
 Next steps:
   1. Open Google Messages — you should see bank / UPI / noise threads.
-     (If still empty: swipe away Messages and reopen, or run inject again.)
   2. Open Spentd (native Android build) → Import from SMS → allow READ_SMS.
   3. Offline parse check:  npm run sms:verify
 `);

@@ -114,14 +114,39 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           retention-days: 30
 
+      - name: Build release notes
+        id: notes
+        run: |
+          NOTES="/tmp/spentd-release-notes.md"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            node scripts/release-notes.mjs "$GITHUB_REF_NAME" > "$NOTES"
+          else
+            {
+              echo "## Spentd APK build #${{ github.run_number }}"
+              echo ""
+              echo "Manual workflow build (not a version tag)."
+              echo ""
+              echo "### Recent commits"
+              echo ""
+              git log -15 --pretty=format:'- %s (%h)' --no-merges
+              echo ""
+            } > "$NOTES"
+          fi
+          echo "path=$NOTES" >> "$GITHUB_OUTPUT"
+          echo "----- release notes -----"
+          cat "$NOTES"
+
       - name: Publish GitHub Release (tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          name: "Spentd ${{ github.ref_name }}"
           files: ${{ steps.apk.outputs.path }}
-          generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.path }}
           draft: false
           prerelease: false
+          # Allow re-running the workflow on the same tag to refresh APK + notes.
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -132,7 +157,7 @@ jobs:
           tag_name: apk-${{ github.run_number }}
           name: "Spentd APK #${{ github.run_number }}"
           files: ${{ steps.apk.outputs.path }}
-          generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.path }}
           draft: false
           prerelease: true
         env:

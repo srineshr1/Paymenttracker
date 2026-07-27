@@ -1,7 +1,7 @@
 /**
- * Compatibility shim — the app is local-first now.
+ * Compatibility shim — the app is local-first.
  * All data lives on device; this re-exports the local repository.
- * Backend HTTP client is intentionally unused (apps/api untouched for future sync).
+ * Optional cloud API (if ever wired) lives outside this repo at spentd-api.
  */
 
 export type {

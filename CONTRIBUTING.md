@@ -1,4 +1,4 @@
-# Contributing to Ledger
+# Contributing to Spentd
 
 Thanks for your interest! Here's how to get started.
 
@@ -7,23 +7,25 @@ Thanks for your interest! Here's how to get started.
 ```bash
 git clone https://github.com/srineshr1/Paymenttracker.git
 cd Paymenttracker
-cp .env.example apps/api/.env
-docker compose up -d
 npm install
 npm run build -w @paymenttracker/shared
-npm run db:migrate
-npm run db:seed
+npm run mobile
+```
+
+For a full Android build (SMS + ML Kit OCR):
+
+```bash
+npm run mobile:android
 ```
 
 ## Project structure
 
 ```
-apps/
-├── api/     — Hono + Drizzle + Postgres backend
-└── mobile/  — Expo (React Native) Android app
-packages/
-└── shared/  — Zod schemas, UPI OCR parsers, shared types
+apps/mobile       — Expo / React Native app (local-first)
+packages/shared   — Zod schemas, UPI / SMS parsers, shared types
 ```
+
+The optional cloud API is **not** in this repo. It lives at `~/Projects/spentd-api` if you have that checkout.
 
 ## Making changes
 
@@ -47,6 +49,7 @@ packages/
 ## Commit messages
 
 Use conventional commits:
+
 - `feat:` new feature
 - `fix:` bug fix
 - `refactor:` code restructuring

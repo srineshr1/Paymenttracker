@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 /**
- * Generate ~3 months of realistic Indian bank / UPI SMS (+ noise)
- * for testing Spentd SMS read + parse pipeline.
+ * Generate realistic Indian bank / UPI SMS (+ noise) for testing Spentd
+ * SMS read + parse pipeline.
+ *
+ * Templates mirror common DLT-header bank/UPI alerts:
+ *   HDFC/SBI/ICICI/Axis debits with VPA + UPI Ref + Avl Bal
+ *   PhonePe / Google Pay app alerts
+ *   Peer UPI credits, salary NEFT, ATM, failed UPI
+ *   Noise: OTP, promos, personal chats
  *
  * Usage:
  *   node scripts/sms-fixtures/generate-sms-fixture.mjs
+ *   node scripts/sms-fixtures/generate-sms-fixture.mjs --days 150 --target 300
  *   node scripts/sms-fixtures/generate-sms-fixture.mjs --days 90 --out path.json
  */
 
@@ -24,6 +31,10 @@ function flag(name, fallback) {
 const DAYS = Number(flag("days", "90"));
 const OUT = resolve(flag("out", resolve(__dirname, "sms-3months.json")));
 const SEED = Number(flag("seed", "42"));
+/** Optional total message target; scales daily volume (default: natural density). */
+const TARGET = flag("target", null) != null ? Number(flag("target", "0")) : null;
+/** Manual density multiplier (ignored when --target is set). */
+const DENSITY_FLAG = Number(flag("density", "1"));
 
 // ─── Deterministic PRNG (mulberry32) ─────────────────────────────────────────
 function mulberry32(a) {
@@ -523,17 +534,25 @@ function randomTimeOnDay(dayStart) {
   );
 }
 
+/** Global volume scale (set in main from --target / --density). */
+let DENSITY = 1;
+
+function scaleChance(p) {
+  return chance(Math.min(1, p * DENSITY));
+}
+
 function generateDay(dayStart, dayIndex) {
   const msgs = [];
   const dow = dayStart.getDay(); // 0 Sun
   const isWeekend = dow === 0 || dow === 6;
 
-  // Payment volume: more on weekends, ~1-4/day
+  // Payment volume: more on weekends, ~1-4/day (scaled by DENSITY)
   let paymentCount = isWeekend ? randInt(2, 5) : randInt(0, 3);
   // Some quiet weekdays
   if (!isWeekend && chance(0.25)) paymentCount = 0;
   // Occasional heavy day
   if (chance(0.08)) paymentCount += randInt(2, 4);
+  paymentCount = Math.max(0, Math.round(paymentCount * DENSITY));
 
   for (let i = 0; i < paymentCount; i++) {
     const when = randomTimeOnDay(dayStart);
@@ -560,7 +579,7 @@ function generateDay(dayStart, dayIndex) {
   }
 
   // Peer credits: ~every few days
-  if (chance(0.18)) {
+  if (scaleChance(0.18)) {
     const when = randomTimeOnDay(dayStart);
     const person = pick(PEOPLE);
     const amount = pick([100, 200, 500, 800, 1000, 2000, 5000]);
@@ -568,7 +587,7 @@ function generateDay(dayStart, dayIndex) {
     msgs.push({ ...m, dateMs: when.getTime() });
   }
 
-  // Monthly salary around day 1 or 28-31
+  // Monthly salary around day 1 or 28-31 (keep almost all — sparse already)
   const dom = dayStart.getDate();
   if ((dom === 1 || dom === 28) && chance(0.85)) {
     const when = new Date(
@@ -585,14 +604,14 @@ function generateDay(dayStart, dayIndex) {
   }
 
   // ATM: occasional
-  if (chance(0.06)) {
+  if (scaleChance(0.06)) {
     const when = randomTimeOnDay(dayStart);
     const m = makeAtmWithdraw(when, pick([2000, 5000, 10000]));
     msgs.push({ ...m, dateMs: when.getTime() });
   }
 
   // Failed txn: rare
-  if (chance(0.04)) {
+  if (scaleChance(0.04)) {
     const when = randomTimeOnDay(dayStart);
     const merchant = pick(MERCHANTS);
     const m = makeFailedTxn(when, merchant, pick(merchant.amounts));
@@ -600,23 +619,23 @@ function generateDay(dayStart, dayIndex) {
   }
 
   // Noise: OTP, promo, personal
-  if (chance(0.35)) {
+  if (scaleChance(0.35)) {
     const when = randomTimeOnDay(dayStart);
     const m = makeOtp(when);
     msgs.push({ ...m, dateMs: when.getTime() });
   }
-  if (chance(0.2)) {
+  if (scaleChance(0.2)) {
     const when = randomTimeOnDay(dayStart);
     const m = makePromo(when);
     msgs.push({ ...m, dateMs: when.getTime() });
   }
-  if (chance(0.4)) {
+  if (scaleChance(0.4)) {
     const when = randomTimeOnDay(dayStart);
     const m = makePersonal(when);
     msgs.push({ ...m, dateMs: when.getTime() });
   }
   // Extra personal traffic some days
-  if (chance(0.15)) {
+  if (scaleChance(0.15)) {
     const when = randomTimeOnDay(dayStart);
     const m = makePersonal(when);
     msgs.push({ ...m, dateMs: when.getTime() });
@@ -634,6 +653,14 @@ function main() {
   const start = new Date(end);
   start.setDate(start.getDate() - (DAYS - 1));
   start.setHours(0, 0, 0, 0);
+
+  // Natural density ≈ 3.4 msgs/day (seed 42, 90d → ~317). Scale to --target.
+  if (TARGET != null && TARGET > 0) {
+    const naturalPerDay = 3.4;
+    DENSITY = Math.max(0.05, TARGET / (DAYS * naturalPerDay));
+  } else {
+    DENSITY = Number.isFinite(DENSITY_FLAG) && DENSITY_FLAG > 0 ? DENSITY_FLAG : 1;
+  }
 
   /** @type {Array<{address:string,body:string,dateMs:number,expected:object}>} */
   const messages = [];
@@ -665,6 +692,8 @@ function main() {
       generatedAt: new Date().toISOString(),
       seed: SEED,
       days: DAYS,
+      density: Math.round(DENSITY * 1000) / 1000,
+      target: TARGET,
       range: {
         from: start.toISOString(),
         to: end.toISOString(),
@@ -684,7 +713,7 @@ function main() {
 
   console.log(`Wrote ${withIds.length} messages → ${OUT}`);
   console.log(
-    `  payment-like: ${paymentCount}, noise: ${noiseCount}, days: ${DAYS}`,
+    `  payment-like: ${paymentCount}, noise: ${noiseCount}, days: ${DAYS}, density: ${DENSITY.toFixed(2)}`,
   );
   console.log(
     `  range: ${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`,

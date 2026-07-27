@@ -82,7 +82,7 @@ export default function SettingsScreen() {
           // recent history (not just messages that arrive from now on).
           try {
             const result = await importAndSavePaymentsFromSms({
-              lookbackDays: 90,
+              lookbackDays: 150,
               maxCount: 2000,
             });
             if (result.created > 0) {
@@ -90,14 +90,14 @@ export default function SettingsScreen() {
                 "SMS import on",
                 `Added ${result.created} recent payment${
                   result.created === 1 ? "" : "s"
-                } from the last 90 days. New messages import automatically.`,
+                } from the last 90 days. New messages import automatically — you'll get a notification to confirm the category (Yes or pick another).`,
               );
             } else {
               Alert.alert(
                 "SMS import on",
                 result.scanned === 0
                   ? "Watching for new bank/UPI messages. No past messages were readable — try Import → SMS."
-                  : `Watching for new messages. Scanned ${result.scanned}; none new to import. Open Import → SMS to review.`,
+                  : `Watching for new messages. Scanned ${result.scanned}; none new to import. New payments will notify you to confirm the category.`,
               );
             }
           } catch {

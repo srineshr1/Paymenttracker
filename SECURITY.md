@@ -20,4 +20,4 @@ We aim to acknowledge reports within 48 hours and provide a fix as soon as possi
 
 ## Scope
 
-This security policy covers the latest release of the app and API. Older versions may not receive security patches.
+This security policy covers the latest release of the Spentd Android app in this repository. Older versions may not receive security patches.

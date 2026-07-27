@@ -7,6 +7,7 @@ import { AppState, type AppStateStatus, Platform } from "react-native";
 import { applyPaymentToAccount } from "@/src/data/cash";
 import { isUnlocked, LocalDataError } from "@/src/data/crypto";
 import { createExpense } from "@/src/data/expenses";
+import { notifyPaymentCategoryConfirm } from "@/src/features/notifications/paymentConfirm";
 import { resolveCategoryId } from "./categorize";
 import { getSmsAutoImportEnabled, setSmsAutoImportEnabled } from "./prefs";
 import { isJunkForAutoImport, resolveMerchant } from "./quality";
@@ -20,9 +21,22 @@ import {
 } from "./readInbox";
 
 export type AutoImportResult =
-  | { status: "saved"; merchant: string; amount: string }
+  | {
+      status: "saved";
+      merchant: string;
+      amount: string;
+      expenseId: string;
+    }
   | { status: "skipped"; reason: string }
   | { status: "error"; reason: string };
+
+/** How the SMS entered the pipeline — live events get a category-confirm notification. */
+export type AutoImportSource = "live" | "catchup";
+
+type QueuedSms = SmsMessageInput & {
+  id?: string | null;
+  _source?: AutoImportSource;
+};
 
 type Listener = (result: AutoImportResult) => void;
 /** Catch-up window when app returns to foreground (ms). */
@@ -32,7 +46,7 @@ let running = false;
 let unsubNative: (() => void) | null = null;
 let appStateSub: { remove: () => void } | null = null;
 let processing = false;
-const queue: Array<SmsMessageInput & { id?: string | null }> = [];
+const queue: QueuedSms[] = [];
 const recentKeys = new Set<string>();
 const listeners = new Set<Listener>();
 let lastCatchupAt = 0;
@@ -63,10 +77,15 @@ function rememberKey(key: string) {
 /**
  * Parse one SMS and auto-save if it looks like a confident payment.
  * Only works while the app is unlocked (encrypted local DB).
+ *
+ * Live messages (new SMS / drained pending) show a category-confirm notification.
+ * Catch-up scans of the inbox stay quiet to avoid spam.
  */
 export async function processIncomingSms(
   msg: SmsMessageInput & { id?: string | null },
+  opts?: { source?: AutoImportSource },
 ): Promise<AutoImportResult> {
+  const sourceKind: AutoImportSource = opts?.source ?? "live";
   if (Platform.OS !== "android") {
     return { status: "skipped", reason: "not_android" };
   }
@@ -143,7 +162,7 @@ export async function processIncomingSms(
   }
 
   try {
-    await createExpense({
+    const { expense } = await createExpense({
       merchant,
       amount: String(parsed.amount).replace(/,/g, ""),
       direction,
@@ -155,10 +174,14 @@ export async function processIncomingSms(
       categoryId,
     });
     await syncBalance();
+    if (sourceKind === "live") {
+      void notifyPaymentCategoryConfirm(expense);
+    }
     const result: AutoImportResult = {
       status: "saved",
       merchant,
       amount: String(parsed.amount),
+      expenseId: expense.id,
     };
     emit(result);
     return result;
@@ -192,15 +215,20 @@ async function flushQueue() {
         queue.unshift(next);
         break;
       }
-      await processIncomingSms(next);
+      const src = next._source ?? "live";
+      const { _source: _, ...msg } = next;
+      await processIncomingSms(msg, { source: src });
     }
   } finally {
     processing = false;
   }
 }
 
-function enqueue(msg: SmsMessageInput & { id?: string | null }) {
-  queue.push(msg);
+function enqueue(
+  msg: SmsMessageInput & { id?: string | null },
+  source: AutoImportSource = "live",
+) {
+  queue.push({ ...msg, _source: source });
   void flushQueue();
 }
 
@@ -211,15 +239,16 @@ async function catchUpRecent() {
   lastCatchupAt = now;
   try {
     const pending = await drainPendingSms();
-    for (const m of pending) enqueue(m);
+    // Messages held while the process was away still count as "live" payments.
+    for (const m of pending) enqueue(m, "live");
 
     const recent = await listInboxSms({
       minDateMs: now - CATCHUP_MS,
       maxCount: 40,
     });
-    // oldest first so order is natural
+    // oldest first so order is natural — quiet scan, no notification spam
     for (const m of [...recent].reverse()) {
-      enqueue(m);
+      enqueue(m, "catchup");
     }
   } catch {
     /* permission or native glitch */
@@ -272,7 +301,7 @@ export async function stopSmsAutoImport(): Promise<void> {
   await stopSmsListening();
 }
 
-/** Enable preference and start listening (requests SMS permissions). */
+/** Enable preference and start listening (requests SMS + notification permissions). */
 export async function enableSmsAutoImport(): Promise<void> {
   if (Platform.OS !== "android" || !isSmsInboxAvailable()) {
     throw new Error(
@@ -282,6 +311,15 @@ export async function enableSmsAutoImport(): Promise<void> {
     );
   }
   await setSmsAutoImportEnabled(true);
+  // Category-confirm banners after each live payment (best-effort).
+  try {
+    const { requestPaymentNotificationPermission } = await import(
+      "@/src/features/notifications/paymentConfirm"
+    );
+    await requestPaymentNotificationPermission();
+  } catch {
+    /* notifications optional */
+  }
   await startSmsAutoImport();
 }
 

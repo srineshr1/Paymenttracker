@@ -31,6 +31,7 @@ import "react-native-reanimated";
 import { BRAND_SPLASH_BG } from "@/src/components/BrandLoading";
 import { ThemeProvider, useTheme } from "@/src/design/ThemeContext";
 import { AuthProvider, useAuth } from "@/src/features/auth/AuthContext";
+import { PaymentNotificationHost } from "@/src/features/notifications/PaymentNotificationHost";
 import { isSmsConsentPending } from "@/src/features/sms/prefs";
 
 export { ErrorBoundary } from "expo-router";
@@ -169,6 +170,8 @@ function ThemedRoot() {
       <NavigationThemeProvider value={navigationTheme}>
         <AuthProvider>
           <StatusBar style={isDark ? "light" : "dark"} />
+          {/* Listen for Yes / Select even on the lock screen */}
+          <PaymentNotificationHost />
           <AuthGate>
             <Stack
               screenOptions={{

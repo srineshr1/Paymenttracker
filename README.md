@@ -41,6 +41,9 @@ Spentd requests SMS permission so it can read payment alerts. Apps outside the P
 - **On-device only** — expenses live in an encrypted vault on your phone; works offline
 - **Screenshot import** — OCR for UPI / bank payment screenshots
 - **SMS import** — parse bank and UPI alerts (with review before saving)
+- **Search & filters** — find expenses by merchant, amount, category, source, date
+- **Learned categories** — when you fix a category, Spentd remembers it for that merchant
+- **Payment notifications** — after auto-import, confirm the guessed category with **Yes** or open the app to pick another
 - **Budgets & cash** — monthly limits and cash / account balances
 - **Export** — share history as CSV or JSON
 - **Themes** — system, light, or dark
@@ -55,8 +58,6 @@ Spentd requests SMS permission so it can read payment alerts. Apps outside the P
 ---
 
 ## Run from source
-
-For people who want to try the code or contribute.
 
 **Need:** Node.js 20+, and an Android phone or emulator.
 
@@ -85,10 +86,12 @@ This builds Spentd as a real app on the device/emulator (SMS + ML Kit work).
 ### Project layout
 
 ```
-apps/mobile       Spentd (Expo / React Native) — local-first
-apps/api          Optional backend (not used by the app today)
-packages/shared   Shared types + payment/SMS parsers
+apps/mobile       Spentd (Expo / React Native) — local-first app
+packages/shared   Shared types + payment / SMS parsers
 ```
+
+There is **no backend in this repository**. The optional sync API lives separately at  
+`~/Projects/spentd-api` (not required for the app).
 
 More detail for contributors: [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -104,6 +107,9 @@ Only to read payment-related messages you choose to import. You can use screensh
 
 **Can I use it without installing the APK?**  
 You can run the JS app in Expo Go for a limited demo, but SMS import will not work. Prefer the [release APK](https://github.com/srineshr1/Paymenttracker/releases/latest).
+
+**Is there a cloud API?**  
+An experimental server used to live in this monorepo. It was moved to a separate project (`spentd-api`) and is not used by the released app.
 
 **I want to contribute**  
 See [CONTRIBUTING.md](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), and [Security](SECURITY.md). Changelog: [CHANGELOG.md](CHANGELOG.md).

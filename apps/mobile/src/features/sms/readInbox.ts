@@ -112,9 +112,9 @@ export async function requestSmsPermission(): Promise<boolean> {
 export type ListInboxOptions = {
   /** Max SMS rows to scan from the inbox (default 500, max 2000). */
   maxCount?: number;
-  /** Only messages on or after this time (ms). Default: 90 days ago. */
+  /** Only messages on or after this time (ms). Default: 150 days ago. */
   minDateMs?: number;
-  /** Lookback window in days when minDateMs is omitted (default 90). */
+  /** Lookback window in days when minDateMs is omitted (default 150 ≈ 5 months). */
   lookbackDays?: number;
 };
 
@@ -156,7 +156,7 @@ export async function listInboxSms(
   const maxCount = Math.min(2000, Math.max(1, options.maxCount ?? 500));
   let minDateMs = options.minDateMs;
   if (minDateMs == null) {
-    const days = options.lookbackDays ?? 90;
+    const days = options.lookbackDays ?? 150;
     minDateMs = Date.now() - days * 24 * 60 * 60 * 1000;
   }
 

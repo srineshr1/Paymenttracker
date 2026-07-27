@@ -1,4 +1,4 @@
-# Fake SMS fixtures (3 months)
+# Fake SMS fixtures (bank / UPI)
 
 Generate realistic Indian bank / UPI SMS, verify the parser offline, and inject them into an Android emulator inbox so Spentd’s **Import from SMS** flow can be tested end-to-end.
 
@@ -6,12 +6,20 @@ Generate realistic Indian bank / UPI SMS, verify the parser offline, and inject 
 
 ```bash
 # from repo root
-npm run sms:generate          # write scripts/sms-fixtures/sms-3months.json
+npm run sms:generate          # write scripts/sms-fixtures/sms-3months.json (90d)
 npm run sms:verify            # run shared parser offline (needs shared build)
-npm run sms:inject:clear      # wipe emulator SMS + inject full fixture
+npm run sms:inject            # inject into running emulator
 ```
 
-Or all offline in one go:
+**5 months ≈ 300 messages:**
+
+```bash
+node scripts/sms-fixtures/generate-sms-fixture.mjs --days 150 --target 300 --out scripts/sms-fixtures/sms-5months.json
+node scripts/sms-fixtures/verify-sms-parse.mjs --fixture scripts/sms-fixtures/sms-5months.json
+node scripts/sms-fixtures/inject-sms-emulator.mjs --fixture scripts/sms-fixtures/sms-5months.json
+```
+
+Or all offline (default 90d fixture):
 
 ```bash
 npm run sms:fixture
@@ -27,7 +35,9 @@ npm run sms:fixture
 | Edge cases | ATM withdraw, failed UPI |
 | Noise | OTPs, promos, personal chats (should be filtered out) |
 
-Default: **90 days**, deterministic seed `42`, ~hundreds of messages spanning ~3 months.
+Templates mirror real Indian DLT headers (`VM-HDFCBK`, `VK-SBIINB`, `VK-PhonePe`, …) with UPI refs, VPA, and available-balance footers.
+
+Default generate: **90 days**, seed `42`. Use `--days 150 --target 300` for ~5 months.
 
 ## Inject into emulator Messages
 
@@ -35,19 +45,24 @@ Default: **90 days**, deterministic seed `42`, ~hundreds of messages spanning ~3
 2. Run:
 
 ```bash
-npm run sms:inject:clear
-# or without wipe:
 npm run sms:inject
+# or 5-month file:
+node scripts/sms-fixtures/inject-sms-emulator.mjs --fixture scripts/sms-fixtures/sms-5months.json
 # smoke test first 30:
-node scripts/sms-fixtures/inject-sms-emulator.mjs --limit 30 --clear
+node scripts/sms-fixtures/inject-sms-emulator.mjs --limit 30
 ```
 
 3. Open the system **Messages** app — bank/UPI threads should appear.
-4. Open **Spentd** (native build with `READ_SMS`, not Expo Go alone for inbox scan) → Import SMS → grant permission.
+4. Open **Spentd** (native build with `READ_SMS`, not Expo Go) → Import SMS → grant permission.
 
-Injection writes the emulator telephony DB (`mmssms.db`) with historical `date` + `sub_id=1` (active SIM), then **clears Google Messages’ cache** so the UI re-indexes. Spentd reads the same Telephony inbox (`READ_SMS`, 90-day lookback in `readInbox.ts`).
+### How inject works
 
-If Messages still looks empty after inject: force-stop Messages and reopen, or run `npm run sms:inject:clear` again.
+| Emulator type | Method |
+|---------------|--------|
+| **AOSP / userdebug** (adb root works) | Writes `mmssms.db` with true historical `date` columns |
+| **Play Store / user** (no root) | `adb emu sms send` — inbox timestamps are “now”; Spentd still uses **dates inside SMS bodies** for `paidAt` |
+
+Spentd default inbox lookback is **150 days** (~5 months).
 
 ## Offline verify only
 
