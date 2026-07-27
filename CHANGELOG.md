@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Payment category notifications: after SMS auto-import, Spentd guesses the category and shows a local notification with **Yes** (confirm / learn) or **Select the right one** (opens the expense in edit mode)
 
+### Fixed
+- SBI “Dear UPI user … debited by 45.00” SMS (no ₹/Rs prefix) was skipped as “not a payment”; amount scoring also preferred the day-of-month over the real amount
+
 ### Changed
 - Removed optional cloud API from this monorepo (now a separate project: `spentd-api`)
 - Docs: README / CONTRIBUTING describe local-first layout only

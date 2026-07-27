@@ -112,20 +112,41 @@ export function extractBestAmount(text: string): string | null {
       score += 2.4;
     }
     if (/\b(amount|amt|txn|of\s+rs|for\s+rs)\b/.test(ctxBefore)) score += 1.0;
+    // "debited by 45.00" / "credited for 100" — verb + preposition right before
+    // the number (common when banks omit ₹/Rs).
+    if (
+      /\b(?:debited|credited|withdrawn|spent|paid|sent|received|deducted|charged|transferred)\s+(?:by|for|of|with)\s*$/i.test(
+        ctxBefore,
+      )
+    ) {
+      score += 1.8;
+    }
 
     // Distractors ----------------------------------------------------------
     if (anyMarkerNear(ctxBefore, BALANCE_MARKERS)) score -= 4.0;
     if (/\bbal(?:ance)?\b/.test(ctxAfter)) score -= 2.0;
+    // Ref/UTR/id noise — only for bare integers. Do NOT treat "a/c XX1234"
+    // before a money amount as a distractor (bank SMS almost always names the
+    // account, then "debited by 45.00"). Decimals / grouping already mark money.
     if (
       anyMarkerNear(ctxBefore, REFERENCE_MARKERS) &&
       !hasCurrency &&
-      !isGrouped
+      !isGrouped &&
+      !hasDecimals
     ) {
       score -= 3.5;
     }
     // Glued to letters / @ / masks (T24071.., xx1234, a/cX1234, ref no.)
     if (/[a-z@*]/i.test(charBefore)) score -= 2.5;
     if (/[a-z@]/i.test(charAfter)) score -= 1.2;
+    // Day glued to month name: "27Jul26", "17Jul", "05-Jan"
+    if (
+      /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(
+        text.slice(end, end + 3),
+      )
+    ) {
+      score -= 3.5;
+    }
     // OTP / verification codes are never amounts.
     if (
       /\b(?:otp|one[\s-]?time|verification|passcode|password|code)\b/.test(
@@ -206,7 +227,9 @@ export function extractRef(text: string): string | null {
   const patterns = [
     /(?:upi\s*(?:ref(?:erence)?(?:\s*no\.?)?|txn(?:\s*id)?|transaction\s*id)|utr|rrn|ref(?:erence)?\s*(?:no\.?|num(?:ber)?)?)\s*[:-]?\s*([A-Z0-9]{8,40})/i,
     // "by Mob Bk ref no 289917195718" / "ref no. 123…"
+    // "ref no 2899…", "Refno 0640…", "Ref No: 123…"
     /\bref\s*(?:no\.?|num(?:ber)?)?\s*[:-]?\s*([0-9]{10,22})\b/i,
+    /\brefno\s*[:-]?\s*([0-9]{10,22})\b/i,
     /\b(T\d{10,}[A-Z0-9]*)\b/,
     /\b([0-9]{12})\b/,
   ];
@@ -300,7 +323,7 @@ const MERCHANT_PATTERNS: {
     score: 3.0,
   },
   {
-    re: /(?:sent\s+to|transfer(?:red)?\s+to)\s+([A-Za-z0-9][A-Za-z0-9 .&'@()-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s+vpa|\s+from\b|\n|\s*$)/i,
+    re: /(?:sent\s+to|transfer(?:red)?\s+to|trf\s+to|xfer\s+to)\s+([A-Za-z0-9][A-Za-z0-9 .&'@()-]{1,60}?)(?:\s*[.;,]|\s+upi|\s+ref|\s+on\b|\s+via|\s+vpa|\s+from\b|\n|\s*$)/i,
     score: 2.8,
   },
   {

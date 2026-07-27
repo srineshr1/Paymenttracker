@@ -32,9 +32,19 @@ const UNION1 =
 const UNION2 =
   "Union Bank of India A/c *0008 Debited Rs:2.00 on 21-07-2026 21:42:34 by Mob Bk ref no 620230268587, Fvg: AWS Indi Avl Bal Rs:712.00. Not you?Call 18002333/SMS BLOCK 0008 to 8879365472";
 
+// SBI "Dear UPI user" template — amount has no ₹/Rs prefix.
+const SBI_DEAR_UPI =
+  "Dear UPI user A/C X5714 debited by 45.00 on date 27Jul26 trf to Jarupulla Pakira Refno 064099935518 If not u? call-1800111109 for other services-18001234-SBI";
+
 describe("isPaymentSms", () => {
   it("accepts bank debit SMS", () => {
     assert.equal(isPaymentSms(HDFC, "VM-HDFCBK"), true);
+  });
+
+  it("accepts SBI Dear UPI user SMS without currency symbol", () => {
+    assert.equal(isPaymentSms(SBI_DEAR_UPI, "VK-SBIUPI"), true);
+    // Even with a non-bank-looking emulator sender
+    assert.equal(isPaymentSms(SBI_DEAR_UPI, "(650) 555-1212"), true);
   });
 
   it("accepts card spend SMS", () => {
@@ -100,6 +110,21 @@ describe("parseSmsMessage", () => {
     assert.match(r.merchant ?? "", /Uber/i);
     assert.ok(r.upiRef);
     assert.equal(r.availableBalance, "10000.00");
+  });
+
+  it("parses SBI Dear UPI user (no ₹/Rs, bare amount, trf to, Refno)", () => {
+    const r = parseSmsMessage({
+      body: SBI_DEAR_UPI,
+      address: "VK-SBIUPI",
+      dateMs: Date.UTC(2026, 6, 27, 10, 13, 0),
+    });
+    assert.equal(r.amount, "45.00");
+    assert.equal(r.direction, "debit");
+    assert.match(r.merchant ?? "", /Jarupulla/i);
+    assert.equal(r.upiRef, "064099935518");
+    assert.ok(r.paidAt?.startsWith("2026-07-27"));
+    assert.ok((r.confidence ?? 0) >= 0.5);
+    assert.equal(isJunkForAutoImport(r), false);
   });
 
   it("extracts available balance from bank SMS", () => {

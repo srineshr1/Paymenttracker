@@ -8,6 +8,12 @@ import {
 } from "./interpret";
 
 describe("extractBestAmount — picks txn amount over distractors", () => {
+  it("picks bare amount after debited by (no currency)", () => {
+    const t =
+      "Dear UPI user A/C X5714 debited by 45.00 on date 27Jul26 trf to Jarupulla Pakira Refno 064099935518";
+    assert.equal(extractBestAmount(t), "45.00");
+  });
+
   it("prefers debited amount over available balance", () => {
     const t =
       "Rs.450.00 debited from A/c **1234 on 17-07-26 to VPA swiggy@ybl. Avl Bal Rs 10,000.00";

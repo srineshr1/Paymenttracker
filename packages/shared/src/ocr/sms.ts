@@ -24,6 +24,13 @@ const AMOUNT_TOKEN_RE = new RegExp(
   "i",
 );
 
+/**
+ * Some banks omit currency: "debited by 45.00", "credited for 1,250.50".
+ * Require a payment verb + optional preposition + money-like number.
+ */
+const BARE_VERB_AMOUNT_RE =
+  /\b(?:debited|credited|withdrawn|spent|paid|sent|received|deducted|charged|transferred|purchase)\s+(?:by|for|of|with|to|from|amt|amount)?\s*(?:₹|rs\.?|inr)?\s*:?\s*[0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|\b(?:debited|credited|withdrawn|spent|paid|sent|received|deducted|charged|transferred|purchase)\s+(?:by|for|of|with|to|from|amt|amount)?\s*(?:₹|rs\.?|inr)?\s*:?\s*[0-9]+(?:\.[0-9]{1,2})?/i;
+
 const PAYMENT_VERB_ALT = verbAlternation(PAYMENT_VERBS);
 const RAIL_ALT = verbAlternation(RAIL_TOKENS);
 const REF_RE = /\b(?:ref(?:erence)?|utr|rrn|txn|transaction\s*id|upi\s*ref)\b/i;
@@ -46,7 +53,8 @@ export function isPaymentSms(body: string, address?: string | null): boolean {
   const text = (body ?? "").trim();
   if (text.length < 12 || text.length > 2000) return false;
 
-  const hasAmount = AMOUNT_TOKEN_RE.test(text);
+  const hasAmount =
+    AMOUNT_TOKEN_RE.test(text) || BARE_VERB_AMOUNT_RE.test(text);
   if (!hasAmount) return false;
 
   const hasVerb = PAYMENT_VERB_ALT.test(text);
