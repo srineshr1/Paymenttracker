@@ -4,7 +4,7 @@
  * When the user corrects an expense's category we remember it for that
  * merchant, so later SMS / screenshot / manual entries for the same merchant
  * are categorized the way the user expects. Learned mappings win over the
- * rule-based heuristics in `features/sms/categorize`; rules stay as fallback.
+ * server/on-device engine in `features/sms/categorize`; remote + rules stay as fallback.
  *
  * Privacy: the merchant name is stored as a user-salted SHA-256 hash for
  * lookups plus an AES-sealed copy for display. No plaintext merchant on disk.

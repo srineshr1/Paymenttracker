@@ -78,8 +78,25 @@ export const listExpensesQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+/** Body for POST /categories/infer — merchant + optional SMS/OCR context. */
+export const categorizeBodySchema = z.object({
+  merchant: z.string().trim().max(200).optional().default(""),
+  direction: directionSchema.optional().default("debit"),
+  rawText: z.string().trim().max(20000).nullable().optional(),
+  notes: z.string().trim().max(1000).nullable().optional(),
+  amount: z.string().trim().max(32).nullable().optional(),
+  /** Client correlation id for batch results. */
+  id: z.string().trim().max(64).optional(),
+});
+
+export const categorizeBatchBodySchema = z.object({
+  items: z.array(categorizeBodySchema).min(1).max(200),
+});
+
 export type AuthBody = z.infer<typeof authBodySchema>;
 export type ChangePasscodeInput = z.infer<typeof changePasscodeSchema>;
 export type UpdateUsernameInput = z.infer<typeof updateUsernameSchema>;
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
+export type CategorizeBody = z.infer<typeof categorizeBodySchema>;
+export type CategorizeBatchBody = z.infer<typeof categorizeBatchBodySchema>;

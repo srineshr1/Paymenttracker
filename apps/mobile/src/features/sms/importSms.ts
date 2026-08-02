@@ -16,7 +16,7 @@ import {
   backfillMissingCategories,
   createExpensesBatch,
 } from "@/src/data/expenses";
-import { resolveCategoryId } from "./categorize";
+import { resolveCategoryIdsBatch } from "./categorize";
 import { dayKey, resolveMerchant, safePaidAtIso } from "./quality";
 import { type ListInboxOptions, listInboxSms } from "./readInbox";
 
@@ -89,14 +89,26 @@ export async function scanSmsInboxForImport(
 }
 
 async function toBatchPayload(rows: ParsedExpense[]) {
-  const out: Record<string, unknown>[] = [];
-  for (const r of rows) {
+  const merchants = rows.map((r) => {
     const merchant = resolveMerchant(r);
     const direction = r.direction ?? "debit";
-    const categoryId = await resolveCategoryId(merchant, direction, r.rawText);
-    out.push({
+    return {
       merchant,
+      direction: direction as "debit" | "credit",
+      rawText: r.rawText,
       amount: String(r.amount).replace(/,/g, ""),
+    };
+  });
+
+  // One round-trip to spentd-api when reachable; on-device rules otherwise.
+  const categoryIds = await resolveCategoryIdsBatch(merchants);
+
+  return rows.map((r, i) => {
+    const merchant = merchants[i].merchant;
+    const direction = merchants[i].direction;
+    return {
+      merchant,
+      amount: merchants[i].amount,
       direction,
       paidAt: safePaidAtIso(r.paidAt),
       source:
@@ -109,10 +121,9 @@ async function toBatchPayload(rows: ParsedExpense[]) {
       upiRef: r.upiRef ?? null,
       notes: null,
       rawOcrText: r.rawText || null,
-      categoryId,
-    });
-  }
-  return out;
+      categoryId: categoryIds[i],
+    };
+  });
 }
 
 function newestWithBalance(rows: ParsedExpense[]): ParsedExpense | null {

@@ -1,3 +1,4 @@
+export * from "./categorize.js";
 export * from "./merchant.js";
 export * from "./ocr/parse.js";
 export * from "./schemas.js";

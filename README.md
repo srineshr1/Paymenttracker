@@ -42,7 +42,7 @@ Spentd requests SMS permission so it can read payment alerts. Apps outside the P
 - **Screenshot import** — OCR for UPI / bank payment screenshots
 - **SMS import** — parse bank and UPI alerts (with review before saving)
 - **Search & filters** — find expenses by merchant, amount, category, source, date
-- **Learned categories** — when you fix a category, Spentd remembers it for that merchant
+- **Smart categories** — optional server inference (`spentd-api`) plus on-device rules; when you fix a category, Spentd remembers it for that merchant
 - **Payment notifications** — after auto-import, confirm the guessed category with **Yes** or open the app to pick another
 - **Budgets & cash** — monthly limits and cash / account balances
 - **Export** — share history as CSV or JSON
@@ -109,7 +109,7 @@ Only to read payment-related messages you choose to import. You can use screensh
 You can run the JS app in Expo Go for a limited demo, but SMS import will not work. Prefer the [release APK](https://github.com/srineshr1/Paymenttracker/releases/latest).
 
 **Is there a cloud API?**  
-An experimental server used to live in this monorepo. It was moved to a separate project (`spentd-api`) and is not used by the released app.
+An optional server lives at `~/Projects/spentd-api`. The app can call `POST /categories/infer` for category suggestions when `EXPO_PUBLIC_API_URL` is set; expenses and passcodes stay on-device. Without the URL, categorization uses the same rules offline.
 
 **I want to contribute**  
 See [CONTRIBUTING.md](CONTRIBUTING.md), [Code of Conduct](CODE_OF_CONDUCT.md), and [Security](SECURITY.md). Changelog: [CHANGELOG.md](CHANGELOG.md).

@@ -663,23 +663,49 @@ export async function backfillMissingCategories(): Promise<number> {
   if (!rows.length) return 0;
 
   // Lazy import avoids circular deps (categorize → listCategories → here)
-  const { resolveCategoryId } = await import("@/src/features/sms/categorize");
+  const { resolveCategoryIdsBatch } = await import(
+    "@/src/features/sms/categorize"
+  );
 
-  let updated = 0;
-  const now = new Date().toISOString();
+  const decrypted: Array<{
+    id: string;
+    merchant: string;
+    direction: "debit" | "credit";
+    rawText: string | null;
+  }> = [];
+
   for (const row of rows) {
     const merchant = (await openString(row.merchant_enc)) ?? "";
     const raw = await openString(row.raw_ocr_enc);
     const direction =
       row.direction === "credit" ? ("credit" as const) : ("debit" as const);
-    const categoryId = await resolveCategoryId(merchant, direction, raw);
+    decrypted.push({
+      id: row.id,
+      merchant,
+      direction,
+      rawText: raw,
+    });
+  }
+
+  const categoryIds = await resolveCategoryIdsBatch(
+    decrypted.map((d) => ({
+      merchant: d.merchant,
+      direction: d.direction,
+      rawText: d.rawText,
+    })),
+  );
+
+  let updated = 0;
+  const now = new Date().toISOString();
+  for (let i = 0; i < decrypted.length; i++) {
+    const categoryId = categoryIds[i];
     if (!categoryId) continue;
     await db.runAsync(
       `UPDATE expenses SET category_id = ?, updated_at = ?
        WHERE id = ? AND user_id = ? AND category_id IS NULL`,
       categoryId,
       now,
-      row.id,
+      decrypted[i].id,
       userId,
     );
     updated += 1;
