@@ -1,16 +1,23 @@
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiError } from "@/src/api/client";
 import { AppHeader } from "@/src/components/AppHeader";
 import { PinPad } from "@/src/components/PinPad";
-import { Button, Card, Screen, Text } from "@/src/components/ui";
+import { Screen, Text } from "@/src/components/ui";
 import { useTheme } from "@/src/design/ThemeContext";
-import { spacing } from "@/src/design/tokens";
+import { spacing, typography } from "@/src/design/tokens";
 import { useAuth } from "@/src/features/auth/AuthContext";
 
 type Step = "current" | "new" | "confirm";
+
+const STEPS: Step[] = ["current", "new", "confirm"];
 
 export default function ChangePasscodeScreen() {
   const insets = useSafeAreaInsets();
@@ -80,8 +87,13 @@ export default function ChangePasscodeScreen() {
   }, [confirm, next, current, step, changePasscode, router]);
 
   const value = step === "current" ? current : step === "new" ? next : confirm;
-  const onChange =
-    step === "current" ? setCurrent : step === "new" ? setNext : setConfirm;
+
+  const onChange = (v: string) => {
+    if (error) setError(null);
+    if (step === "current") setCurrent(v);
+    else if (step === "new") setNext(v);
+    else setConfirm(v);
+  };
 
   const label =
     step === "current"
@@ -92,10 +104,12 @@ export default function ChangePasscodeScreen() {
 
   const hint =
     step === "current"
-      ? "Enter the 6 digits you use to sign in."
+      ? "Enter the 6 digits you use to unlock."
       : step === "new"
         ? "Choose a new 6-digit passcode."
         : "Re-enter the same 6 digits.";
+
+  const stepIndex = STEPS.indexOf(step);
 
   return (
     <Screen style={{ paddingTop: insets.top }}>
@@ -104,26 +118,83 @@ export default function ChangePasscodeScreen() {
         subtitle="Unlocks encrypted data on this device"
         backTo="/(app)/settings"
       />
-      <ScrollView
-        contentContainerStyle={{
-          padding: spacing.xl,
-          paddingBottom: insets.bottom + 40,
-          gap: spacing.xl,
-        }}
-        keyboardShouldPersistTaps="handled"
+
+      <View
+        style={[
+          styles.root,
+          { paddingBottom: insets.bottom + spacing.lg },
+        ]}
       >
-        <Card variant="soft">
-          <Text variant="label">{label}</Text>
-          <Text muted style={{ marginTop: 4, marginBottom: spacing.lg }}>
+        <View style={styles.top}>
+          <View style={styles.stepRow}>
+            {STEPS.map((s, i) => {
+              const active = i === stepIndex;
+              const done = i < stepIndex;
+              return (
+                <View
+                  key={s}
+                  style={[
+                    styles.stepDot,
+                    {
+                      backgroundColor:
+                        active || done ? colors.accent : "transparent",
+                      borderColor:
+                        active || done ? colors.accent : colors.borderStrong,
+                      opacity: done && !active ? 0.55 : 1,
+                    },
+                  ]}
+                />
+              );
+            })}
+          </View>
+
+          <Text
+            style={{
+              marginTop: spacing.lg,
+              fontFamily: typography.fontSansSemi,
+              fontSize: 18,
+              color: colors.text,
+              textAlign: "center",
+            }}
+          >
+            {label}
+          </Text>
+          <Text
+            muted
+            style={{
+              marginTop: spacing.sm,
+              textAlign: "center",
+              fontSize: 14,
+              lineHeight: 20,
+              maxWidth: 280,
+            }}
+          >
             {hint}
           </Text>
+        </View>
+
+        <View style={styles.spacer} />
+
+        <View style={styles.padBlock}>
           <PinPad value={value} onChange={onChange} disabled={loading} />
+
+          <View style={styles.status}>
+            {loading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : error ? (
+              <Text
+                color={colors.danger}
+                style={{ textAlign: "center", fontSize: 14 }}
+              >
+                {error}
+              </Text>
+            ) : (
+              <View style={styles.statusPlaceholder} />
+            )}
+          </View>
+
           {step !== "current" ? (
-            <Button
-              title="Back"
-              variant="ghost"
-              style={{ marginTop: spacing.lg }}
-              disabled={loading}
+            <Pressable
               onPress={() => {
                 setError(null);
                 if (step === "confirm") {
@@ -136,26 +207,72 @@ export default function ChangePasscodeScreen() {
                   setStep("current");
                 }
               }}
-            />
-          ) : null}
-        </Card>
-
-        {error ? (
-          <Text color={colors.danger} style={{ textAlign: "center" }}>
-            {error}
-          </Text>
-        ) : null}
-
-        {loading ? (
-          <Button title="Updating…" loading style={styles.loading} />
-        ) : null}
-      </ScrollView>
+              disabled={loading}
+              hitSlop={12}
+              style={styles.backLink}
+            >
+              <Text
+                style={{
+                  fontFamily: typography.fontSansMedium,
+                  fontSize: 14,
+                  color: colors.textMuted,
+                }}
+              >
+                Back
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={styles.backLinkPlaceholder} />
+          )}
+        </View>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: {
-    marginTop: spacing.sm,
+  root: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  top: {
+    alignItems: "center",
+    paddingTop: spacing.xl,
+  },
+  stepRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+  },
+  spacer: {
+    flex: 1,
+    minHeight: spacing.xl,
+  },
+  padBlock: {
+    alignItems: "center",
+    paddingBottom: spacing.sm,
+  },
+  status: {
+    minHeight: 24,
+    marginTop: spacing.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusPlaceholder: {
+    height: 18,
+  },
+  backLink: {
+    alignSelf: "center",
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  backLinkPlaceholder: {
+    height: 18 + spacing.lg + spacing.sm,
   },
 });
