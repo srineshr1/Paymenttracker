@@ -1,8 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useCallback } from "react";
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { runOnJS } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 import { Text } from "@/src/components/ui";
 import { formatINRCompact } from "@/src/design/format";
 import { useTheme } from "@/src/design/ThemeContext";
@@ -28,9 +37,206 @@ type Props = {
   canGoNext?: boolean;
 };
 
+type DayColProps = {
+  day: WeekDayBar;
+  max: number;
+  chartH: number;
+  selected: boolean;
+  onSelect: (dayIndex: number) => void;
+  isDark: boolean;
+  accent: string;
+  accentStrong: string;
+  textMuted: string;
+  trackBg: string;
+};
+
+function DayCol({
+  day,
+  max,
+  chartH,
+  selected,
+  onSelect,
+  isDark,
+  accent,
+  accentStrong,
+  textMuted,
+  trackBg,
+}: DayColProps) {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: scale.value }],
+  }));
+
+  const hasSpend = !day.empty && day.amount > 0;
+  const isPeak = hasSpend && day.amount === max;
+  const ratio = hasSpend ? day.amount / max : 0;
+  const barH = hasSpend
+    ? Math.max(10, ratio * (chartH - 36))
+    : day.empty
+      ? 0
+      : 4;
+
+  // Soft wash → richer accent by spend intensity
+  const fillTop = day.active || isPeak || selected
+    ? accent
+    : isDark
+      ? `rgba(201,164,108,${0.35 + ratio * 0.45})`
+      : `rgba(154,107,47,${0.28 + ratio * 0.5})`;
+  const fillBottom = day.active || isPeak || selected
+    ? isDark
+      ? "rgba(201,164,108,0.55)"
+      : "rgba(154,107,47,0.55)"
+    : isDark
+      ? `rgba(201,164,108,${0.18 + ratio * 0.25})`
+      : `rgba(154,107,47,${0.14 + ratio * 0.28})`;
+
+  const onPressIn = () => {
+    scale.value = withSpring(0.96, { damping: 16, stiffness: 320 });
+  };
+  const onPressOut = () => {
+    scale.value = withSpring(1, { damping: 14, stiffness: 280 });
+  };
+  const onPress = () => {
+    if (day.empty) return;
+    void Haptics.selectionAsync();
+    onSelect(day.dayIndex);
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      disabled={day.empty}
+      accessibilityRole="button"
+      accessibilityLabel={`${DAY_LABELS[day.dayIndex]}${
+        hasSpend ? `, ${formatINRCompact(day.amount)}` : day.empty ? ", upcoming" : ", no spend"
+      }`}
+      accessibilityState={{ selected }}
+      style={styles.col}
+    >
+      <View style={[styles.amountSlot, { height: 22 }]}>
+        {selected && !day.empty ? (
+          <Animated.View
+            entering={FadeIn.duration(140)}
+            exiting={FadeOut.duration(100)}
+            style={[
+              styles.amountPill,
+              {
+                backgroundColor: isDark
+                  ? "rgba(201,164,108,0.18)"
+                  : "rgba(154,107,47,0.12)",
+                borderColor: isDark
+                  ? "rgba(201,164,108,0.28)"
+                  : "rgba(154,107,47,0.2)",
+              },
+            ]}
+          >
+            <Text
+              style={{
+                fontFamily: typography.fontMonoMed,
+                fontSize: 10,
+                color: accentStrong,
+                letterSpacing: -0.2,
+              }}
+              numberOfLines={1}
+            >
+              {hasSpend ? formatINRCompact(day.amount) : "₹0"}
+            </Text>
+          </Animated.View>
+        ) : null}
+      </View>
+
+      <View style={[styles.barTrack, { height: chartH - 22 }]}>
+        {/* Soft rail behind every bar */}
+        <View
+          style={[
+            styles.rail,
+            {
+              backgroundColor: trackBg,
+              height: "100%",
+              opacity: day.empty ? 0.35 : 1,
+            },
+          ]}
+        />
+
+        {day.empty ? (
+          <View style={styles.emptyDotWrap}>
+            <View
+              style={[
+                styles.emptyDot,
+                {
+                  borderColor: isDark
+                    ? "rgba(201,164,108,0.28)"
+                    : "rgba(154,107,47,0.22)",
+                  backgroundColor: isDark
+                    ? "rgba(201,164,108,0.06)"
+                    : "rgba(154,107,47,0.05)",
+                },
+              ]}
+            />
+          </View>
+        ) : (
+          <Animated.View
+            style={[
+              styles.barShell,
+              {
+                height: barH,
+                // Selected ring
+                shadowColor: accent,
+                shadowOpacity: selected ? 0.35 : 0,
+                shadowRadius: selected ? 6 : 0,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: selected ? 3 : 0,
+              },
+              animStyle,
+            ]}
+          >
+            <LinearGradient
+              colors={[fillTop, fillBottom]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={[
+                styles.barFill,
+                selected && {
+                  borderWidth: StyleSheet.hairlineWidth * 2,
+                  borderColor: isDark
+                    ? "rgba(224,192,138,0.55)"
+                    : "rgba(122,82,32,0.35)",
+                },
+              ]}
+            />
+          </Animated.View>
+        )}
+      </View>
+
+      <Text
+        style={{
+          marginTop: spacing.sm,
+          textAlign: "center",
+          fontFamily:
+            day.active || selected
+              ? typography.fontSansSemi
+              : typography.fontSans,
+          fontSize: 11,
+          color:
+            day.active || selected
+              ? accentStrong
+              : day.empty
+                ? textMuted
+                : textMuted,
+          opacity: day.empty ? 0.55 : 1,
+        }}
+      >
+        {DAY_LABELS[day.dayIndex]}
+      </Text>
+    </Pressable>
+  );
+}
+
 /**
- * Simple vertical bar chart for daily spend.
- * No library chart animations — week changes update instantly.
+ * Vertical bar chart for daily spend.
+ * Tap a day to reveal its amount; swipe to change week.
  */
 export function WeekBars({
   days,
@@ -41,10 +247,13 @@ export function WeekBars({
 }: Props) {
   const { colors, isDark } = useTheme();
   const max = Math.max(1, ...days.map((d) => (d.empty ? 0 : d.amount)));
-  const chartH = 120;
-  // Theme-tinted bars: soft wash for low spend → full accent for peak / today
-  const barMuted = isDark ? "rgba(201,164,108,0.28)" : "rgba(154,107,47,0.22)";
-  const barMid = isDark ? "rgba(201,164,108,0.55)" : "rgba(154,107,47,0.48)";
+  const chartH = 128;
+  const [selected, setSelected] = useState<number | null>(null);
+
+  // Clear selection when the week data set changes
+  useEffect(() => {
+    setSelected(null);
+  }, [days]);
 
   const goPrev = useCallback(() => {
     if (canGoPrev) onPrevWeek?.();
@@ -54,6 +263,10 @@ export function WeekBars({
     if (canGoNext) onNextWeek?.();
   }, [canGoNext, onNextWeek]);
 
+  const onSelect = useCallback((dayIndex: number) => {
+    setSelected((prev) => (prev === dayIndex ? null : dayIndex));
+  }, []);
+
   const pan = Gesture.Pan()
     .activeOffsetX([-28, 28])
     .failOffsetY([-18, 18])
@@ -62,6 +275,8 @@ export function WeekBars({
       if (e.translationX > 52) runOnJS(goPrev)();
       else if (e.translationX < -52) runOnJS(goNext)();
     });
+
+  const trackBg = isDark ? "rgba(201,164,108,0.07)" : "rgba(154,107,47,0.06)";
 
   return (
     <View style={styles.wrap}>
@@ -82,7 +297,7 @@ export function WeekBars({
           <Ionicons name="chevron-back" size={16} color={colors.text} />
         </Pressable>
         <Text muted style={styles.hint}>
-          Swipe to change week
+          Tap a day · swipe weeks
         </Text>
         <Pressable
           onPress={goNext}
@@ -102,91 +317,22 @@ export function WeekBars({
       </View>
 
       <GestureDetector gesture={pan}>
-        <View>
-          <View style={[styles.chart, { height: chartH }]}>
-            {days.map((d) => {
-              const h =
-                d.empty || d.amount <= 0
-                  ? 0
-                  : Math.max(8, (d.amount / max) * (chartH - 28));
-              // Label peak day + today when it has spend
-              const isPeak = !d.empty && d.amount > 0 && d.amount === max;
-              const showLabel = d.amount > 0 && (d.active || isPeak);
-              const ratio = d.amount > 0 ? d.amount / max : 0;
-              let barColor = barMuted;
-              if (d.amount <= 0) {
-                barColor = isDark
-                  ? "rgba(201,164,108,0.12)"
-                  : "rgba(154,107,47,0.1)";
-              } else if (d.active || isPeak) {
-                barColor = colors.accent;
-              } else if (ratio >= 0.45) {
-                barColor = barMid;
-              }
-              return (
-                <View key={d.dayIndex} style={styles.col}>
-                  {showLabel ? (
-                    <Text
-                      style={{
-                        fontFamily: typography.fontSansMedium,
-                        fontSize: 10,
-                        color: colors.accentStrong,
-                        marginBottom: 4,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {formatINRCompact(d.amount)}
-                    </Text>
-                  ) : (
-                    <View style={{ height: 16 }} />
-                  )}
-                  <View style={styles.barTrack}>
-                    {d.empty ? (
-                      <View
-                        style={[
-                          styles.barEmpty,
-                          {
-                            borderColor: isDark
-                              ? "rgba(201,164,108,0.35)"
-                              : "rgba(154,107,47,0.3)",
-                            height: Math.max(36, chartH * 0.35),
-                          },
-                        ]}
-                      />
-                    ) : (
-                      <View
-                        style={[
-                          styles.bar,
-                          {
-                            height: h || 4,
-                            backgroundColor: barColor,
-                          },
-                        ]}
-                      />
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-          <View style={styles.labels}>
-            {days.map((d) => (
-              <Text
-                key={d.dayIndex}
-                style={{
-                  flex: 1,
-                  textAlign: "center",
-                  fontFamily: d.active
-                    ? typography.fontSansSemi
-                    : typography.fontSans,
-                  fontSize: 11,
-                  color: d.active ? colors.accentStrong : colors.textMuted,
-                }}
-              >
-                {DAY_LABELS[d.dayIndex]}
-              </Text>
-            ))}
-          </View>
+        <View style={styles.chartRow}>
+          {days.map((d) => (
+            <DayCol
+              key={d.dayIndex}
+              day={d}
+              max={max}
+              chartH={chartH}
+              selected={selected === d.dayIndex}
+              onSelect={onSelect}
+              isDark={isDark}
+              accent={colors.accent}
+              accentStrong={colors.accentStrong}
+              textMuted={colors.textMuted}
+              trackBg={trackBg}
+            />
+          ))}
         </View>
       </GestureDetector>
     </View>
@@ -213,40 +359,62 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: typography.fontSans,
   },
-  chart: {
+  chartRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 6,
+    gap: 8,
+    minHeight: 150,
   },
   col: {
     flex: 1,
     alignItems: "center",
+  },
+  amountSlot: {
+    width: "100%",
+    alignItems: "center",
     justifyContent: "flex-end",
-    height: "100%",
+    marginBottom: 4,
+  },
+  amountPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    maxWidth: "100%",
   },
   barTrack: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    position: "relative",
+  },
+  rail: {
+    position: "absolute",
+    bottom: 0,
+    width: 10,
+    borderRadius: radius.pill,
+  },
+  barShell: {
+    width: 10,
+    borderRadius: radius.pill,
+    overflow: "hidden",
+    // scale from bottom
+    transformOrigin: "bottom",
+  },
+  barFill: {
     flex: 1,
     width: "100%",
+    borderRadius: radius.pill,
+  },
+  emptyDotWrap: {
+    flex: 1,
     justifyContent: "flex-end",
-    alignItems: "center",
+    paddingBottom: 2,
   },
-  bar: {
-    width: "72%",
-    maxWidth: 28,
-    borderRadius: radius.xs,
-    minHeight: 4,
-  },
-  barEmpty: {
-    width: "72%",
-    maxWidth: 28,
-    borderRadius: radius.xs,
+  emptyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: radius.pill,
     borderWidth: 1.5,
-    borderStyle: "dashed",
-    backgroundColor: "transparent",
-  },
-  labels: {
-    flexDirection: "row",
-    gap: 6,
-    marginTop: spacing.sm,
   },
 });
