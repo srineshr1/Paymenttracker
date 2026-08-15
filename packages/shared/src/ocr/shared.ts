@@ -1,5 +1,51 @@
 import type { ParsedDirection, ParsedSource } from "./types.js";
 
+/**
+ * Fold Indian bank SMS quirks into shapes the interpreter already knows:
+ * currency-after-amount, compact Dr/Cr, Hindi verbs/currency, glued
+ * "Avl BalRs", "Debited(TRF)".
+ */
+export function normalizeSmsText(text: string): string {
+  let s = (text ?? "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u200b\u200c\u200d\ufeff]/g, "");
+
+  // Hindi / long-form currency → Rs
+  s = s.replace(/रुपये|रुपए|रू\.?|रु\.?/g, "Rs ");
+  s = s.replace(/\b(?:rupees?|re\.?)\b/gi, "Rs ");
+
+  // Amount then currency: "500.00 INR", "450.00 Rs.", "1,250.50/-"
+  s = s.replace(
+    /(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(?:INR|Rs\.?|₹)\b/gi,
+    "Rs $1",
+  );
+  s = s.replace(
+    /(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*\/-/g,
+    "Rs $1",
+  );
+
+  // Glued "Avl BalRs875" / "BalRs 875.93"
+  s = s.replace(
+    /\b(avl|avail|available|bal(?:ance)?|limit)\s*(rs\.?|inr|₹)/gi,
+    "$1 $2",
+  );
+
+  // "Debited(TRF)" / "Credited(IMPS)"
+  s = s.replace(/\b(debited|credited|withdrawn)\s*\([^)]{0,16}\)/gi, "$1 ");
+
+  // Compact Dr/Cr immediately before money (not "Dr. Reddy")
+  s = s.replace(/\bDr\.?\s*(?=(?:₹|rs\.?|inr)\b|\d)/gi, "debited ");
+  s = s.replace(/\bCr\.?\s*(?=(?:₹|rs\.?|inr)\b|\d)/gi, "credited ");
+
+  // Hindi verbs
+  s = s.replace(/डेबिट(?:\s*किए|\s*किये|\s*हुए|\s*हुआ)?/g, "debited");
+  s = s.replace(/क्रेडिट(?:\s*किए|\s*किये|\s*हुए|\s*हुआ)?/g, "credited");
+  s = s.replace(/काट[ाे]?\s*ग[एयाेें]+/g, "debited");
+  s = s.replace(/जमा(?:\s*किए|\s*किये|\s*हुए|\s*हुआ)?/g, "credited");
+
+  return s.replace(/[ \t]+/g, " ").trim();
+}
+
 /** Fix common OCR glitches on Indian UPI screenshots */
 export function normalizeOcrText(text: string): string {
   return (
@@ -196,11 +242,17 @@ export function extractUpiRef(text: string): string | null {
 
 export function extractDirection(text: string): ParsedDirection {
   const t = text.toLowerCase();
-  if (
-    /\b(received|credited|credit|you received|money received|received from)\b/.test(
+  // "credit card" is an instrument, not a credit txn.
+  const looksCredit =
+    /\b(received|credited|you received|money received|received from)\b/.test(
       t,
-    ) &&
-    !/\b(paid to|sent to|you paid|debited)\b/.test(t)
+    ) ||
+    (/\bcredit\b/.test(t) && !/\bcredit\s*cards?\b/.test(t));
+  if (
+    looksCredit &&
+    !/\b(paid to|sent to|you paid|debited|spent|withdrawn|used for|using your)\b/.test(
+      t,
+    )
   ) {
     return "credit";
   }
@@ -216,7 +268,7 @@ export function extractStatus(
   }
   if (/\b(pending|processing|in progress)\b/.test(t)) return "pending";
   if (
-    /\b(success|successful|completed|paid successfully|payment successful|transaction successful|debited from)\b/.test(
+    /\b(success|successful|completed|paid successfully|payment successful|transaction successful|debited(?:\s+from)?|credited|spent|withdrawn|used\s+for|using\s+your)\b/.test(
       t,
     )
   ) {
