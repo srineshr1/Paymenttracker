@@ -2,11 +2,10 @@ import {
   BALANCE_MARKERS,
   detectAppOrBank,
   isBankName,
-  OTP_RE,
   PAYMENT_VERBS,
-  PROMO_RE,
   RAIL_TOKENS,
   REFERENCE_MARKERS,
+  TXN_PHRASE_RE,
   verbAlternation,
 } from "./lexicon.js";
 import {
@@ -15,6 +14,7 @@ import {
   extractPaidAt,
   extractStatus,
   normalizeOcrText,
+  normalizeSmsText,
   parseAmountToken,
   scoreConfidence,
 } from "./shared.js";
@@ -445,6 +445,7 @@ export function extractBestMerchant(
 /** Whether the text plausibly describes a real money movement. */
 export function looksLikePayment(text: string, ref: string | null): boolean {
   if (PAYMENT_VERB_ALT.test(text)) return true;
+  if (TXN_PHRASE_RE.test(text)) return true;
   if (RAIL_ALT.test(text) && ref) return true;
   return false;
 }
@@ -458,7 +459,9 @@ export function interpretTransactionText(
   raw: string,
   hints: InterpretHints = {},
 ): ParsedExpense {
-  const text = normalizeOcrText(raw ?? "");
+  const text = hints.isSms
+    ? normalizeOcrText(normalizeSmsText(raw ?? ""))
+    : normalizeOcrText(raw ?? "");
   const warnings: string[] = [];
 
   // For SMS, the *source* is the sender/header (e.g. "HDFC Bank:", "PhonePe:")

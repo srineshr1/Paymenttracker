@@ -274,7 +274,9 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
     val filter = IntentFilter(Telephony.Sms.Intents.SMS_RECEIVED_ACTION)
     filter.priority = IntentFilter.SYSTEM_HIGH_PRIORITY
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      reactContext.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+      // System SMS_RECEIVED still reaches NOT_EXPORTED receivers; EXPORTED
+      // is rejected on some OEMs for this protected broadcast.
+      reactContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
     } else {
       @Suppress("UnspecifiedRegisterReceiverFlag")
       reactContext.registerReceiver(receiver, filter)
@@ -299,14 +301,15 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
           projection,
           if (lastSeenId >= 0) "${Telephony.Sms._ID} > ?" else null,
           if (lastSeenId >= 0) arrayOf(lastSeenId.toString()) else null,
-          "${Telephony.Sms._ID} ASC LIMIT 40"
+          "${Telephony.Sms._ID} ASC"
         )
       if (cursor == null) return
       val idxId = cursor.getColumnIndex(Telephony.Sms._ID)
       val idxAddress = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
       val idxBody = cursor.getColumnIndex(Telephony.Sms.BODY)
       val idxDate = cursor.getColumnIndex(Telephony.Sms.DATE)
-      while (cursor.moveToNext()) {
+      var emitted = 0
+      while (cursor.moveToNext() && emitted < 40) {
         val id = if (idxId >= 0) cursor.getLong(idxId) else continue
         if (id > lastSeenId) lastSeenId = id
         deliverMessage(
@@ -315,6 +318,7 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
           body = if (idxBody >= 0) cursor.getString(idxBody) ?: "" else "",
           dateMs = if (idxDate >= 0) cursor.getLong(idxDate) else System.currentTimeMillis()
         )
+        emitted += 1
       }
     } catch (_: Exception) {
     } finally {
@@ -421,8 +425,8 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
       selectionArgs = null
     }
 
-    // Never put LIMIT in sortOrder — many OEMs reject or return empty for
-    // Telephony provider when sortOrder is not a pure ORDER BY clause.
+    // Never put LIMIT in sortOrder or QUERY_ARG_LIMIT — many OEM Telephony
+    // providers reject those and return null / empty, so the inbox looks dead.
     val sortOrder = "${Telephony.Sms.DATE} DESC"
     val uri: Uri = Telephony.Sms.Inbox.CONTENT_URI
     var cursor: Cursor? = null
@@ -431,30 +435,13 @@ class SmsInboxModule(private val reactContext: ReactApplicationContext) :
 
     try {
       cursor =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          val args = android.os.Bundle()
-          if (selection != null) {
-            args.putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, selection)
-            args.putStringArray(
-              android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
-              selectionArgs
-            )
-          }
-          args.putString(
-            android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER,
-            sortOrder
-          )
-          args.putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, maxRows)
-          reactContext.contentResolver.query(uri, projection, args, null)
-        } else {
-          reactContext.contentResolver.query(
-            uri,
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
-          )
-        }
+        reactContext.contentResolver.query(
+          uri,
+          projection,
+          selection,
+          selectionArgs,
+          sortOrder
+        )
       if (cursor != null) {
         val idxAddress = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
         val idxBody = cursor.getColumnIndex(Telephony.Sms.BODY)

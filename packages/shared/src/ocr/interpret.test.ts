@@ -14,6 +14,12 @@ describe("extractBestAmount — picks txn amount over distractors", () => {
     assert.equal(extractBestAmount(t), "45.00");
   });
 
+  it("picks compact Dr amount over available balance", () => {
+    const t =
+      "YBL: A/c X1234 Rs 250.00 debited at SWIGGY on 01-09-26. Avl Bal Rs 5,000.00";
+    assert.equal(extractBestAmount(t), "250.00");
+  });
+
   it("prefers debited amount over available balance", () => {
     const t =
       "Rs.450.00 debited from A/c **1234 on 17-07-26 to VPA swiggy@ybl. Avl Bal Rs 10,000.00";

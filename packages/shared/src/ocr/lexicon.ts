@@ -240,9 +240,23 @@ export const REFERENCE_MARKERS = [
 export const OTP_RE =
   /\b(?:otp|one[\s-]?time\s+password|verification\s+code|do\s+not\s+share|secret\s+code|passcode|login\s+code)\b/i;
 
+/**
+ * The SMS *is* an OTP / login code, not a payment that happens to say
+ * "Do not share OTP" in the footer (very common on Indian bank alerts).
+ */
+export const OTP_PRIMARY_RE =
+  /\b(?:your\s+otp|otp\s+(?:is|for)|is\s+the\s+otp|one[\s-]?time\s+(?:password|code)|verification\s+code|login\s+code|secret\s+code)\b/i;
+
 /** Promo / marketing markers (soft signal — only used to reject when no txn verb). */
 export const PROMO_RE =
   /\b(?:offer|cashback\s+up\s+to|discount|sale|coupon|voucher|win\b|congratulations|claim\s+now|limited\s+period|apply\s+now|lowest\s+price|off\b|flat\s+\d+%|hurry)\b/i;
+
+/**
+ * Money-moved phrases that are not a single verb ("debited").
+ * Credit-card SMS: "Thank you for using your … Card … for Rs.2500 at AMAZON".
+ */
+export const TXN_PHRASE_RE =
+  /\b(?:using\s+your|used\s+for|thank\s+you\s+for\s+using|(?:txn|transaction)\s+(?:of|for)|purchase\s+of|payment\s+(?:of|for|made|successful)|has\s+been\s+made)\b/i;
 
 /**
  * Detect the payment app or bank from message text + optional sender address.

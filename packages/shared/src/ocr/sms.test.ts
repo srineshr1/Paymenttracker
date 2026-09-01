@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { extractAvailableBalance } from "./interpret";
 import { isJunkForAutoImport } from "./quality";
+import { normalizeSmsText } from "./shared";
 import {
   classifySmsMessages,
   dedupeParsedExpenses,
@@ -35,6 +36,29 @@ const UNION2 =
 // SBI "Dear UPI user" template — amount has no ₹/Rs prefix.
 const SBI_DEAR_UPI =
   "Dear UPI user A/C X5714 debited by 45.00 on date 27Jul26 trf to Jarupulla Pakira Refno 064099935518 If not u? call-1800111109 for other services-18001234-SBI";
+
+// Compact Dr/Cr (Yes Bank / Kotak style) — previously missed: no "debited" word.
+const YES_DR =
+  "YBL: A/c X1234 INR 250.00 Dr at SWIGGY on 01-09-26 10:15:00. Avl Bal INR 5,000.00";
+
+// Amount then currency — isPaymentSms required ₹/Rs *before* the number.
+const AMOUNT_THEN_INR =
+  "Your A/c XX1234 is debited 500.00 INR on 01-09-26 to VPA tea@ybl. UPI Ref 417612345699";
+
+// Hindi debit — verbs/currency never reached the detector.
+const HINDI_DEBIT =
+  "आपके खाते से 150 रुपये डेबिट किए गए। UPI Ref 417612345700. Avl Bal 2,000.00 रुपये";
+
+// Glued bank footer + Debited(TRF)
+const DEBITED_TRF =
+  "A/c XX1234 Debited(TRF) Rs.150.00 on 01-09-26 to JOHN DOE. Avl BalRs875.00";
+
+// Credit-card SMS with "Do not share OTP" footer (OTP_RE used to kill these).
+const CARD_OTP_FOOTER =
+  "Thank you for using your HDFC Bank Credit Card ending 1234 for Rs.2,500.00 at AMAZON on 01-09-26. Do not share OTP/CVV/PIN with anyone.";
+
+const PURE_OTP_TXN =
+  "HDFC Bank: 482910 is the OTP for txn of Rs.5000 at AMAZON. Do not share OTP.";
 
 describe("isPaymentSms", () => {
   it("accepts bank debit SMS", () => {
@@ -89,6 +113,51 @@ describe("isPaymentSms", () => {
       ),
       false,
     );
+  });
+
+  it("accepts Yes Bank compact Dr SMS", () => {
+    assert.equal(isPaymentSms(YES_DR, "VM-YESBNK"), true);
+    assert.equal(isPaymentSms(YES_DR), true);
+  });
+
+  it("accepts amount-then-INR debit", () => {
+    assert.equal(isPaymentSms(AMOUNT_THEN_INR, "VM-HDFCBK"), true);
+  });
+
+  it("accepts Hindi debit SMS", () => {
+    assert.equal(isPaymentSms(HINDI_DEBIT, "VM-HDFCBK"), true);
+  });
+
+  it("accepts Debited(TRF) with glued Avl BalRs", () => {
+    assert.equal(isPaymentSms(DEBITED_TRF, "VM-HDFCBK"), true);
+  });
+
+  it("accepts card spend that only says Do not share OTP in the footer", () => {
+    assert.equal(isPaymentSms(CARD_OTP_FOOTER, "VM-HDFCBK"), true);
+  });
+
+  it("still rejects an OTP that is for a transaction", () => {
+    assert.equal(isPaymentSms(PURE_OTP_TXN, "VM-HDFCBK"), false);
+  });
+});
+
+describe("normalizeSmsText", () => {
+  it("turns compact Dr/Cr into debited/credited", () => {
+    assert.match(normalizeSmsText(YES_DR), /debited/i);
+    assert.match(
+      normalizeSmsText("A/c XX credited INR 500.00 Cr from JOHN"),
+      /credited/i,
+    );
+  });
+
+  it("moves trailing INR in front of the amount", () => {
+    assert.match(normalizeSmsText(AMOUNT_THEN_INR), /Rs 500\.00/i);
+  });
+
+  it("unwraps Debited(TRF) and splits Avl BalRs", () => {
+    const n = normalizeSmsText(DEBITED_TRF);
+    assert.match(n, /Debited /i);
+    assert.doesNotMatch(n, /BalRs/i);
   });
 });
 
@@ -165,6 +234,48 @@ describe("parseSmsMessage", () => {
     const r = parseSmsMessage({ body, dateMs: ms });
     assert.equal(r.amount, "100.00");
     assert.ok(r.paidAt?.startsWith("2026-07-18"));
+  });
+
+  it("parses Yes Bank compact Dr (amount, merchant, balance)", () => {
+    const r = parseSmsMessage({ body: YES_DR, address: "VM-YESBNK" });
+    assert.equal(r.amount, "250.00");
+    assert.equal(r.direction, "debit");
+    assert.match(r.merchant ?? "", /swiggy/i);
+    assert.equal(r.availableBalance, "5000.00");
+    assert.equal(isJunkForAutoImport(r), false);
+  });
+
+  it("parses amount-then-INR debit", () => {
+    const r = parseSmsMessage({ body: AMOUNT_THEN_INR });
+    assert.equal(r.amount, "500.00");
+    assert.equal(r.direction, "debit");
+    assert.equal(r.upiRef, "417612345699");
+  });
+
+  it("parses Hindi debit SMS", () => {
+    const r = parseSmsMessage({ body: HINDI_DEBIT });
+    assert.equal(r.amount, "150.00");
+    assert.equal(r.direction, "debit");
+    assert.equal(r.upiRef, "417612345700");
+  });
+
+  it("parses Debited(TRF) and glued Avl BalRs", () => {
+    const r = parseSmsMessage({ body: DEBITED_TRF });
+    assert.equal(r.amount, "150.00");
+    assert.equal(r.availableBalance, "875.00");
+    assert.match(r.merchant ?? "", /JOHN/i);
+  });
+
+  it("parses card SMS with OTP footer (not treated as OTP)", () => {
+    const r = parseSmsMessage({
+      body: CARD_OTP_FOOTER,
+      address: "VM-HDFCBK",
+    });
+    assert.equal(r.amount, "2500.00");
+    assert.equal(r.direction, "debit");
+    assert.match(r.merchant ?? "", /amazon/i);
+    assert.ok((r.confidence ?? 0) >= 0.5);
+    assert.equal(isJunkForAutoImport(r), false);
   });
 });
 

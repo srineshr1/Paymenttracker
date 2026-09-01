@@ -8,20 +8,29 @@ import type { ParsedDirection, ParsedSource } from "./types.js";
 export function normalizeSmsText(text: string): string {
   let s = (text ?? "")
     .replace(/\u00a0/g, " ")
-    .replace(/[\u200b\u200c\u200d\ufeff]/g, "");
+    .replace(/\u200b|\u200c|\u200d|\ufeff/g, "");
 
   // Hindi / long-form currency → Rs
   s = s.replace(/रुपये|रुपए|रू\.?|रु\.?/g, "Rs ");
   s = s.replace(/\b(?:rupees?|re\.?)\b/gi, "Rs ");
 
-  // Amount then currency: "500.00 INR", "450.00 Rs.", "1,250.50/-"
+  // Glued currency+amount: "Rs500", "INR.250.00", "INR:25"
+  s = s.replace(/\b(rs\.?|inr)[.\s:]*?(?=\d)/gi, "Rs ");
+
+  // Amount then currency: "500.00 INR", "1,250.50 Rs.", "1,250.50/-".
+  // Require decimals or grouping so "A/c X1234 Rs 250.00" is not rewritten
+  // as "Rs 1234 250.00" (account mask stealing the currency token).
   s = s.replace(
-    /(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(?:INR|Rs\.?|₹)\b/gi,
+    /(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+\.\d{1,2})\s*(?:INR|Rs\.?|₹)\b/gi,
     "Rs $1",
   );
   s = s.replace(
-    /(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*\/-/g,
+    /(\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+\.\d{1,2})\s*\/-/g,
     "Rs $1",
+  );
+  s = s.replace(
+    /\b(debited|credited|withdrawn|spent|paid|sent|received|deducted|charged|purchase)\s+(\d{1,7})\s*(?:INR|Rs\.?|₹)\b/gi,
+    "$1 Rs $2",
   );
 
   // Glued "Avl BalRs875" / "BalRs 875.93"
@@ -36,6 +45,16 @@ export function normalizeSmsText(text: string): string {
   // Compact Dr/Cr immediately before money (not "Dr. Reddy")
   s = s.replace(/\bDr\.?\s*(?=(?:₹|rs\.?|inr)\b|\d)/gi, "debited ");
   s = s.replace(/\bCr\.?\s*(?=(?:₹|rs\.?|inr)\b|\d)/gi, "credited ");
+
+  // Compact Dr/Cr after money: "INR 250.00 Dr at SWIGGY", "Rs 500.00 Cr"
+  s = s.replace(
+    /((?:₹|rs\.?|inr)\s*:?\s*\d[\d,]*(?:\.\d{1,2})?|\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+\.\d{2})\s*Dr\.?\b/gi,
+    "$1 debited",
+  );
+  s = s.replace(
+    /((?:₹|rs\.?|inr)\s*:?\s*\d[\d,]*(?:\.\d{1,2})?|\d{1,3}(?:,\d{2,3})+(?:\.\d{1,2})?|\d+\.\d{2})\s*Cr\.?\b/gi,
+    "$1 credited",
+  );
 
   // Hindi verbs
   s = s.replace(/डेबिट(?:\s*किए|\s*किये|\s*हुए|\s*हुआ)?/g, "debited");

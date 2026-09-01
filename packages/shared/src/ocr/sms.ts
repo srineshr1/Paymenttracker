@@ -1,17 +1,15 @@
 import { interpretTransactionText } from "./interpret.js";
 import {
   detectAppOrBank,
-  OTP_RE,
+  OTP_PRIMARY_RE,
   PAYMENT_VERBS,
   PROMO_RE,
   RAIL_TOKENS,
+  TXN_PHRASE_RE,
   verbAlternation,
 } from "./lexicon.js";
-import {
-  autoImportSkipReason,
-  dayKey,
-  isJunkForAutoImport,
-} from "./quality.js";
+import { autoImportSkipReason, dayKey } from "./quality.js";
+import { normalizeSmsText } from "./shared.js";
 import type { ParsedExpense, SmsMessageInput } from "./types.js";
 
 /** Amount-like token in SMS bodies (with or without ₹/Rs). */
@@ -33,7 +31,9 @@ const BARE_VERB_AMOUNT_RE =
 
 const PAYMENT_VERB_ALT = verbAlternation(PAYMENT_VERBS);
 const RAIL_ALT = verbAlternation(RAIL_TOKENS);
-const REF_RE = /\b(?:ref(?:erence)?|utr|rrn|txn|transaction\s*id|upi\s*ref)\b/i;
+const REF_RE =
+  /\b(?:ref(?:erence)?|refno|utr|rrn|txn|transaction\s*id|upi\s*ref)\b/i;
+const AMT_LABEL_RE = /\b(?:amt|amount)\s*:?\s*[0-9]/i;
 
 /** Soft cross-source window: same amount + direction within this many ms → dup. */
 const SOFT_DEDUP_MS = 5 * 60 * 1000;
@@ -50,21 +50,26 @@ const BANKISH_ADDRESS_RE =
  * Rejects OTP / verification codes and pure promotional blasts.
  */
 export function isPaymentSms(body: string, address?: string | null): boolean {
-  const text = (body ?? "").trim();
+  const text = normalizeSmsText(body ?? "");
   if (text.length < 12 || text.length > 2000) return false;
 
   const hasAmount =
-    AMOUNT_TOKEN_RE.test(text) || BARE_VERB_AMOUNT_RE.test(text);
+    AMOUNT_TOKEN_RE.test(text) ||
+    BARE_VERB_AMOUNT_RE.test(text) ||
+    AMT_LABEL_RE.test(text);
   if (!hasAmount) return false;
 
-  const hasVerb = PAYMENT_VERB_ALT.test(text);
+  const hasVerb = PAYMENT_VERB_ALT.test(text) || TXN_PHRASE_RE.test(text);
   const hasRail = RAIL_ALT.test(text);
   const hasRef = REF_RE.test(text);
   const knownSource = detectAppOrBank(text, address).source !== "unknown";
   const bankishSender = Boolean(address && BANKISH_ADDRESS_RE.test(address));
 
-  // OTP / verification code with no actual money movement → never an expense.
-  if (OTP_RE.test(text) && !hasVerb) return false;
+  // Pure OTP / login-code SMS. Do NOT treat "Do not share OTP" footers on
+  // real payment alerts as OTP — those are almost every Indian bank SMS.
+  // Require a real movement verb (debited/spent/…) — "OTP for txn of Rs.5000"
+  // must stay rejected even though it contains "txn of".
+  if (OTP_PRIMARY_RE.test(text) && !PAYMENT_VERB_ALT.test(text)) return false;
 
   // Marketing blast with no transaction signal → skip.
   if (PROMO_RE.test(text) && !hasVerb && !(hasRail && hasRef)) return false;
@@ -73,6 +78,9 @@ export function isPaymentSms(body: string, address?: string | null): boolean {
   if (hasVerb) return true;
   if (hasRail && (hasRef || knownSource)) return true;
   if (bankishSender && (hasRail || hasRef)) return true;
+  if (hasAmount && hasRail && (knownSource || bankishSender) && hasRef) {
+    return true;
+  }
 
   return false;
 }
